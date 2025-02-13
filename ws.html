@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador Bing</title>
+    <style>
+        /* Estilos CSS */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .search-container {
+            text-align: center;
+            background-color: #fff;
+            padding: 20px 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        #search-input {
+            width: 300px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #0078d4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        button:hover {
+            background-color: #005bb5;
+        }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <h1>Buscador Bing</h1>
+        <form id="bing-search-form">
+            <input type="text" id="search-input" placeholder="Digite sua busca aqui..." required>
+            <button type="submit">Buscar</button>
+        </form>
+    </div>
+
+    <script>
+        // JavaScript para redirecionar a busca para o Bing
+        document.getElementById('bing-search-form').addEventListener('submit', function(event) {
+            event.preventDefault(); // Impede o envio padrão do formulário
+
+            // Obtém o valor digitado pelo usuário
+            const query = document.getElementById('search-input').value;
+
+            // Constrói a URL de busca do Bing com a consulta
+            const bingSearchUrl = `https://www.bing.com/search?q=${encodeURIComponent(query)}`;
+
+            // Redireciona o usuário para os resultados de busca no Bing
+            window.location.href = bingSearchUrl;
+        });
+    </script>
+</body>
+</html>
