@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pesquisa no DuckDuckGo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        #search-input {
+            width: 300px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #de5833; /* Cor do DuckDuckGo */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #c24b29;
+        }
+
+        .results {
+            width: 80%;
+            max-width: 600px;
+            margin-top: 20px;
+        }
+
+        .result-item {
+            background-color: #fff;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .result-item a {
+            text-decoration: none;
+            color: #de5833;
+            font-size: 16px;
+        }
+
+        .result-item a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Pesquisa no DuckDuckGo</h1>
+    <input type="text" id="search-input" placeholder="Digite sua busca aqui...">
+    <button id="search-button">Buscar</button>
+
+    <div class="results" id="results"></div>
+
+    <script>
+        const searchButton = document.getElementById('search-button');
+        const searchInput = document.getElementById('search-input');
+        const resultsDiv = document.getElementById('results');
+
+        searchButton.addEventListener('click', function() {
+            const query = searchInput.value;
+
+            if (!query) {
+                alert('Por favor, digite algo para buscar.');
+                return;
+            }
+
+            // Limpa os resultados anteriores
+            resultsDiv.innerHTML = '';
+
+            // URL da API DuckDuckGo Instant Answer
+            const apiUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&pretty=1`;
+
+            // Faz a requisição à API
+            fetch(apiUrl)
+            .then(response => response.json())
+            .then(data => {
+                // Processa os resultados
+                const relatedTopics = data.RelatedTopics;
+
+                if (!relatedTopics || relatedTopics.length === 0) {
+                    resultsDiv.innerHTML = '<p>Nenhum resultado encontrado.</p>';
+                    return;
+                }
+
+                // Exibe os resultados na página
+                relatedTopics.forEach(result => {
+                    if (result.FirstURL) { // Verifica se o resultado tem um link
+                        const resultItem = document.createElement('div');
+                        resultItem.classList.add('result-item');
+
+                        const title = document.createElement('h3');
+                        const link = document.createElement('a');
+                        link.href = result.FirstURL;
+                        link.textContent = result.Text || 'Ver mais';
+                        link.target = '_blank'; // Abre o link em uma nova aba
+
+                        title.appendChild(link);
+                        resultItem.appendChild(title);
+
+                        resultsDiv.appendChild(resultItem);
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Erro ao buscar:', error);
+                resultsDiv.innerHTML = '<p>Ocorreu um erro ao buscar os resultados. Tente novamente mais tarde.</p>';
+            });
+        });
+    </script>
+
+</body>
+</html>
