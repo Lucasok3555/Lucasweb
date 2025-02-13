@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feed do Fediverso</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        #feed {
+            margin-top: 20px;
+        }
+
+        .post {
+            background-color: #e9ecef;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            color: #333;
+        }
+
+        .post-header {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .post-content {
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Feed do Fediverso</h1>
+        <div id="feed"></div>
+    </div>
+
+    <script>
+        // Função para buscar posts públicos de uma instância do Fediverso
+        async function fetchFediversePosts(instanceUrl) {
+            try {
+                const response = await fetch(`${instanceUrl}/api/v1/timelines/public`);
+                if (!response.ok) {
+                    throw new Error(`Erro ao buscar posts: ${response.statusText}`);
+                }
+                const posts = await response.json();
+                return posts;
+            } catch (error) {
+                console.error("Erro ao carregar os posts:", error);
+                return [];
+            }
+        }
+
+        // Função para exibir os posts na tela
+        function displayPosts(posts) {
+            const feedElement = document.getElementById('feed');
+            feedElement.innerHTML = ''; // Limpa o feed antes de adicionar novos posts
+
+            posts.forEach(post => {
+                const postElement = document.createElement('div');
+                postElement.classList.add('post');
+
+                const postHeader = document.createElement('div');
+                postHeader.classList.add('post-header');
+                postHeader.textContent = `${post.account.display_name || post.account.username} (@${post.account.username})`;
+
+                const postContent = document.createElement('div');
+                postContent.classList.add('post-content');
+                postContent.textContent = post.content;
+
+                postElement.appendChild(postHeader);
+                postElement.appendChild(postContent);
+
+                feedElement.appendChild(postElement);
+            });
+        }
+
+        // Inicializa o feed ao carregar a página
+        async function initFeed() {
+            const instanceUrl = 'https://mastodon.social'; // Substitua pela instância desejada
+            const posts = await fetchFediversePosts(instanceUrl);
+            displayPosts(posts);
+        }
+
+        // Inicia o feed quando a página carregar
+        document.addEventListener('DOMContentLoaded', initFeed);
+    </script>
+</body>
+</html>
