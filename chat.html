@@ -1,21 +1,9 @@
-// Back-end (Node.js + Express + Socket.IO)
-const express = require('express');
-const http = require('http');
-const socketIo = require('socket.io');
-
-const app = express();
-const server = http.createServer(app);
-const io = socketIo(server);
-
-// Servir HTML, CSS e JavaScript diretamente no servidor
-app.get('/', (req, res) => {
-    res.send(`
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat P2P com WebRTC</title>
+    <title>Chat P2P Estático com WebRTC</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -91,12 +79,20 @@ app.get('/', (req, res) => {
         .chat-input button:hover {
             background: #0056b3;
         }
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
     </style>
 </head>
 <body>
     <div class="chat-container">
         <div class="chat-header">
-            Chat P2P com WebRTC
+            Chat P2P Estático com WebRTC
         </div>
         <div class="chat-messages" id="chatMessages">
             <!-- Mensagens serão exibidas aqui -->
@@ -105,18 +101,20 @@ app.get('/', (req, res) => {
             <input type="text" id="userInput" placeholder="Digite sua mensagem...">
             <button onclick="sendMessage()">Enviar</button>
         </div>
+        <textarea id="offer" placeholder="Cole a oferta SDP aqui"></textarea>
+        <textarea id="answer" placeholder="Cole a resposta SDP aqui"></textarea>
+        <button onclick="startConnection()">Iniciar Conexão</button>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
         const peerConnection = new RTCPeerConnection();
-
         let dataChannel;
 
         // Referências aos elementos do DOM
         const messagesContainer = document.getElementById('chatMessages');
         const userInput = document.getElementById('userInput');
+        const offerTextarea = document.getElementById('offer');
+        const answerTextarea = document.getElementById('answer');
 
         // Configurar DataChannel
         peerConnection.ondatachannel = (event) => {
@@ -149,13 +147,6 @@ app.get('/', (req, res) => {
             userInput.value = '';
         }
 
-        // Permitir enviar mensagem ao pressionar Enter
-        userInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
-
         // Adicionar mensagem à tela
         function addMessage(text, sender) {
             const messageElement = document.createElement('div');
@@ -172,50 +163,37 @@ app.get('/', (req, res) => {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        // Signaling para trocar SDP e ICE Candidates
-        socket.on('signal', async (data) => {
-            if (data.sdp) {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
-                if (data.sdp.type === 'offer') {
-                    const answer = await peerConnection.createAnswer();
-                    await peerConnection.setLocalDescription(answer);
-                    socket.emit('signal', { sdp: peerConnection.localDescription });
-                }
-            } else if (data.candidate) {
-                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-            }
-        });
+        // Iniciar conexão manualmente
+        async function startConnection() {
+            if (offerTextarea.value) {
+                // Se houver uma oferta, configurar como resposta
+                const remoteOffer = JSON.parse(offerTextarea.value);
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(remoteOffer));
 
-        // Enviar ICE Candidates
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                answerTextarea.value = JSON.stringify(peerConnection.localDescription);
+            } else {
+                // Se não houver oferta, criar uma oferta
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                offerTextarea.value = JSON.stringify(peerConnection.localDescription);
+            }
+        }
+
+        // Enviar ICE Candidates manualmente
         peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
-                socket.emit('signal', { candidate: event.candidate });
+                alert('Copie este ICE Candidate e cole no outro peer:\n' + JSON.stringify(event.candidate));
             }
         };
 
-        // Iniciar conexão
-        socket.emit('signal', { sdp: peerConnection.localDescription });
+        // Permitir enviar mensagem ao pressionar Enter
+        userInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
     </script>
 </body>
 </html>
-`);
-});
-
-// Lógica do servidor Socket.IO (signaling)
-io.on('connection', (socket) => {
-    console.log('Novo usuário conectado:', socket.id);
-
-    // Quando um peer envia uma oferta ou resposta
-    socket.on('signal', (data) => {
-        socket.broadcast.emit('signal', data); // Reenvia para o outro peer
-    });
-
-    socket.on('disconnect', () => {
-        console.log('Usuário desconectado:', socket.id);
-    });
-});
-
-// Iniciar o servidor na porta 3000
-server.listen(3000, () => {
-    console.log('Servidor rodando em http://localhost:3000');
-});
