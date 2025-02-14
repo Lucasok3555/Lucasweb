@@ -26,6 +26,19 @@
             color: #333;
         }
 
+        #search-bar {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        #search-bar input {
+            width: 80%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
         #feed {
             margin-top: 20px;
         }
@@ -45,20 +58,41 @@
 
         .post-content {
             font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .post-images {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .post-images img {
+            max-width: 100px;
+            max-height: 100px;
+            border-radius: 5px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Feed do Fediverso</h1>
+        <div id="search-bar">
+            <input type="text" id="search-input" placeholder="Pesquisar por usuário ou instância..." />
+        </div>
         <div id="feed"></div>
     </div>
 
     <script>
         // Função para buscar posts públicos de uma instância do Fediverso
-        async function fetchFediversePosts(instanceUrl) {
+        async function fetchFediversePosts(instanceUrl, username = null) {
             try {
-                const response = await fetch(`${instanceUrl}/api/v1/timelines/public`);
+                let url = `${instanceUrl}/api/v1/timelines/public`;
+                if (username) {
+                    url = `${instanceUrl}/api/v1/accounts/${username}/statuses`;
+                }
+
+                const response = await fetch(url);
                 if (!response.ok) {
                     throw new Error(`Erro ao buscar posts: ${response.statusText}`);
                 }
@@ -85,20 +119,64 @@
 
                 const postContent = document.createElement('div');
                 postContent.classList.add('post-content');
-                postContent.textContent = post.content;
+                postContent.innerHTML = post.content; // Mantém o HTML para formatar links e outras tags
 
                 postElement.appendChild(postHeader);
                 postElement.appendChild(postContent);
+
+                // Exibir imagens, se houver
+                if (post.media_attachments && post.media_attachments.length > 0) {
+                    const imagesContainer = document.createElement('div');
+                    imagesContainer.classList.add('post-images');
+
+                    post.media_attachments.forEach(media => {
+                        if (media.type === 'image') {
+                            const img = document.createElement('img');
+                            img.src = media.url;
+                            img.alt = 'Imagem do post';
+                            imagesContainer.appendChild(img);
+                        }
+                    });
+
+                    postElement.appendChild(imagesContainer);
+                }
 
                 feedElement.appendChild(postElement);
             });
         }
 
+        // Função para lidar com a busca
+        async function handleSearch() {
+            const searchInput = document.getElementById('search-input').value.trim();
+            let instanceUrl = 'https://mastodon.social'; // Instância padrão
+            let username = null;
+
+            if (searchInput.includes('@')) {
+                // Se o usuário inseriu um nome de usuário no formato "user@instancia"
+                const [usernamePart, instancePart] = searchInput.split('@');
+                instanceUrl = `https://${instancePart}`;
+                username = usernamePart;
+            } else if (searchInput.includes('.')) {
+                // Se o usuário inseriu apenas uma instância (ex: mastodon.social)
+                instanceUrl = `https://${searchInput}`;
+            }
+
+            const posts = await fetchFediversePosts(instanceUrl, username);
+            displayPosts(posts);
+        }
+
         // Inicializa o feed ao carregar a página
         async function initFeed() {
-            const instanceUrl = 'https://mastodon.social'; // Substitua pela instância desejada
+            const instanceUrl = 'https://mastodon.social'; // Instância padrão
             const posts = await fetchFediversePosts(instanceUrl);
             displayPosts(posts);
+
+            // Adiciona evento de busca ao pressionar Enter
+            document.getElementById('search-input').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    handleSearch();
+                }
+            });
         }
 
         // Inicia o feed quando a página carregar
