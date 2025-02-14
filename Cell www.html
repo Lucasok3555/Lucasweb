@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P2P Video Call</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f4f4f9;
+    }
+
+    .container {
+      text-align: center;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    #video-container {
+      display: flex;
+      justify-content: space-around;
+      margin: 20px 0;
+    }
+
+    video {
+      width: 45%;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+    }
+
+    #controls {
+      margin-top: 20px;
+    }
+
+    input {
+      padding: 10px;
+      width: 200px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin-left: 10px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>P2P Video Call</h1>
+    <div id="video-container">
+      <video id="local-video" autoplay muted></video>
+      <video id="remote-video" autoplay></video>
+    </div>
+    <div id="controls">
+      <input type="text" id="room-id" placeholder="Enter Room ID">
+      <button id="join-btn">Join Call</button>
+      <button id="leave-btn">Leave Call</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.4.7/dist/peerjs.min.js"></script>
+  <script>
+    const localVideo = document.getElementById('local-video');
+    const remoteVideo = document.getElementById('remote-video');
+    const roomIdInput = document.getElementById('room-id');
+    const joinBtn = document.getElementById('join-btn');
+    const leaveBtn = document.getElementById('leave-btn');
+
+    let localStream;
+    let peer;
+    let currentCall;
+
+    // Get user media (camera and microphone)
+    async function getLocalStream() {
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localVideo.srcObject = localStream;
+      } catch (error) {
+        console.error('Error accessing media devices:', error);
+      }
+    }
+
+    // Initialize PeerJS
+    function initPeer() {
+      peer = new Peer();
+
+      peer.on('open', (id) => {
+        console.log('Your PeerJS ID:', id);
+      });
+
+      peer.on('call', (call) => {
+        call.answer(localStream); // Answer the call with the local stream
+        call.on('stream', (remoteStream) => {
+          remoteVideo.srcObject = remoteStream; // Display the remote stream
+        });
+      });
+    }
+
+    // Join a call
+    joinBtn.addEventListener('click', () => {
+      const roomId = roomIdInput.value.trim();
+      if (!roomId) {
+        alert('Please enter a Room ID.');
+        return;
+      }
+
+      if (!localStream) {
+        alert('Local stream not available. Please check your camera/microphone permissions.');
+        return;
+      }
+
+      const call = peer.call(roomId, localStream); // Initiate a call to the room ID
+      call.on('stream', (remoteStream) => {
+        remoteVideo.srcObject = remoteStream; // Display the remote stream
+      });
+
+      currentCall = call;
+    });
+
+    // Leave a call
+    leaveBtn.addEventListener('click', () => {
+      if (currentCall) {
+        currentCall.close(); // Close the current call
+        remoteVideo.srcObject = null; // Clear the remote video
+      }
+    });
+
+    // Initialize the app
+    getLocalStream();
+    initPeer();
+  </script>
+</body>
+</html>
