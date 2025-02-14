@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Simples</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+        }
+        .chat-container {
+            width: 400px;
+            margin: auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-header {
+            background: #007bff;
+            color: white;
+            padding: 15px;
+            text-align: center;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            border-bottom: 1px solid #ddd;
+        }
+        .message {
+            margin: 10px 0;
+        }
+        .message.user {
+            text-align: right;
+        }
+        .message.bot {
+            text-align: left;
+        }
+        .message-content {
+            display: inline-block;
+            padding: 10px;
+            border-radius: 20px;
+            max-width: 70%;
+        }
+        .message.user .message-content {
+            background: #dcf8c6;
+        }
+        .message.bot .message-content {
+            background: #e9ecef;
+        }
+        .chat-input {
+            display: flex;
+            padding: 10px;
+        }
+        .chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            outline: none;
+        }
+        .chat-input button {
+            margin-left: 10px;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .chat-input button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">
+        Chat Simples
+    </div>
+    <div class="chat-messages" id="chatMessages">
+        <!-- Mensagens serão exibidas aqui -->
+    </div>
+    <div class="chat-input">
+        <input type="text" id="userInput" placeholder="Digite sua mensagem...">
+        <button onclick="sendMessage()">Enviar</button>
+    </div>
+</div>
+
+<script>
+    const messagesContainer = document.getElementById('chatMessages');
+    const userInput = document.getElementById('userInput');
+
+    function sendMessage() {
+        const messageText = userInput.value.trim();
+        if (messageText === '') return;
+
+        // Adiciona a mensagem do usuário
+        addMessage(messageText, 'user');
+
+        // Limpa o input
+        userInput.value = '';
+
+        // Simula uma resposta automática (como se fosse outro usuário)
+        setTimeout(() => {
+            addMessage("Recebido sua mensagem: " + messageText, 'bot');
+        }, 1000);
+    }
+
+    function addMessage(text, sender) {
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('message', sender);
+
+        const contentElement = document.createElement('div');
+        contentElement.classList.add('message-content');
+        contentElement.textContent = text;
+
+        messageElement.appendChild(contentElement);
+        messagesContainer.appendChild(messageElement);
+
+        // Rola para a última mensagem
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // Permite enviar mensagem ao pressionar Enter
+    userInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+</script>
+
+</body>
+</html>
