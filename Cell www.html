@@ -60,6 +60,13 @@
     button:hover {
       background-color: #0056b3;
     }
+
+    #user-id {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+    }
   </style>
 </head>
 <body>
@@ -69,6 +76,7 @@
       <video id="local-video" autoplay muted></video>
       <video id="remote-video" autoplay></video>
     </div>
+    <div id="user-id">Your ID: <span id="user-id-value">Loading...</span></div>
     <div id="controls">
       <input type="text" id="room-id" placeholder="Enter Room ID">
       <button id="join-btn">Join Call</button>
@@ -83,6 +91,7 @@
     const roomIdInput = document.getElementById('room-id');
     const joinBtn = document.getElementById('join-btn');
     const leaveBtn = document.getElementById('leave-btn');
+    const userIdValue = document.getElementById('user-id-value');
 
     let localStream;
     let peer;
@@ -103,7 +112,7 @@
       peer = new Peer();
 
       peer.on('open', (id) => {
-        console.log('Your PeerJS ID:', id);
+        userIdValue.textContent = id; // Display the user's ID
       });
 
       peer.on('call', (call) => {
