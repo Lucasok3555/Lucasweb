@@ -14,7 +14,7 @@
         async function fetchLocationInfo() {
             try {
                 // Faz uma requisição à API do ip-api.com
-                const response = await fetch('https://ip-api.com/json/');
+                const response = await fetch('http://ip-api.com/xml/?fields=61439');
                 const data = await response.json();
 
                 // Verifica se a requisição foi bem-sucedida
