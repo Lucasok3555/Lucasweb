@@ -74,24 +74,29 @@
     <div class="timer" id="timer">00:00</div>
   </div>
 
+  <!-- PeerJS CDN -->
+  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
   <script>
     // Gerar um ID único para o usuário
-    const localId = Math.floor(Math.random() * 1000000);
-    document.getElementById('local-id').textContent = localId;
-
-    const peerConnection = new RTCPeerConnection();
+    const peer = new Peer();
     let localStream;
     let remoteStream;
     let callTimerInterval;
     let callDuration = 0;
 
     // Elementos da interface
+    const localIdDisplay = document.getElementById('local-id');
     const remoteIdInput = document.getElementById('remote-id');
     const startCallButton = document.getElementById('start-call');
     const toggleMicButton = document.getElementById('toggle-mic');
     const endCallButton = document.getElementById('end-call');
     const statusText = document.getElementById('status');
     const timerDisplay = document.getElementById('timer');
+
+    // Quando o ID do usuário for gerado pelo PeerJS
+    peer.on('open', (id) => {
+      localIdDisplay.textContent = id;
+    });
 
     // Função para iniciar a chamada
     async function startCall() {
@@ -103,30 +108,29 @@
 
       statusText.textContent = 'Iniciando chamada...';
 
-      // Obter acesso ao microfone
       try {
         localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+        const call = peer.call(remoteId, localStream);
+        setupCallListeners(call);
       } catch (error) {
         console.error('Erro ao acessar o microfone:', error);
         statusText.textContent = 'Erro ao acessar o microfone.';
-        return;
       }
+    }
 
-      // Configurar conexão com o outro usuário
-      const offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
-
-      // Simular envio do SDP para o outro usuário (aqui seria via servidor)
-      console.log('Enviar oferta para o ID:', remoteId, offer);
-
-      // Simular recebimento da resposta do outro usuário
-      setTimeout(async () => {
-        const answer = { type: 'answer', sdp: 'Resposta simulada' }; // Resposta simulada
-        await peerConnection.setRemoteDescription(answer);
+    // Função para configurar os listeners da chamada
+    function setupCallListeners(call) {
+      call.on('stream', (stream) => {
+        remoteStream = stream;
         statusText.textContent = 'Chamada conectada!';
         startCallTimer(); // Iniciar o cronômetro
-      }, 2000);
+      });
+
+      call.on('close', () => {
+        statusText.textContent = 'Chamada encerrada.';
+        stopCallTimer();
+        timerDisplay.textContent = '00:00'; // Resetar o cronômetro
+      });
     }
 
     // Função para alternar o microfone
@@ -138,7 +142,7 @@
 
     // Função para encerrar a chamada
     function endCall() {
-      peerConnection.close();
+      peer.destroy();
       localStream.getTracks().forEach(track => track.stop());
       stopCallTimer();
       statusText.textContent = 'Chamada encerrada.';
@@ -160,6 +164,15 @@
     function stopCallTimer() {
       clearInterval(callTimerInterval);
     }
+
+    // Receber chamadas automaticamente
+    peer.on('call', (call) => {
+      navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+        localStream = stream;
+        call.answer(stream); // Atender automaticamente
+        setupCallListeners(call);
+      });
+    });
 
     // Eventos de clique
     startCallButton.addEventListener('click', startCall);
