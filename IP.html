@@ -3,43 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Informações de Localização por IP</title>
+    <title>Informações de IP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .info {
+            margin-top: 20px;
+        }
+        .info p {
+            font-size: 16px;
+            color: #555;
+            line-height: 1.6;
+        }
+        .info strong {
+            color: #333;
+        }
+    </style>
 </head>
 <body>
-    <h1>Informações de Localização</h1>
-    <p id="location-info">Carregando...</p>
+    <div class="container">
+        <h1>Informações do IP</h1>
+        <div class="info" id="info">
+            <!-- As informações do IP serão exibidas aqui -->
+        </div>
+    </div>
 
     <script>
-        // Função para buscar informações de localização com base no IP
-        async function fetchLocationInfo() {
+        // URL da API para obter informações do IP
+        const apiUrl = 'http://ip-api.com/json/24.48.0.1';
+
+        // Função para buscar e exibir as informações do IP
+        async function fetchIpInfo() {
             try {
-                // Faz uma requisição à API do ip-api.com
-                const response = await fetch('http://ip-api.com/json/24.48.0.1');
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error('Erro ao buscar informações do IP');
+                }
                 const data = await response.json();
 
-                // Verifica se a requisição foi bem-sucedida
-                if (data.status === 'success') {
-                    // Exibe as informações na página
-                    const locationInfo = document.getElementById('location-info');
-                    locationInfo.innerHTML = `
-                        <strong>País:</strong> ${data.country} <br>
-                        <strong>Região:</strong> ${data.regionName} <br>
-                        <strong>Cidade:</strong> ${data.city} <br>
-                        <strong>IP:</strong> ${data.query} <br>
-                        <strong>Localização:</strong> ${data.lat}, ${data.lon} <br>
-                        <strong>Provedor de Internet:</strong> ${data.isp} <br>
-                    `;
-                } else {
-                    document.getElementById('location-info').innerText = 'Erro ao buscar informações de localização.';
-                }
+                // Exibir as informações no elemento HTML
+                const infoDiv = document.getElementById('info');
+                infoDiv.innerHTML = `
+                    <p><strong>País:</strong> ${data.country}</p>
+                    <p><strong>Região:</strong> ${data.regionName}</p>
+                    <p><strong>Cidade:</strong> ${data.city}</p>
+                    <p><strong>Latitude:</strong> ${data.lat}</p>
+                    <p><strong>Longitude:</strong> ${data.lon}</p>
+                    <p><strong>Provedor de Internet:</strong> ${data.isp}</p>
+                `;
             } catch (error) {
-                console.error('Erro ao buscar informações de localização:', error);
-                document.getElementById('location-info').innerText = 'Erro ao carregar informações.';
+                console.error(error);
+                document.getElementById('info').innerHTML = '<p>Não foi possível carregar as informações do IP.</p>';
             }
         }
 
-        // Chama a função ao carregar a página
-        fetchLocationInfo();
+        // Chamar a função ao carregar a página
+        fetchIpInfo();
     </script>
 </body>
 </html>
