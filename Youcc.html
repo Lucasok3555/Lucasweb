@@ -75,18 +75,6 @@
             text-align: center;
             word-wrap: break-word; /* Quebra palavras longas */
         }
-
-        /* Estilo do player de vídeo */
-        #video-player {
-            text-align: center;
-            margin-top: 20px;
-            display: none;
-        }
-
-        #video-player video {
-            max-width: 100%;
-            height: auto;
-        }
     </style>
 </head>
 <body>
@@ -98,12 +86,6 @@
 
     <!-- Feed de Vídeos -->
     <div id="video-feed"></div>
-
-    <!-- Player de Vídeo -->
-    <div id="video-player">
-        <h2 id="video-title"></h2>
-        <video id="video-element" controls width="640" height="360"></video>
-    </div>
 
     <script>
         // URL da API do PeerTube
@@ -136,34 +118,18 @@
                     <h3>${video.name}</h3>
                 `;
 
-                // Adiciona o evento de clique para reproduzir o vídeo
-                videoItem.addEventListener('click', () => playVideo(video));
+                // Adiciona o evento de clique para abrir a página de detalhes
+                videoItem.addEventListener('click', () => openVideoPage(video));
 
                 videoFeed.appendChild(videoItem);
             });
         }
 
-        // Função para reproduzir o vídeo
-        function playVideo(video) {
-            const videoPlayer = document.getElementById('video-player');
-            const videoElement = document.getElementById('video-element');
-            const videoTitle = document.getElementById('video-title');
-
-            // Define o título e a fonte do vídeo
-            videoTitle.textContent = video.name;
-
-            // Verifica se há streamingPlaylists (HLS) ou arquivos MP4 disponíveis
-            if (video.streamingPlaylists && video.streamingPlaylists.length > 0) {
-                videoElement.src = video.streamingPlaylists[0].playlistUrl;
-            } else if (video.files && video.files.length > 0) {
-                videoElement.src = video.files[0].fileUrl;
-            } else {
-                alert('Este vídeo não está disponível para reprodução.');
-                return;
-            }
-
-            // Mostra o player de vídeo
-            videoPlayer.style.display = 'block';
+        // Função para abrir a página de detalhes do vídeo
+        function openVideoPage(video) {
+            // Salva os dados do vídeo no localStorage
+            localStorage.setItem('selectedVideo', JSON.stringify(video));
+            window.location.href = 'video.html'; // Redireciona para a página de detalhes
         }
 
         // Função para pesquisar vídeos
