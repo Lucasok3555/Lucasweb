@@ -66,12 +66,14 @@
         .video-item img {
             width: 100%;
             height: auto;
+            object-fit: cover; /* Garante que a imagem cubra o espaço sem distorção */
         }
 
         .video-item h3 {
             font-size: 16px;
             margin: 10px;
             text-align: center;
+            word-wrap: break-word; /* Quebra palavras longas */
         }
 
         /* Estilo do player de vídeo */
@@ -115,6 +117,7 @@
                 displayVideos(data.data);
             } catch (error) {
                 console.error('Erro ao carregar vídeos:', error);
+                alert('Não foi possível carregar os vídeos. Tente novamente mais tarde.');
             }
         }
 
@@ -129,7 +132,7 @@
 
                 // Cria a estrutura do vídeo
                 videoItem.innerHTML = `
-                    <img src="${video.thumbnailPath}" alt="${video.name}">
+                    <img src="${video.thumbnailPath}" alt="${video.name}" onerror="this.src='https://via.placeholder.com/300';">
                     <h3>${video.name}</h3>
                 `;
 
@@ -148,7 +151,16 @@
 
             // Define o título e a fonte do vídeo
             videoTitle.textContent = video.name;
-            videoElement.src = video.streamingPlaylists[0].playlistUrl || video.files[0].fileUrl;
+
+            // Verifica se há streamingPlaylists (HLS) ou arquivos MP4 disponíveis
+            if (video.streamingPlaylists && video.streamingPlaylists.length > 0) {
+                videoElement.src = video.streamingPlaylists[0].playlistUrl;
+            } else if (video.files && video.files.length > 0) {
+                videoElement.src = video.files[0].fileUrl;
+            } else {
+                alert('Este vídeo não está disponível para reprodução.');
+                return;
+            }
 
             // Mostra o player de vídeo
             videoPlayer.style.display = 'block';
@@ -168,6 +180,7 @@
                 displayVideos(data.data);
             } catch (error) {
                 console.error('Erro ao pesquisar vídeos:', error);
+                alert('Não foi possível encontrar vídeos com esse termo.');
             }
         }
 
