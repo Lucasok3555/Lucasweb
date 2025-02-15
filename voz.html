@@ -47,6 +47,13 @@
       font-size: 18px;
       color: #555;
     }
+
+    .timer {
+      margin-top: 20px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #007bff;
+    }
   </style>
 </head>
 <body>
@@ -64,6 +71,7 @@
       <button id="end-call">Encerrar Chamada 📵</button>
     </div>
     <div class="status" id="status">Aguardando chamada...</div>
+    <div class="timer" id="timer">00:00</div>
   </div>
 
   <script>
@@ -74,6 +82,8 @@
     const peerConnection = new RTCPeerConnection();
     let localStream;
     let remoteStream;
+    let callTimerInterval;
+    let callDuration = 0;
 
     // Elementos da interface
     const remoteIdInput = document.getElementById('remote-id');
@@ -81,6 +91,7 @@
     const toggleMicButton = document.getElementById('toggle-mic');
     const endCallButton = document.getElementById('end-call');
     const statusText = document.getElementById('status');
+    const timerDisplay = document.getElementById('timer');
 
     // Função para iniciar a chamada
     async function startCall() {
@@ -114,6 +125,7 @@
         const answer = { type: 'answer', sdp: 'Resposta simulada' }; // Resposta simulada
         await peerConnection.setRemoteDescription(answer);
         statusText.textContent = 'Chamada conectada!';
+        startCallTimer(); // Iniciar o cronômetro
       }, 2000);
     }
 
@@ -128,7 +140,25 @@
     function endCall() {
       peerConnection.close();
       localStream.getTracks().forEach(track => track.stop());
+      stopCallTimer();
       statusText.textContent = 'Chamada encerrada.';
+      timerDisplay.textContent = '00:00'; // Resetar o cronômetro
+    }
+
+    // Função para iniciar o cronômetro
+    function startCallTimer() {
+      callDuration = 0;
+      callTimerInterval = setInterval(() => {
+        callDuration++;
+        const minutes = Math.floor(callDuration / 60).toString().padStart(2, '0');
+        const seconds = (callDuration % 60).toString().padStart(2, '0');
+        timerDisplay.textContent = `${minutes}:${seconds}`;
+      }, 1000);
+    }
+
+    // Função para parar o cronômetro
+    function stopCallTimer() {
+      clearInterval(callTimerInterval);
     }
 
     // Eventos de clique
