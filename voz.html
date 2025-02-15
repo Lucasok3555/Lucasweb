@@ -54,6 +54,11 @@
       font-weight: bold;
       color: #007bff;
     }
+
+    /* Elemento de áudio invisível */
+    audio {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -72,6 +77,9 @@
     </div>
     <div class="status" id="status">Aguardando chamada...</div>
     <div class="timer" id="timer">00:00</div>
+
+    <!-- Elemento de áudio para reproduzir o som remoto -->
+    <audio id="remote-audio" autoplay></audio>
   </div>
 
   <!-- PeerJS CDN -->
@@ -92,6 +100,7 @@
     const endCallButton = document.getElementById('end-call');
     const statusText = document.getElementById('status');
     const timerDisplay = document.getElementById('timer');
+    const remoteAudio = document.getElementById('remote-audio'); // Elemento de áudio
 
     // Quando o ID do usuário for gerado pelo PeerJS
     peer.on('open', (id) => {
@@ -122,6 +131,7 @@
     function setupCallListeners(call) {
       call.on('stream', (stream) => {
         remoteStream = stream;
+        remoteAudio.srcObject = remoteStream; // Vincular o áudio remoto ao elemento <audio>
         statusText.textContent = 'Chamada conectada!';
         startCallTimer(); // Iniciar o cronômetro
       });
