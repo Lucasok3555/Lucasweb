@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalhes do Vídeo - PeerTube</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+
+        /* Estilo do player de vídeo */
+        #video-player {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        #video-player video {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Estilo das informações do vídeo */
+        #video-info {
+            margin: 20px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        #video-info h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        #video-info p {
+            font-size: 16px;
+            line-height: 1.5;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <!-- Player de Vídeo -->
+    <div id="video-player">
+        <video id="video-element" controls width="640" height="360"></video>
+    </div>
+
+    <!-- Informações do Vídeo -->
+    <div id="video-info">
+        <h2 id="video-title">Carregando...</h2>
+        <p id="video-description">Carregando descrição...</p>
+    </div>
+
+    <script>
+        // Função para carregar os dados do vídeo salvo no localStorage
+        function loadVideoDetails() {
+            const selectedVideo = JSON.parse(localStorage.getItem('selectedVideo'));
+
+            if (!selectedVideo) {
+                alert('Vídeo não encontrado.');
+                window.location.href = 'index.html'; // Redireciona de volta para a página inicial
+                return;
+            }
+
+            const videoElement = document.getElementById('video-element');
+            const videoTitle = document.getElementById('video-title');
+            const videoDescription = document.getElementById('video-description');
+
+            // Define o título e a descrição do vídeo
+            videoTitle.textContent = selectedVideo.name;
+            videoDescription.textContent = selectedVideo.description || 'Sem descrição disponível.';
+
+            // Define a fonte do vídeo
+            if (selectedVideo.streamingPlaylists && selectedVideo.streamingPlaylists.length > 0) {
+                videoElement.src = selectedVideo.streamingPlaylists[0].playlistUrl;
+            } else if (selectedVideo.files && selectedVideo.files.length > 0) {
+                videoElement.src = selectedVideo.files[0].fileUrl;
+            } else {
+                alert('Este vídeo não está disponível para reprodução.');
+                window.location.href = 'index.html'; // Redireciona de volta para a página inicial
+            }
+        }
+
+        // Carrega os detalhes do vídeo quando a página é carregada
+        document.addEventListener('DOMContentLoaded', loadVideoDetails);
+    </script>
+</body>
+</html>
