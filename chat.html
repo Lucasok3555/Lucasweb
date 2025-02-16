@@ -37,6 +37,9 @@
       padding: 15px;
       font-size: 18px;
       text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     #chat-messages {
@@ -109,7 +112,7 @@
       z-index: 999;
     }
 
-    #new-conversation-modal {
+    .modal {
       display: none;
       position: fixed;
       top: 50%;
@@ -122,7 +125,7 @@
       text-align: center;
     }
 
-    #new-conversation-modal input {
+    .modal input {
       width: 100%;
       padding: 10px;
       margin-bottom: 10px;
@@ -130,7 +133,7 @@
       border-radius: 4px;
     }
 
-    #new-conversation-modal button {
+    .modal button {
       padding: 10px 20px;
       background-color: #007bff;
       color: white;
@@ -139,7 +142,7 @@
       cursor: pointer;
     }
 
-    #new-conversation-modal button:hover {
+    .modal button:hover {
       background-color: #0056b3;
     }
   </style>
@@ -152,7 +155,10 @@
   </div>
 
   <div id="chat-container">
-    <div id="chat-header">Chat</div>
+    <div id="chat-header">
+      Chat
+      <button id="show-user-id">Mostrar ID</button>
+    </div>
     <div id="chat-messages"></div>
     <div id="chat-input">
       <input type="text" id="message-input" placeholder="Digite sua mensagem..." />
@@ -162,16 +168,23 @@
 
   <!-- Modal para Nova Conversa -->
   <div id="overlay"></div>
-  <div id="new-conversation-modal">
+  <div id="new-conversation-modal" class="modal">
     <h3>Iniciar Nova Conversa</h3>
     <input type="text" id="recipient-id-input" placeholder="Digite o ID do destinatário" />
     <button id="start-conversation">Iniciar</button>
+  </div>
+
+  <!-- Modal para Mostrar ID -->
+  <div id="user-id-modal" class="modal">
+    <p>Seu ID de Usuário é: <strong id="displayed-user-id"></strong></p>
+    <button id="close-user-id-modal">Fechar</button>
   </div>
 
   <script>
     const conversations = {};
     let currentConversationId = null;
     const userId = `user-${Math.floor(Math.random() * 10000)}`; // ID do usuário atual
+    document.getElementById('displayed-user-id').textContent = userId;
 
     // Função para abrir o modal de nova conversa
     document.getElementById('open-modal').addEventListener('click', () => {
@@ -249,12 +262,23 @@
       }
     }
 
+    // Botão para mostrar o ID do usuário
+    document.getElementById('show-user-id').addEventListener('click', () => {
+      document.getElementById('overlay').style.display = 'block';
+      document.getElementById('user-id-modal').style.display = 'block';
+    });
+
     // Fecha o modal
     function closeModal() {
       document.getElementById('overlay').style.display = 'none';
-      document.getElementById('new-conversation-modal').style.display = 'none';
+      document.querySelectorAll('.modal').forEach(modal => {
+        modal.style.display = 'none';
+      });
       document.getElementById('recipient-id-input').value = '';
     }
+
+    // Fechar modal de ID do usuário
+    document.getElementById('close-user-id-modal').addEventListener('click', closeModal);
   </script>
 </body>
 </html>
