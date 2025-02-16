@@ -1,199 +1,221 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat P2P Estático com WebRTC</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            height: 100vh;
-        }
-        .chat-container {
-            width: 400px;
-            margin: auto;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-        .chat-header {
-            background: #007bff;
-            color: white;
-            padding: 15px;
-            text-align: center;
-        }
-        .chat-messages {
-            flex: 1;
-            padding: 10px;
-            overflow-y: auto;
-            border-bottom: 1px solid #ddd;
-        }
-        .message {
-            margin: 10px 0;
-        }
-        .message.user {
-            text-align: right;
-        }
-        .message.bot {
-            text-align: left;
-        }
-        .message-content {
-            display: inline-block;
-            padding: 10px;
-            border-radius: 20px;
-            max-width: 70%;
-        }
-        .message.user .message-content {
-            background: #dcf8c6;
-        }
-        .message.bot .message-content {
-            background: #e9ecef;
-        }
-        .chat-input {
-            display: flex;
-            padding: 10px;
-        }
-        .chat-input input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 20px;
-            outline: none;
-        }
-        .chat-input button {
-            margin-left: 10px;
-            padding: 10px 20px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-        }
-        .chat-input button:hover {
-            background: #0056b3;
-        }
-        textarea {
-            width: 100%;
-            height: 100px;
-            margin-top: 10px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web de Mensagem P2P</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      height: 100vh;
+    }
+
+    #sidebar {
+      width: 300px;
+      background-color: #f4f4f4;
+      border-right: 1px solid #ddd;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    #sidebar h2 {
+      margin-top: 0;
+    }
+
+    #chat-container {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #chat-header {
+      background-color: #007bff;
+      color: white;
+      padding: 15px;
+      font-size: 18px;
+      text-align: center;
+    }
+
+    #chat-messages {
+      flex-grow: 1;
+      padding: 20px;
+      overflow-y: auto;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .message {
+      margin-bottom: 10px;
+    }
+
+    .message.sent {
+      text-align: right;
+    }
+
+    .message.received {
+      text-align: left;
+    }
+
+    #chat-input {
+      display: flex;
+      padding: 10px;
+      border-top: 1px solid #ddd;
+    }
+
+    #chat-input input[type="text"] {
+      flex-grow: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-right: 10px;
+    }
+
+    #chat-input button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #chat-input button:hover {
+      background-color: #0056b3;
+    }
+
+    #add-user-modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+    }
+
+    #add-user-modal input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    #add-user-modal button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+    }
+  </style>
 </head>
 <body>
-    <div class="chat-container">
-        <div class="chat-header">
-            Chat P2P Estático com WebRTC
-        </div>
-        <div class="chat-messages" id="chatMessages">
-            <!-- Mensagens serão exibidas aqui -->
-        </div>
-        <div class="chat-input">
-            <input type="text" id="userInput" placeholder="Digite sua mensagem...">
-            <button onclick="sendMessage()">Enviar</button>
-        </div>
-        <textarea id="offer" placeholder="Cole a oferta SDP aqui"></textarea>
-        <textarea id="answer" placeholder="Cole a resposta SDP aqui"></textarea>
-        <button onclick="startConnection()">Iniciar Conexão</button>
+  <div id="sidebar">
+    <h2>Conversas</h2>
+    <button id="open-modal">+</button>
+    <ul id="conversation-list"></ul>
+  </div>
+
+  <div id="chat-container">
+    <div id="chat-header">Chat</div>
+    <div id="chat-messages"></div>
+    <div id="chat-input">
+      <input type="text" id="message-input" placeholder="Digite sua mensagem..." />
+      <button id="send-message">Enviar</button>
     </div>
+  </div>
 
-    <script>
-        const peerConnection = new RTCPeerConnection();
-        let dataChannel;
+  <!-- Modal -->
+  <div id="overlay"></div>
+  <div id="add-user-modal">
+    <h3>Iniciar Conversa</h3>
+    <input type="text" id="user-id-input" placeholder="Digite o ID do usuário" />
+    <button id="start-conversation">Iniciar</button>
+  </div>
 
-        // Referências aos elementos do DOM
-        const messagesContainer = document.getElementById('chatMessages');
-        const userInput = document.getElementById('userInput');
-        const offerTextarea = document.getElementById('offer');
-        const answerTextarea = document.getElementById('answer');
+  <script>
+    const conversations = {};
+    let currentConversationId = null;
 
-        // Configurar DataChannel
-        peerConnection.ondatachannel = (event) => {
-            dataChannel = event.channel;
-            dataChannel.onmessage = (event) => {
-                addMessage(event.data, 'bot');
-            };
-        };
+    document.getElementById('open-modal').addEventListener('click', () => {
+      document.getElementById('overlay').style.display = 'block';
+      document.getElementById('add-user-modal').style.display = 'block';
+    });
 
-        // Criar DataChannel se for o iniciador
-        dataChannel = peerConnection.createDataChannel('chat');
-
-        dataChannel.onopen = () => {
-            console.log('DataChannel aberto');
-        };
-
-        dataChannel.onmessage = (event) => {
-            addMessage(event.data, 'bot');
-        };
-
-        // Função para enviar mensagem
-        function sendMessage() {
-            const messageText = userInput.value.trim();
-            if (messageText === '') return;
-
-            dataChannel.send(messageText);
-            addMessage(messageText, 'user');
-
-            // Limpar o campo de entrada
-            userInput.value = '';
+    document.getElementById('start-conversation').addEventListener('click', () => {
+      const userId = document.getElementById('user-id-input').value.trim();
+      if (userId) {
+        if (!conversations[userId]) {
+          conversations[userId] = [];
+          addConversationToList(userId);
         }
+        switchConversation(userId);
+        closeModal();
+      }
+    });
 
-        // Adicionar mensagem à tela
-        function addMessage(text, sender) {
-            const messageElement = document.createElement('div');
-            messageElement.classList.add('message', sender);
+    document.getElementById('send-message').addEventListener('click', () => {
+      const message = document.getElementById('message-input').value.trim();
+      if (message && currentConversationId) {
+        sendMessage(currentConversationId, message);
+        document.getElementById('message-input').value = '';
+      }
+    });
 
-            const contentElement = document.createElement('div');
-            contentElement.classList.add('message-content');
-            contentElement.textContent = text;
+    function addConversationToList(userId) {
+      const conversationList = document.getElementById('conversation-list');
+      const listItem = document.createElement('li');
+      listItem.textContent = `Usuário ${userId}`;
+      listItem.addEventListener('click', () => switchConversation(userId));
+      conversationList.appendChild(listItem);
+    }
 
-            messageElement.appendChild(contentElement);
-            messagesContainer.appendChild(messageElement);
+    function switchConversation(userId) {
+      currentConversationId = userId;
+      document.getElementById('chat-header').textContent = `Chat com Usuário ${userId}`;
+      renderMessages();
+    }
 
-            // Rolar para a última mensagem
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
+    function sendMessage(userId, message) {
+      conversations[userId].push({ sender: 'me', text: message });
+      renderMessages();
+    }
 
-        // Iniciar conexão manualmente
-        async function startConnection() {
-            if (offerTextarea.value) {
-                // Se houver uma oferta, configurar como resposta
-                const remoteOffer = JSON.parse(offerTextarea.value);
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(remoteOffer));
-
-                const answer = await peerConnection.createAnswer();
-                await peerConnection.setLocalDescription(answer);
-                answerTextarea.value = JSON.stringify(peerConnection.localDescription);
-            } else {
-                // Se não houver oferta, criar uma oferta
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-                offerTextarea.value = JSON.stringify(peerConnection.localDescription);
-            }
-        }
-
-        // Enviar ICE Candidates manualmente
-        peerConnection.onicecandidate = (event) => {
-            if (event.candidate) {
-                alert('Copie este ICE Candidate e cole no outro peer:\n' + JSON.stringify(event.candidate));
-            }
-        };
-
-        // Permitir enviar mensagem ao pressionar Enter
-        userInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
+    function renderMessages() {
+      const chatMessages = document.getElementById('chat-messages');
+      chatMessages.innerHTML = '';
+      if (currentConversationId && conversations[currentConversationId]) {
+        conversations[currentConversationId].forEach(msg => {
+          const messageDiv = document.createElement('div');
+          messageDiv.className = `message ${msg.sender === 'me' ? 'sent' : 'received'}`;
+          messageDiv.textContent = msg.text;
+          chatMessages.appendChild(messageDiv);
         });
-    </script>
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('overlay').style.display = 'none';
+      document.getElementById('add-user-modal').style.display = 'none';
+      document.getElementById('user-id-input').value = '';
+    }
+  </script>
 </body>
 </html>
