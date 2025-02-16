@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat P2P com WebRTC</title>
+  <title>Web de Mensagem P2P com WebRTC</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -21,6 +21,10 @@
       box-sizing: border-box;
     }
 
+    #sidebar h2 {
+      margin-top: 0;
+    }
+
     #chat-container {
       flex-grow: 1;
       display: flex;
@@ -33,6 +37,9 @@
       padding: 15px;
       font-size: 18px;
       text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     #chat-messages {
@@ -57,6 +64,13 @@
     .message.received {
       background-color: #e9ecef;
       align-self: flex-start;
+    }
+
+    .message .sender-id {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 5px;
+      display: block;
     }
 
     #chat-input {
@@ -85,6 +99,52 @@
     #chat-input button:hover {
       background-color: #0056b3;
     }
+
+    /* Modal */
+    #overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      text-align: center;
+    }
+
+    .modal input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    .modal button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .modal button:hover {
+      background-color: #0056b3;
+    }
   </style>
 </head>
 <body>
@@ -95,7 +155,10 @@
   </div>
 
   <div id="chat-container">
-    <div id="chat-header">Chat</div>
+    <div id="chat-header">
+      Chat
+      <button id="show-user-id">Mostrar ID</button>
+    </div>
     <div id="chat-messages"></div>
     <div id="chat-input">
       <input type="text" id="message-input" placeholder="Digite sua mensagem..." />
@@ -103,77 +166,179 @@
     </div>
   </div>
 
+  <!-- Modal para Nova Conversa -->
+  <div id="overlay"></div>
+  <div id="new-conversation-modal" class="modal">
+    <h3>Iniciar Nova Conversa</h3>
+    <input type="text" id="recipient-id-input" placeholder="Digite o ID do destinatário" />
+    <button id="start-conversation">Iniciar</button>
+  </div>
+
+  <!-- Modal para Mostrar ID -->
+  <div id="user-id-modal" class="modal">
+    <p>Seu ID de Usuário é: <strong id="displayed-user-id"></strong></p>
+    <button id="close-user-id-modal">Fechar</button>
+  </div>
+
   <script>
-    const peerConnectionConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-    let localPeerConnection;
-    let remotePeerConnection;
+    const peerConnections = {};
+    let localPeerId = `user-${Math.floor(Math.random() * 10000)}`;
+    document.getElementById('displayed-user-id').textContent = localPeerId;
 
-    // Função para criar uma nova conexão P2P
-    function createPeerConnection() {
-      localPeerConnection = new RTCPeerConnection(peerConnectionConfig);
-      remotePeerConnection = new RTCPeerConnection(peerConnectionConfig);
+    const signalingServerUrl = 'wss://your-signaling-server-url'; // Substitua pelo seu servidor de sinalização
+    const signalingSocket = new WebSocket(signalingServerUrl);
 
-      // Quando o ICE candidate é gerado, envie para o outro peer
-      localPeerConnection.onicecandidate = (event) => {
+    signalingSocket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'offer') {
+        handleOffer(data);
+      } else if (data.type === 'answer') {
+        handleAnswer(data);
+      } else if (data.type === 'candidate') {
+        handleCandidate(data);
+      }
+    };
+
+    function createPeerConnection(peerId) {
+      const peerConnection = new RTCPeerConnection();
+
+      peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-          remotePeerConnection.addIceCandidate(event.candidate);
+          signalingSocket.send(JSON.stringify({
+            type: 'candidate',
+            from: localPeerId,
+            to: peerId,
+            candidate: event.candidate
+          }));
         }
       };
 
-      remotePeerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          localPeerConnection.addIceCandidate(event.candidate);
-        }
+      peerConnection.ondatachannel = (event) => {
+        const dataChannel = event.channel;
+        setupDataChannel(dataChannel, peerId);
       };
 
-      // Receber mensagens do canal de dados
-      remotePeerConnection.ondatachannel = (event) => {
-        const receiveChannel = event.channel;
-        receiveChannel.onmessage = (event) => {
-          addMessageToChat('received', event.data);
-        };
+      return peerConnection;
+    }
+
+    function setupDataChannel(dataChannel, peerId) {
+      dataChannel.onmessage = (event) => {
+        const message = event.data;
+        displayMessage(peerId, message, 'received');
       };
 
-      // Criar um canal de dados para enviar mensagens
-      const sendChannel = localPeerConnection.createDataChannel('chat');
-      document.getElementById('send-message').onclick = () => {
-        const message = document.getElementById('message-input').value.trim();
-        if (message && sendChannel.readyState === 'open') {
-          sendChannel.send(message);
-          addMessageToChat('sent', message);
-          document.getElementById('message-input').value = '';
-        }
+      dataChannel.onopen = () => {
+        console.log(`Conexão aberta com ${peerId}`);
+      };
+
+      dataChannel.onclose = () => {
+        console.log(`Conexão fechada com ${peerId}`);
       };
     }
 
-    // Função para adicionar mensagens ao chat
-    function addMessageToChat(type, message) {
+    function sendMessageToPeer(peerId, message) {
+      const peerConnection = peerConnections[peerId];
+      if (peerConnection && peerConnection.dataChannel) {
+        peerConnection.dataChannel.send(message);
+      }
+    }
+
+    document.getElementById('open-modal').addEventListener('click', () => {
+      document.getElementById('overlay').style.display = 'block';
+      document.getElementById('new-conversation-modal').style.display = 'block';
+    });
+
+    document.getElementById('start-conversation').addEventListener('click', () => {
+      const recipientId = document.getElementById('recipient-id-input').value.trim();
+      if (recipientId) {
+        if (!peerConnections[recipientId]) {
+          const peerConnection = createPeerConnection(recipientId);
+          const dataChannel = peerConnection.createDataChannel('chat');
+          setupDataChannel(dataChannel, recipientId);
+          peerConnections[recipientId] = { peerConnection, dataChannel };
+        }
+        switchConversation(recipientId);
+        closeModal();
+      }
+    });
+
+    document.getElementById('send-message').addEventListener('click', () => {
+      const message = document.getElementById('message-input').value.trim();
+      if (message && currentConversationId) {
+        sendMessageToPeer(currentConversationId, message);
+        displayMessage(currentConversationId, message, 'sent');
+        document.getElementById('message-input').value = '';
+      }
+    });
+
+    function displayMessage(peerId, message, type) {
       const chatMessages = document.getElementById('chat-messages');
       const messageDiv = document.createElement('div');
       messageDiv.className = `message ${type}`;
-      messageDiv.textContent = message;
+
+      const senderIdSpan = document.createElement('span');
+      senderIdSpan.className = 'sender-id';
+      senderIdSpan.textContent = type === 'sent' ? `Você` : `Remetente: ${peerId}`;
+
+      const messageText = document.createElement('span');
+      messageText.textContent = message;
+
+      messageDiv.appendChild(senderIdSpan);
+      messageDiv.appendChild(messageText);
+
       chatMessages.appendChild(messageDiv);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    // Iniciar a conexão P2P
-    document.getElementById('open-modal').addEventListener('click', () => {
-      createPeerConnection();
+    function switchConversation(userId) {
+      currentConversationId = userId;
+      document.getElementById('chat-header').textContent = `Chat com Usuário ${userId}`;
+    }
 
-      // Simular a troca de ofertas/SDP entre peers (sinalização)
-      localPeerConnection.createOffer().then((offer) => {
-        return localPeerConnection.setLocalDescription(offer);
-      }).then(() => {
-        remotePeerConnection.setRemoteDescription(localPeerConnection.localDescription);
-        return remotePeerConnection.createAnswer();
-      }).then((answer) => {
-        return remotePeerConnection.setLocalDescription(answer);
-      }).then(() => {
-        localPeerConnection.setRemoteDescription(remotePeerConnection.localDescription);
-      }).catch((error) => {
-        console.error('Erro na conexão P2P:', error);
-      });
+    document.getElementById('show-user-id').addEventListener('click', () => {
+      document.getElementById('overlay').style.display = 'block';
+      document.getElementById('user-id-modal').style.display = 'block';
     });
+
+    document.getElementById('close-user-id-modal').addEventListener('click', closeModal);
+
+    function closeModal() {
+      document.getElementById('overlay').style.display = 'none';
+      document.querySelectorAll('.modal').forEach(modal => {
+        modal.style.display = 'none';
+      });
+      document.getElementById('recipient-id-input').value = '';
+    }
+
+    function handleOffer(data) {
+      const peerId = data.from;
+      const peerConnection = createPeerConnection(peerId);
+      peerConnections[peerId] = { peerConnection };
+
+      peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer))
+        .then(() => peerConnection.createAnswer())
+        .then(answer => peerConnection.setLocalDescription(answer))
+        .then(() => {
+          signalingSocket.send(JSON.stringify({
+            type: 'answer',
+            from: localPeerId,
+            to: peerId,
+            answer: peerConnection.localDescription
+          }));
+        });
+    }
+
+    function handleAnswer(data) {
+      const peerId = data.from;
+      const peerConnection = peerConnections[peerId].peerConnection;
+      peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+    }
+
+    function handleCandidate(data) {
+      const peerId = data.from;
+      const peerConnection = peerConnections[peerId].peerConnection;
+      peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+    }
   </script>
 </body>
 </html>
