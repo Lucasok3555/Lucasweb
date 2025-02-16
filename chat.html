@@ -37,6 +37,9 @@
       padding: 15px;
       font-size: 18px;
       text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     #chat-messages {
@@ -85,35 +88,7 @@
       background-color: #0056b3;
     }
 
-    #add-user-modal {
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background-color: white;
-      padding: 20px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      z-index: 1000;
-    }
-
-    #add-user-modal input {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-    }
-
-    #add-user-modal button {
-      padding: 10px 20px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
+    /* Modal */
     #overlay {
       display: none;
       position: fixed;
@@ -123,6 +98,37 @@
       height: 100%;
       background-color: rgba(0, 0, 0, 0.5);
       z-index: 999;
+    }
+
+    #user-id-modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      text-align: center;
+    }
+
+    #user-id-modal p {
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+
+    #user-id-modal button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #user-id-modal button:hover {
+      background-color: #0056b3;
     }
   </style>
 </head>
@@ -134,7 +140,10 @@
   </div>
 
   <div id="chat-container">
-    <div id="chat-header">Chat</div>
+    <div id="chat-header">
+      Chat
+      <button id="show-user-id">Mostrar ID</button>
+    </div>
     <div id="chat-messages"></div>
     <div id="chat-input">
       <input type="text" id="message-input" placeholder="Digite sua mensagem..." />
@@ -142,33 +151,36 @@
     </div>
   </div>
 
-  <!-- Modal -->
+  <!-- Modal para Mostrar ID -->
   <div id="overlay"></div>
-  <div id="add-user-modal">
-    <h3>Iniciar Conversa</h3>
-    <input type="text" id="user-id-input" placeholder="Digite o ID do usuário" />
-    <button id="start-conversation">Iniciar</button>
+  <div id="user-id-modal">
+    <p>Seu ID de Usuário é: <strong id="displayed-user-id"></strong></p>
+    <button id="close-user-id-modal">Fechar</button>
   </div>
 
   <script>
     const conversations = {};
     let currentConversationId = null;
 
-    document.getElementById('open-modal').addEventListener('click', () => {
+    // Gerar um ID de usuário aleatório (simulação)
+    const userId = `user-${Math.floor(Math.random() * 10000)}`;
+    document.getElementById('displayed-user-id').textContent = userId;
+
+    // Função para abrir o modal de ID do usuário
+    document.getElementById('show-user-id').addEventListener('click', () => {
       document.getElementById('overlay').style.display = 'block';
-      document.getElementById('add-user-modal').style.display = 'block';
+      document.getElementById('user-id-modal').style.display = 'block';
     });
 
-    document.getElementById('start-conversation').addEventListener('click', () => {
-      const userId = document.getElementById('user-id-input').value.trim();
-      if (userId) {
-        if (!conversations[userId]) {
-          conversations[userId] = [];
-          addConversationToList(userId);
-        }
-        switchConversation(userId);
-        closeModal();
-      }
+    // Função para fechar o modal de ID do usuário
+    document.getElementById('close-user-id-modal').addEventListener('click', () => {
+      document.getElementById('overlay').style.display = 'none';
+      document.getElementById('user-id-modal').style.display = 'none';
+    });
+
+    // Funções de conversa
+    document.getElementById('open-modal').addEventListener('click', () => {
+      alert('Funcionalidade de iniciar nova conversa ainda não implementada.');
     });
 
     document.getElementById('send-message').addEventListener('click', () => {
@@ -179,21 +191,8 @@
       }
     });
 
-    function addConversationToList(userId) {
-      const conversationList = document.getElementById('conversation-list');
-      const listItem = document.createElement('li');
-      listItem.textContent = `Usuário ${userId}`;
-      listItem.addEventListener('click', () => switchConversation(userId));
-      conversationList.appendChild(listItem);
-    }
-
-    function switchConversation(userId) {
-      currentConversationId = userId;
-      document.getElementById('chat-header').textContent = `Chat com Usuário ${userId}`;
-      renderMessages();
-    }
-
     function sendMessage(userId, message) {
+      if (!conversations[userId]) conversations[userId] = [];
       conversations[userId].push({ sender: 'me', text: message });
       renderMessages();
     }
@@ -209,12 +208,6 @@
           chatMessages.appendChild(messageDiv);
         });
       }
-    }
-
-    function closeModal() {
-      document.getElementById('overlay').style.display = 'none';
-      document.getElementById('add-user-modal').style.display = 'none';
-      document.getElementById('user-id-input').value = '';
     }
   </script>
 </body>
