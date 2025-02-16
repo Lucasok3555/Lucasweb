@@ -37,9 +37,6 @@
       padding: 15px;
       font-size: 18px;
       text-align: center;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
     }
 
     #chat-messages {
@@ -51,14 +48,26 @@
 
     .message {
       margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 5px;
+      max-width: 70%;
     }
 
     .message.sent {
-      text-align: right;
+      background-color: #dcf8c6;
+      align-self: flex-end;
     }
 
     .message.received {
-      text-align: left;
+      background-color: #e9ecef;
+      align-self: flex-start;
+    }
+
+    .message .sender-id {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 5px;
+      display: block;
     }
 
     #chat-input {
@@ -100,7 +109,7 @@
       z-index: 999;
     }
 
-    #user-id-modal {
+    #new-conversation-modal {
       display: none;
       position: fixed;
       top: 50%;
@@ -113,12 +122,15 @@
       text-align: center;
     }
 
-    #user-id-modal p {
-      font-size: 18px;
-      margin-bottom: 20px;
+    #new-conversation-modal input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
     }
 
-    #user-id-modal button {
+    #new-conversation-modal button {
       padding: 10px 20px;
       background-color: #007bff;
       color: white;
@@ -127,7 +139,7 @@
       cursor: pointer;
     }
 
-    #user-id-modal button:hover {
+    #new-conversation-modal button:hover {
       background-color: #0056b3;
     }
   </style>
@@ -140,10 +152,7 @@
   </div>
 
   <div id="chat-container">
-    <div id="chat-header">
-      Chat
-      <button id="show-user-id">Mostrar ID</button>
-    </div>
+    <div id="chat-header">Chat</div>
     <div id="chat-messages"></div>
     <div id="chat-input">
       <input type="text" id="message-input" placeholder="Digite sua mensagem..." />
@@ -151,38 +160,39 @@
     </div>
   </div>
 
-  <!-- Modal para Mostrar ID -->
+  <!-- Modal para Nova Conversa -->
   <div id="overlay"></div>
-  <div id="user-id-modal">
-    <p>Seu ID de Usuário é: <strong id="displayed-user-id"></strong></p>
-    <button id="close-user-id-modal">Fechar</button>
+  <div id="new-conversation-modal">
+    <h3>Iniciar Nova Conversa</h3>
+    <input type="text" id="recipient-id-input" placeholder="Digite o ID do destinatário" />
+    <button id="start-conversation">Iniciar</button>
   </div>
 
   <script>
     const conversations = {};
     let currentConversationId = null;
+    const userId = `user-${Math.floor(Math.random() * 10000)}`; // ID do usuário atual
 
-    // Gerar um ID de usuário aleatório (simulação)
-    const userId = `user-${Math.floor(Math.random() * 10000)}`;
-    document.getElementById('displayed-user-id').textContent = userId;
-
-    // Função para abrir o modal de ID do usuário
-    document.getElementById('show-user-id').addEventListener('click', () => {
-      document.getElementById('overlay').style.display = 'block';
-      document.getElementById('user-id-modal').style.display = 'block';
-    });
-
-    // Função para fechar o modal de ID do usuário
-    document.getElementById('close-user-id-modal').addEventListener('click', () => {
-      document.getElementById('overlay').style.display = 'none';
-      document.getElementById('user-id-modal').style.display = 'none';
-    });
-
-    // Funções de conversa
+    // Função para abrir o modal de nova conversa
     document.getElementById('open-modal').addEventListener('click', () => {
-      alert('Funcionalidade de iniciar nova conversa ainda não implementada.');
+      document.getElementById('overlay').style.display = 'block';
+      document.getElementById('new-conversation-modal').style.display = 'block';
     });
 
+    // Função para iniciar uma nova conversa
+    document.getElementById('start-conversation').addEventListener('click', () => {
+      const recipientId = document.getElementById('recipient-id-input').value.trim();
+      if (recipientId) {
+        if (!conversations[recipientId]) {
+          conversations[recipientId] = [];
+          addConversationToList(recipientId);
+        }
+        switchConversation(recipientId);
+        closeModal();
+      }
+    });
+
+    // Função para enviar mensagem
     document.getElementById('send-message').addEventListener('click', () => {
       const message = document.getElementById('message-input').value.trim();
       if (message && currentConversationId) {
@@ -191,12 +201,30 @@
       }
     });
 
-    function sendMessage(userId, message) {
-      if (!conversations[userId]) conversations[userId] = [];
-      conversations[userId].push({ sender: 'me', text: message });
+    // Adiciona uma conversa à lista na barra lateral
+    function addConversationToList(userId) {
+      const conversationList = document.getElementById('conversation-list');
+      const listItem = document.createElement('li');
+      listItem.textContent = `Usuário ${userId}`;
+      listItem.addEventListener('click', () => switchConversation(userId));
+      conversationList.appendChild(listItem);
+    }
+
+    // Alterna para uma conversa específica
+    function switchConversation(userId) {
+      currentConversationId = userId;
+      document.getElementById('chat-header').textContent = `Chat com Usuário ${userId}`;
       renderMessages();
     }
 
+    // Envia uma mensagem para o destinatário
+    function sendMessage(userId, message) {
+      const newMessage = { sender: userId === userId ? 'me' : 'other', text: message, senderId: userId };
+      conversations[currentConversationId].push(newMessage);
+      renderMessages();
+    }
+
+    // Renderiza as mensagens na tela
     function renderMessages() {
       const chatMessages = document.getElementById('chat-messages');
       chatMessages.innerHTML = '';
@@ -204,10 +232,28 @@
         conversations[currentConversationId].forEach(msg => {
           const messageDiv = document.createElement('div');
           messageDiv.className = `message ${msg.sender === 'me' ? 'sent' : 'received'}`;
-          messageDiv.textContent = msg.text;
+
+          // Exibe o ID do remetente e a mensagem
+          const senderIdSpan = document.createElement('span');
+          senderIdSpan.className = 'sender-id';
+          senderIdSpan.textContent = msg.sender === 'me' ? `Você` : `Remetente: ${msg.senderId}`;
+
+          const messageText = document.createElement('span');
+          messageText.textContent = msg.text;
+
+          messageDiv.appendChild(senderIdSpan);
+          messageDiv.appendChild(messageText);
+
           chatMessages.appendChild(messageDiv);
         });
       }
+    }
+
+    // Fecha o modal
+    function closeModal() {
+      document.getElementById('overlay').style.display = 'none';
+      document.getElementById('new-conversation-modal').style.display = 'none';
+      document.getElementById('recipient-id-input').value = '';
     }
   </script>
 </body>
