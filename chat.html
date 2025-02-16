@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Web de Mensagem P2P com WebRTC</title>
+  <title>Web de Mensagem P2P</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -181,127 +181,106 @@
   </div>
 
   <script>
-    const peerConnections = {};
-    let localPeerId = `user-${Math.floor(Math.random() * 10000)}`;
-    document.getElementById('displayed-user-id').textContent = localPeerId;
+    const conversations = {};
+    let currentConversationId = null;
+    const userId = `user-${Math.floor(Math.random() * 10000)}`; // ID do usuário atual
+    document.getElementById('displayed-user-id').textContent = userId;
 
-    const signalingServerUrl = 'wss://your-signaling-server-url'; // Substitua pelo seu servidor de sinalização
-    const signalingSocket = new WebSocket(signalingServerUrl);
-
-    signalingSocket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'offer') {
-        handleOffer(data);
-      } else if (data.type === 'answer') {
-        handleAnswer(data);
-      } else if (data.type === 'candidate') {
-        handleCandidate(data);
-      }
-    };
-
-    function createPeerConnection(peerId) {
-      const peerConnection = new RTCPeerConnection();
-
-      peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          signalingSocket.send(JSON.stringify({
-            type: 'candidate',
-            from: localPeerId,
-            to: peerId,
-            candidate: event.candidate
-          }));
-        }
-      };
-
-      peerConnection.ondatachannel = (event) => {
-        const dataChannel = event.channel;
-        setupDataChannel(dataChannel, peerId);
-      };
-
-      return peerConnection;
-    }
-
-    function setupDataChannel(dataChannel, peerId) {
-      dataChannel.onmessage = (event) => {
-        const message = event.data;
-        displayMessage(peerId, message, 'received');
-      };
-
-      dataChannel.onopen = () => {
-        console.log(`Conexão aberta com ${peerId}`);
-      };
-
-      dataChannel.onclose = () => {
-        console.log(`Conexão fechada com ${peerId}`);
-      };
-    }
-
-    function sendMessageToPeer(peerId, message) {
-      const peerConnection = peerConnections[peerId];
-      if (peerConnection && peerConnection.dataChannel) {
-        peerConnection.dataChannel.send(message);
-      }
-    }
-
+    // Função para abrir o modal de nova conversa
     document.getElementById('open-modal').addEventListener('click', () => {
       document.getElementById('overlay').style.display = 'block';
       document.getElementById('new-conversation-modal').style.display = 'block';
     });
 
+    // Função para iniciar uma nova conversa
     document.getElementById('start-conversation').addEventListener('click', () => {
       const recipientId = document.getElementById('recipient-id-input').value.trim();
       if (recipientId) {
-        if (!peerConnections[recipientId]) {
-          const peerConnection = createPeerConnection(recipientId);
-          const dataChannel = peerConnection.createDataChannel('chat');
-          setupDataChannel(dataChannel, recipientId);
-          peerConnections[recipientId] = { peerConnection, dataChannel };
+        if (!conversations[recipientId]) {
+          conversations[recipientId] = [];
+          addConversationToList(recipientId);
         }
         switchConversation(recipientId);
         closeModal();
       }
     });
 
+    // Função para enviar mensagem
     document.getElementById('send-message').addEventListener('click', () => {
       const message = document.getElementById('message-input').value.trim();
       if (message && currentConversationId) {
-        sendMessageToPeer(currentConversationId, message);
-        displayMessage(currentConversationId, message, 'sent');
+        sendMessage(currentConversationId, message);
         document.getElementById('message-input').value = '';
       }
     });
 
-    function displayMessage(peerId, message, type) {
-      const chatMessages = document.getElementById('chat-messages');
-      const messageDiv = document.createElement('div');
-      messageDiv.className = `message ${type}`;
-
-      const senderIdSpan = document.createElement('span');
-      senderIdSpan.className = 'sender-id';
-      senderIdSpan.textContent = type === 'sent' ? `Você` : `Remetente: ${peerId}`;
-
-      const messageText = document.createElement('span');
-      messageText.textContent = message;
-
-      messageDiv.appendChild(senderIdSpan);
-      messageDiv.appendChild(messageText);
-
-      chatMessages.appendChild(messageDiv);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
+    // Adiciona uma conversa à lista na barra lateral
+    function addConversationToList(userId) {
+      const conversationList = document.getElementById('conversation-list');
+      const listItem = document.createElement('li');
+      listItem.textContent = `Usuário ${userId}`;
+      listItem.addEventListener('click', () => switchConversation(userId));
+      conversationList.appendChild(listItem);
     }
 
+    // Alterna para uma conversa específica
     function switchConversation(userId) {
       currentConversationId = userId;
       document.getElementById('chat-header').textContent = `Chat com Usuário ${userId}`;
+      renderMessages();
     }
 
+    // Envia uma mensagem para o destinatário
+    function sendMessage(userId, message) {
+      const newMessage = { sender: 'me', text: message, senderId: userId };
+      conversations[currentConversationId].push(newMessage);
+
+      // Simula o recebimento da mensagem pelo destinatário
+      simulateMessageReceived(userId, message);
+
+      renderMessages();
+    }
+
+    // Simula o recebimento da mensagem pelo destinatário
+    function simulateMessageReceived(userId, message) {
+      if (!conversations[userId]) {
+        conversations[userId] = [];
+      }
+      conversations[userId].push({ sender: 'other', text: message, senderId: userId });
+    }
+
+    // Renderiza as mensagens na tela
+    function renderMessages() {
+      const chatMessages = document.getElementById('chat-messages');
+      chatMessages.innerHTML = '';
+      if (currentConversationId && conversations[currentConversationId]) {
+        conversations[currentConversationId].forEach(msg => {
+          const messageDiv = document.createElement('div');
+          messageDiv.className = `message ${msg.sender === 'me' ? 'sent' : 'received'}`;
+
+          // Exibe o ID do remetente e a mensagem
+          const senderIdSpan = document.createElement('span');
+          senderIdSpan.className = 'sender-id';
+          senderIdSpan.textContent = msg.sender === 'me' ? `Você` : `Remetente: ${msg.senderId}`;
+
+          const messageText = document.createElement('span');
+          messageText.textContent = msg.text;
+
+          messageDiv.appendChild(senderIdSpan);
+          messageDiv.appendChild(messageText);
+
+          chatMessages.appendChild(messageDiv);
+        });
+      }
+    }
+
+    // Botão para mostrar o ID do usuário
     document.getElementById('show-user-id').addEventListener('click', () => {
       document.getElementById('overlay').style.display = 'block';
       document.getElementById('user-id-modal').style.display = 'block';
     });
 
-    document.getElementById('close-user-id-modal').addEventListener('click', closeModal);
-
+    // Fecha o modal
     function closeModal() {
       document.getElementById('overlay').style.display = 'none';
       document.querySelectorAll('.modal').forEach(modal => {
@@ -310,35 +289,8 @@
       document.getElementById('recipient-id-input').value = '';
     }
 
-    function handleOffer(data) {
-      const peerId = data.from;
-      const peerConnection = createPeerConnection(peerId);
-      peerConnections[peerId] = { peerConnection };
-
-      peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer))
-        .then(() => peerConnection.createAnswer())
-        .then(answer => peerConnection.setLocalDescription(answer))
-        .then(() => {
-          signalingSocket.send(JSON.stringify({
-            type: 'answer',
-            from: localPeerId,
-            to: peerId,
-            answer: peerConnection.localDescription
-          }));
-        });
-    }
-
-    function handleAnswer(data) {
-      const peerId = data.from;
-      const peerConnection = peerConnections[peerId].peerConnection;
-      peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-    }
-
-    function handleCandidate(data) {
-      const peerId = data.from;
-      const peerConnection = peerConnections[peerId].peerConnection;
-      peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-    }
+    // Fechar modal de ID do usuário
+    document.getElementById('close-user-id-modal').addEventListener('click', closeModal);
   </script>
 </body>
 </html>
