@@ -65,15 +65,6 @@
             font-size: 14px;
             color: #333;
         }
-
-        textarea {
-            width: 100%;
-            height: 80px;
-            margin-top: 10px;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
     </style>
 </head>
 <body>
@@ -88,9 +79,6 @@
     <input type="text" id="recipientKey" placeholder="Chave do destinatário">
     <input type="number" id="amount" placeholder="Quantia a enviar">
     <button onclick="sendMoney()">Enviar L$</button>
-
-    <textarea id="transactionReceipt" placeholder="Cole o comprovante de transação aqui"></textarea>
-    <button onclick="applyTransaction()">Aplicar Comprovante</button>
 </div>
 
 <script>
@@ -127,7 +115,10 @@
         document.getElementById("balance").innerText = balance.toFixed(2);
     }
 
-    // Função para enviar dinheiro e gerar um comprovante
+    // Configuração do BroadcastChannel para comunicação P2P
+    const channel = new BroadcastChannel('p2p-wallet');
+
+    // Função para enviar dinheiro
     function sendMoney() {
         const recipientKey = document.getElementById("recipientKey").value.trim();
         const amount = parseFloat(document.getElementById("amount").value);
@@ -149,47 +140,15 @@
         const newSenderBalance = userBalance - amount;
         saveBalance(userKey, newSenderBalance);
 
-        // Gera o comprovante de transação
-        const transactionReceipt = JSON.stringify({
+        // Envia a transação para o canal Broadcast
+        channel.postMessage({
             senderKey: userKey,
             recipientKey: recipientKey,
             amount: amount,
             timestamp: new Date().toISOString()
         });
 
-        // Exibe o comprovante para o usuário copiar
-        alert("Transação realizada! Compartilhe o comprovante abaixo com o destinatário:");
-        document.getElementById("transactionReceipt").value = transactionReceipt;
-    }
-
-    // Função para aplicar um comprovante de transação
-    function applyTransaction() {
-        const transactionReceipt = document.getElementById("transactionReceipt").value.trim();
-
-        if (!transactionReceipt) {
-            alert("Por favor, insira um comprovante de transação válido.");
-            return;
-        }
-
-        try {
-            const transaction = JSON.parse(transactionReceipt);
-
-            // Verifica se o comprovante é válido
-            const userKey = getUserKey();
-            if (transaction.recipientKey !== userKey) {
-                alert("Este comprovante não é destinado a você.");
-                return;
-            }
-
-            // Atualiza o saldo do destinatário
-            const currentBalance = loadBalance(userKey);
-            const newBalance = currentBalance + transaction.amount;
-            saveBalance(userKey, newBalance);
-
-            alert(`L$ ${transaction.amount.toFixed(2)} recebido com sucesso!`);
-        } catch (error) {
-            alert("Comprovante inválido. Por favor, verifique o formato.");
-        }
+        alert(`L$ ${amount.toFixed(2)} enviado para a chave ${recipientKey}`);
     }
 
     // Inicialização da carteira
@@ -197,6 +156,20 @@
         const userKey = getUserKey();
         const userBalance = loadBalance(userKey);
         document.getElementById("balance").innerText = userBalance.toFixed(2);
+
+        // Escuta por mensagens no canal Broadcast
+        channel.onmessage = function (event) {
+            const transaction = event.data;
+
+            // Verifica se a transação é destinada ao usuário atual
+            if (transaction.recipientKey === userKey) {
+                const currentBalance = loadBalance(userKey);
+                const newBalance = currentBalance + transaction.amount;
+                saveBalance(userKey, newBalance);
+
+                alert(`Você recebeu L$ ${transaction.amount.toFixed(2)} de ${transaction.senderKey}`);
+            }
+        };
     };
 </script>
 
