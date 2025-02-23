@@ -8,6 +8,39 @@
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            color: #333;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        input[type="text"],
+        input[type="tel"],
+        input[type="email"] {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
         }
         .contact-list {
             list-style-type: none;
@@ -18,13 +51,16 @@
             padding: 10px;
             margin-bottom: 10px;
             border-radius: 5px;
+            background-color: white;
             position: relative;
         }
         .contact-item h3 {
             margin: 0;
+            color: #333;
         }
         .contact-item p {
             margin: 5px 0;
+            color: #555;
         }
         .contact-item .actions {
             position: absolute;
@@ -33,9 +69,20 @@
         }
         .contact-item .actions button {
             margin-left: 5px;
+            background-color: #28a745;
+        }
+        .contact-item .actions button.delete {
+            background-color: #dc3545;
+        }
+        .contact-item .actions button:hover {
+            opacity: 0.9;
         }
         .hidden {
             display: none;
+        }
+        #exportContacts,
+        #importContacts {
+            margin-right: 10px;
         }
     </style>
 </head>
@@ -95,7 +142,7 @@
                     <p>Email: ${contact.email}</p>
                     <div class="actions">
                         <button onclick="editContact(${index})">Editar</button>
-                        <button onclick="deleteContact(${index})">Excluir</button>
+                        <button class="delete" onclick="deleteContact(${index})">Excluir</button>
                     </div>
                 `;
                 contactList.appendChild(contactItem);
@@ -183,4 +230,4 @@
         loadContacts();
     </script>
 </body>
-</html>
+                                                     </html>
