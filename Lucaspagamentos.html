@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carteira P2P Offline</title>
+    <title>Carteira P2P Online com WebRTC</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -70,18 +70,23 @@
 <body>
 
 <div class="wallet-container">
-    <h1>Carteira P2P Offline</h1>
+    <h1>Carteira P2P Online</h1>
     <div class="balance">Saldo: L$ <span id="balance">20.00</span></div>
 
     <button onclick="showKey()">Mostrar Chave</button>
     <div class="key-display" id="keyDisplay"></div>
 
     <input type="text" id="recipientKey" placeholder="Chave do destinatário">
+    <button onclick="connectToPeer()">Conectar ao Destinatário</button>
+
     <input type="number" id="amount" placeholder="Quantia a enviar">
     <button onclick="sendMoney()">Enviar L$</button>
 </div>
 
+<script src="/socket.io/socket.io.js"></script>
 <script>
+    const socket = io('https://lucasok3555.github.io/Lucasweb/p2pservi%C3%A7o.js');
+
     // Função para criar ou obter a chave do usuário
     function getUserKey() {
         let userKey = localStorage.getItem("userKey");
@@ -115,21 +120,22 @@
         document.getElementById("balance").innerText = balance.toFixed(2);
     }
 
-    // Configuração do BroadcastChannel para comunicação P2P
-    const channel = new BroadcastChannel('p2p-wallet');
+    // Configuração do WebRTC
+    const peerConnection = new RTCPeerConnection();
+
+    let localUserKey = getUserKey();
+    let remoteUserKey = null;
 
     // Função para enviar dinheiro
     function sendMoney() {
-        const recipientKey = document.getElementById("recipientKey").value.trim();
         const amount = parseFloat(document.getElementById("amount").value);
 
-        if (!recipientKey || isNaN(amount) || amount <= 0) {
-            alert("Por favor, insira uma chave válida e uma quantia positiva.");
+        if (isNaN(amount) || amount <= 0) {
+            alert("Por favor, insira uma quantia válida.");
             return;
         }
 
-        const userKey = getUserKey();
-        const userBalance = loadBalance(userKey);
+        const userBalance = loadBalance(localUserKey);
 
         if (amount > userBalance) {
             alert("Saldo insuficiente!");
@@ -138,17 +144,37 @@
 
         // Atualiza o saldo do remetente
         const newSenderBalance = userBalance - amount;
-        saveBalance(userKey, newSenderBalance);
+        saveBalance(localUserKey, newSenderBalance);
 
-        // Envia a transação para o canal Broadcast
-        channel.postMessage({
-            senderKey: userKey,
-            recipientKey: recipientKey,
+        // Envia a transação via WebRTC
+        peerConnection.send(JSON.stringify({
+            senderKey: localUserKey,
+            recipientKey: remoteUserKey,
             amount: amount,
             timestamp: new Date().toISOString()
-        });
+        }));
 
-        alert(`L$ ${amount.toFixed(2)} enviado para a chave ${recipientKey}`);
+        alert(`L$ ${amount.toFixed(2)} enviado para a chave ${remoteUserKey}`);
+    }
+
+    // Função para conectar ao destinatário
+    function connectToPeer() {
+        remoteUserKey = document.getElementById("recipientKey").value.trim();
+
+        if (!remoteUserKey) {
+            alert("Por favor, insira uma chave válida do destinatário.");
+            return;
+        }
+
+        // Cria uma oferta
+        peerConnection.createOffer().then(offer => {
+            return peerConnection.setLocalDescription(offer);
+        }).then(() => {
+            // Envia a oferta para o servidor
+            socket.emit('offer', { senderKey: localUserKey, offer });
+        }).catch(error => {
+            console.error("Erro ao criar oferta:", error);
+        });
     }
 
     // Inicialização da carteira
@@ -157,17 +183,42 @@
         const userBalance = loadBalance(userKey);
         document.getElementById("balance").innerText = userBalance.toFixed(2);
 
-        // Escuta por mensagens no canal Broadcast
-        channel.onmessage = function (event) {
-            const transaction = event.data;
+        // Escuta por mensagens no canal de dados
+        peerConnection.ondatachannel = event => {
+            const dataChannel = event.channel;
 
-            // Verifica se a transação é destinada ao usuário atual
-            if (transaction.recipientKey === userKey) {
-                const currentBalance = loadBalance(userKey);
-                const newBalance = currentBalance + transaction.amount;
-                saveBalance(userKey, newBalance);
+            dataChannel.onmessage = event => {
+                const transaction = JSON.parse(event.data);
 
-                alert(`Você recebeu L$ ${transaction.amount.toFixed(2)} de ${transaction.senderKey}`);
+                if (transaction.recipientKey === userKey) {
+                    const currentBalance = loadBalance(userKey);
+                    const newBalance = currentBalance + transaction.amount;
+                    saveBalance(userKey, newBalance);
+
+                    alert(`Você recebeu L$ ${transaction.amount.toFixed(2)} de ${transaction.senderKey}`);
+                }
+            };
+        };
+
+        // Cria um canal de dados para enviar transações
+        const dataChannel = peerConnection.createDataChannel("transactions");
+
+        // Recebe a resposta do destinatário
+        socket.on('answer', data => {
+            const { answer } = data;
+            peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+        });
+
+        // Recebe candidatos ICE
+        socket.on('ice-candidate', data => {
+            const { candidate } = data;
+            peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        });
+
+        // Envia candidatos ICE para o servidor
+        peerConnection.onicecandidate = event => {
+            if (event.candidate) {
+                socket.emit('ice-candidate', { targetKey: remoteUserKey, candidate: event.candidate });
             }
         };
     };
