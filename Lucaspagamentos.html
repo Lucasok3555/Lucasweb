@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carteira P2P</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .wallet-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .balance {
+            text-align: center;
+            font-size: 24px;
+            color: #5cb85c;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #4cae4c;
+        }
+
+        .key-display {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+<div class="wallet-container">
+    <h1>Carteira P2P</h1>
+    <div class="balance">Saldo: L$ <span id="balance">20.00</span></div>
+
+    <button onclick="showKey()">Mostrar Chave</button>
+    <div class="key-display" id="keyDisplay"></div>
+
+    <input type="text" id="recipientKey" placeholder="Chave do destinatário">
+    <input type="number" id="amount" placeholder="Quantia a enviar">
+    <button onclick="sendMoney()">Enviar L$</button>
+</div>
+
+<script>
+    // Função para criar ou obter a chave do usuário
+    function getUserKey() {
+        let userKey = getCookie("userKey");
+        if (!userKey) {
+            userKey = generateRandomKey();
+            setCookie("userKey", userKey, 365);
+        }
+        return userKey;
+    }
+
+    // Função para gerar uma chave aleatória
+    function generateRandomKey() {
+        return Math.random().toString(36).substr(2, 10);
+    }
+
+    // Função para mostrar a chave do usuário
+    function showKey() {
+        const userKey = getUserKey();
+        document.getElementById("keyDisplay").innerText = `Sua chave: ${userKey}`;
+    }
+
+    // Função para enviar dinheiro
+    function sendMoney() {
+        const recipientKey = document.getElementById("recipientKey").value;
+        const amount = parseFloat(document.getElementById("amount").value);
+
+        if (!recipientKey || isNaN(amount) || amount <= 0) {
+            alert("Por favor, insira uma chave válida e uma quantia positiva.");
+            return;
+        }
+
+        const userBalance = parseFloat(getCookie("balance")) || 20.00;
+
+        if (amount > userBalance) {
+            alert("Saldo insuficiente!");
+            return;
+        }
+
+        // Atualiza o saldo do remetente
+        const newSenderBalance = userBalance - amount;
+        setCookie("balance", newSenderBalance.toFixed(2), 365);
+        document.getElementById("balance").innerText = newSenderBalance.toFixed(2);
+
+        // Atualiza o saldo do destinatário (simulação offline)
+        const recipientBalance = parseFloat(getCookie(`balance_${recipientKey}`)) || 20.00;
+        const newRecipientBalance = recipientBalance + amount;
+        setCookie(`balance_${recipientKey}`, newRecipientBalance.toFixed(2), 365);
+
+        alert(`L$ ${amount.toFixed(2)} enviado para a chave ${recipientKey}`);
+    }
+
+    // Função para obter cookies
+    function getCookie(name) {
+        const value = "; " + document.cookie;
+        const parts = value.split("; " + name + "=");
+        if (parts.length === 2) return parts.pop().split(";").shift();
+    }
+
+    // Função para definir cookies
+    function setCookie(name, value, days) {
+        const date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        const expires = "expires=" + date.toUTCString();
+        document.cookie = name + "=" + value + ";" + expires + ";path=/";
+    }
+
+    // Inicialização da carteira
+    window.onload = function () {
+        const userKey = getUserKey();
+        const userBalance = parseFloat(getCookie("balance")) || 20.00;
+        document.getElementById("balance").innerText = userBalance.toFixed(2);
+    };
+</script>
+
+</body>
+</html>
