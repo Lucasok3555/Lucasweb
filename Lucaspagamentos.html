@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carteira P2P</title>
+    <title>Carteira P2P Offline</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -21,7 +21,7 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            width: 300px;
+            width: 350px;
         }
 
         h1 {
@@ -65,12 +65,21 @@
             font-size: 14px;
             color: #333;
         }
+
+        textarea {
+            width: 100%;
+            height: 80px;
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
 
 <div class="wallet-container">
-    <h1>Carteira P2P</h1>
+    <h1>Carteira P2P Offline</h1>
     <div class="balance">Saldo: L$ <span id="balance">20.00</span></div>
 
     <button onclick="showKey()">Mostrar Chave</button>
@@ -79,15 +88,18 @@
     <input type="text" id="recipientKey" placeholder="Chave do destinatário">
     <input type="number" id="amount" placeholder="Quantia a enviar">
     <button onclick="sendMoney()">Enviar L$</button>
+
+    <textarea id="transactionReceipt" placeholder="Cole o comprovante de transação aqui"></textarea>
+    <button onclick="applyTransaction()">Aplicar Comprovante</button>
 </div>
 
 <script>
     // Função para criar ou obter a chave do usuário
     function getUserKey() {
-        let userKey = getCookie("userKey");
+        let userKey = localStorage.getItem("userKey");
         if (!userKey) {
             userKey = generateRandomKey();
-            setCookie("userKey", userKey, 365);
+            localStorage.setItem("userKey", userKey);
         }
         return userKey;
     }
@@ -103,9 +115,21 @@
         document.getElementById("keyDisplay").innerText = `Sua chave: ${userKey}`;
     }
 
-    // Função para enviar dinheiro
+    // Função para carregar o saldo do usuário
+    function loadBalance(userKey) {
+        const balance = localStorage.getItem(`balance_${userKey}`);
+        return balance ? parseFloat(balance) : 20.00; // Saldo inicial padrão
+    }
+
+    // Função para salvar o saldo do usuário
+    function saveBalance(userKey, balance) {
+        localStorage.setItem(`balance_${userKey}`, balance.toFixed(2));
+        document.getElementById("balance").innerText = balance.toFixed(2);
+    }
+
+    // Função para enviar dinheiro e gerar um comprovante
     function sendMoney() {
-        const recipientKey = document.getElementById("recipientKey").value;
+        const recipientKey = document.getElementById("recipientKey").value.trim();
         const amount = parseFloat(document.getElementById("amount").value);
 
         if (!recipientKey || isNaN(amount) || amount <= 0) {
@@ -113,7 +137,8 @@
             return;
         }
 
-        const userBalance = parseFloat(getCookie("balance")) || 20.00;
+        const userKey = getUserKey();
+        const userBalance = loadBalance(userKey);
 
         if (amount > userBalance) {
             alert("Saldo insuficiente!");
@@ -122,36 +147,55 @@
 
         // Atualiza o saldo do remetente
         const newSenderBalance = userBalance - amount;
-        setCookie("balance", newSenderBalance.toFixed(2), 365);
-        document.getElementById("balance").innerText = newSenderBalance.toFixed(2);
+        saveBalance(userKey, newSenderBalance);
 
-        // Atualiza o saldo do destinatário (simulação offline)
-        const recipientBalance = parseFloat(getCookie(`balance_${recipientKey}`)) || 20.00;
-        const newRecipientBalance = recipientBalance + amount;
-        setCookie(`balance_${recipientKey}`, newRecipientBalance.toFixed(2), 365);
+        // Gera o comprovante de transação
+        const transactionReceipt = JSON.stringify({
+            senderKey: userKey,
+            recipientKey: recipientKey,
+            amount: amount,
+            timestamp: new Date().toISOString()
+        });
 
-        alert(`L$ ${amount.toFixed(2)} enviado para a chave ${recipientKey}`);
+        // Exibe o comprovante para o usuário copiar
+        alert("Transação realizada! Compartilhe o comprovante abaixo com o destinatário:");
+        document.getElementById("transactionReceipt").value = transactionReceipt;
     }
 
-    // Função para obter cookies
-    function getCookie(name) {
-        const value = "; " + document.cookie;
-        const parts = value.split("; " + name + "=");
-        if (parts.length === 2) return parts.pop().split(";").shift();
-    }
+    // Função para aplicar um comprovante de transação
+    function applyTransaction() {
+        const transactionReceipt = document.getElementById("transactionReceipt").value.trim();
 
-    // Função para definir cookies
-    function setCookie(name, value, days) {
-        const date = new Date();
-        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-        const expires = "expires=" + date.toUTCString();
-        document.cookie = name + "=" + value + ";" + expires + ";path=/";
+        if (!transactionReceipt) {
+            alert("Por favor, insira um comprovante de transação válido.");
+            return;
+        }
+
+        try {
+            const transaction = JSON.parse(transactionReceipt);
+
+            // Verifica se o comprovante é válido
+            const userKey = getUserKey();
+            if (transaction.recipientKey !== userKey) {
+                alert("Este comprovante não é destinado a você.");
+                return;
+            }
+
+            // Atualiza o saldo do destinatário
+            const currentBalance = loadBalance(userKey);
+            const newBalance = currentBalance + transaction.amount;
+            saveBalance(userKey, newBalance);
+
+            alert(`L$ ${transaction.amount.toFixed(2)} recebido com sucesso!`);
+        } catch (error) {
+            alert("Comprovante inválido. Por favor, verifique o formato.");
+        }
     }
 
     // Inicialização da carteira
     window.onload = function () {
         const userKey = getUserKey();
-        const userBalance = parseFloat(getCookie("balance")) || 20.00;
+        const userBalance = loadBalance(userKey);
         document.getElementById("balance").innerText = userBalance.toFixed(2);
     };
 </script>
