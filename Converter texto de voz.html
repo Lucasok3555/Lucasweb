@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Texto para Voz</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 50px;
+    }
+    textarea {
+      width: 80%;
+      height: 100px;
+      margin-bottom: 20px;
+      padding: 10px;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #audio-player {
+      margin-top: 20px;
+      display: none;
+    }
+    #download-btn {
+      display: none;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Conversor de Texto para Voz</h1>
+  <textarea id="text-input" placeholder="Digite o texto aqui..."></textarea><br>
+  <button id="speak-btn">Falar</button>
+  <button id="play-btn" style="display: none;">Escutar Áudio</button>
+  <button id="download-btn">Baixar Áudio</button>
+
+  <!-- Elemento de áudio oculto -->
+  <audio id="audio-player" controls></audio>
+
+  <script src="https://cdn.jsdelivr.net/npm/recorder-js@latest/dist/recorder.min.js"></script>
+  <script>
+    const textInput = document.getElementById('text-input');
+    const speakBtn = document.getElementById('speak-btn');
+    const playBtn = document.getElementById('play-btn');
+    const downloadBtn = document.getElementById('download-btn');
+    const audioPlayer = document.getElementById('audio-player');
+
+    let audioChunks = [];
+    let mediaRecorder;
+
+    // Função para iniciar a gravação
+    async function startRecording() {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = event => {
+        audioChunks.push(event.data);
+      };
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+
+        // Configura o player de áudio para reproduzir o áudio gravado
+        audioPlayer.src = audioUrl;
+        audioPlayer.style.display = 'block';
+        playBtn.style.display = 'inline-block';
+
+        // Configura o botão de download
+        downloadBtn.href = audioUrl;
+        downloadBtn.download = 'voz-gravada.wav';
+        downloadBtn.style.display = 'inline-block';
+
+        audioChunks = [];
+      };
+      mediaRecorder.start();
+    }
+
+    // Função para parar a gravação
+    function stopRecording() {
+      mediaRecorder.stop();
+    }
+
+    // Evento para falar o texto
+    speakBtn.addEventListener('click', () => {
+      const text = textInput.value;
+      if (text.trim() === '') {
+        alert('Por favor, digite algum texto.');
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      speechSynthesis.speak(utterance);
+
+      // Iniciar gravação ao falar
+      startRecording();
+
+      // Parar gravação quando o texto terminar de ser falado
+      utterance.onend = () => {
+        stopRecording();
+      };
+    });
+
+    // Evento para reproduzir o áudio
+    playBtn.addEventListener('click', () => {
+      audioPlayer.play();
+    });
+  </script>
+</body>
+</html>
