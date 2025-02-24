@@ -221,11 +221,13 @@
     });
 
     document.getElementById('send-message').addEventListener('click', () => {
-      const message = document.getElementById('message-input').value.trim();
+      const messageInput = document.getElementById('message-input');
+      const message = messageInput.value.trim();
+
       if (message && currentConnection && currentConnection.open) {
         currentConnection.send(message);
         displayMessage(localPeerId, message, 'sent');
-        document.getElementById('message-input').value = '';
+        messageInput.value = '';
       } else {
         alert('Você precisa estar conectado a alguém para enviar mensagens.');
       }
