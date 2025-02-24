@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Baixar Arquivo do IPFS</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      padding: 0;
+      background-color: #f4f4f9;
+    }
+    h1 {
+      color: #333;
+    }
+    input[type="text"] {
+      width: 300px;
+      padding: 10px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .message {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #555;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1>Baixar Arquivo do IPFS</h1>
+  <input type="text" id="cidInput" placeholder="Insira o CID do arquivo no IPFS">
+  <button onclick="downloadFile()">Baixar Arquivo</button>
+  <div class="message" id="message"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ipfs-http-client/dist/index.min.js"></script>
+  <script>
+    async function downloadFile() {
+      const cid = document.getElementById('cidInput').value.trim();
+      const messageElement = document.getElementById('message');
+
+      if (!cid) {
+        messageElement.textContent = 'Por favor, insira um CID válido.';
+        messageElement.className = 'error';
+        return;
+      }
+
+      try {
+        // Conectando ao nó IPFS (usando o gateway público)
+        const ipfs = window.IpfsHttpClient.create({ host: 'ipfs.io', port: 443, protocol: 'https' });
+
+        messageElement.textContent = 'Buscando arquivo no IPFS...';
+        messageElement.className = '';
+
+        // Obtendo os dados do arquivo pelo CID
+        const chunks = [];
+        for await (const chunk of ipfs.cat(cid)) {
+          chunks.push(chunk);
+        }
+
+        // Convertendo os chunks em um Blob
+        const blob = new Blob(chunks);
+
+        // Criando um link de download
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = cid; // Nome padrão do arquivo é o CID
+        a.click();
+
+        messageElement.textContent = 'Arquivo baixado com sucesso!';
+        messageElement.className = '';
+      } catch (error) {
+        console.error('Erro ao baixar o arquivo:', error);
+        messageElement.textContent = 'Erro ao baixar o arquivo. Verifique o CID ou sua conexão.';
+        messageElement.className = 'error';
+      }
+    }
+  </script>
+</body>
+</html>
