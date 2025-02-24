@@ -3,155 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Feed de Vídeos - PeerTube</title>
+    <title>Feed de Vídeos - YouTube</title>
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
             background-color: #f4f4f4;
-        }
-
-        /* Estilo da barra de pesquisa */
-        #search-bar {
             display: flex;
+            flex-direction: column;
+            align-items: center;
             justify-content: center;
-            padding: 20px;
-            background-color: #fff;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            height: 100vh;
         }
 
-        #search-bar input {
-            width: 60%;
-            padding: 10px;
-            font-size: 16px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-
-        #search-bar button {
-            padding: 10px 20px;
-            margin-left: 10px;
-            font-size: 16px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        #search-bar button:hover {
-            background-color: #0056b3;
-        }
-
-        /* Estilo do feed de vídeos */
+        /* Estilo do feed */
         #video-feed {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .video-item {
-            width: 300px;
-            margin: 10px;
-            cursor: pointer;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            overflow: hidden;
-            background-color: #fff;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-
-        .video-item img {
-            width: 100%;
-            height: auto;
-            object-fit: cover; /* Garante que a imagem cubra o espaço sem distorção */
-        }
-
-        .video-item h3 {
-            font-size: 16px;
-            margin: 10px;
             text-align: center;
-            word-wrap: break-word; /* Quebra palavras longas */
+            width: 80%;
+            max-width: 800px;
+        }
+
+        /* Estilo do player de vídeo */
+        #video-player {
+            margin-bottom: 20px;
+        }
+
+        /* Estilo das informações do vídeo */
+        #video-info {
+            font-size: 16px;
+            color: #333;
         }
     </style>
 </head>
 <body>
-    <!-- Barra de Pesquisa -->
-    <div id="search-bar">
-        <input type="text" id="search-input" placeholder="Pesquisar vídeos...">
-        <button onclick="searchVideos()">Buscar</button>
+    <!-- Feed de Vídeos -->
+    <div id="video-feed">
+        <!-- Player de Vídeo -->
+        <div id="video-player">
+            <video id="plyr-video" controls playsinline></video>
+        </div>
+
+        <!-- Informações do Vídeo -->
+        <div id="video-info">
+            <h2 id="video-title">Carregando...</h2>
+            <p id="video-views">Visualizações: Carregando...</p>
+        </div>
     </div>
 
-    <!-- Feed de Vídeos -->
-    <div id="video-feed"></div>
-
+    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
     <script>
-        // URL da API do PeerTube
-        const PEERTUBE_API_URL = 'https://peertube.cpy.re/api/v1/videos';
+        // Chave da API do YouTube
+        const YOUTUBE_API_KEY = 'AIzaSyDR0YdRMRJUTwJtdQExWTpIKmGxiW9F4Iw';
 
-        // Função para carregar os vídeos populares do PeerTube
-        async function loadTrendingVideos() {
+        // ID do vídeo inicial (substitua pelo ID de um vídeo do YouTube)
+        const INITIAL_VIDEO_ID = 'dQw4w9WgXcQ'; // Exemplo: "Never Gonna Give You Up"
+
+        // Função para carregar os detalhes do vídeo usando a API do YouTube
+        async function loadVideoDetails(videoId) {
             try {
-                const response = await fetch(`${PEERTUBE_API_URL}?sort=-createdAt&count=10`); // Busca os 10 vídeos mais recentes
+                const response = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoId}&key=${YOUTUBE_API_KEY}`);
                 const data = await response.json();
-                displayVideos(data.data);
+
+                if (!data.items || data.items.length === 0) {
+                    alert('Vídeo não encontrado.');
+                    return;
+                }
+
+                const video = data.items[0];
+                const title = video.snippet.title;
+                const views = video.statistics.viewCount;
+
+                // Atualiza o título e as visualizações
+                document.getElementById('video-title').textContent = title;
+                document.getElementById('video-views').textContent = `Visualizações: ${views}`;
+
+                // Define a fonte do vídeo no player
+                const videoElement = document.getElementById('plyr-video');
+                videoElement.src = `https://www.youtube.com/embed/${videoId}?controls=0&enablejsapi=1`;
+
+                // Inicializa o Plyr
+                const player = new Plyr('#plyr-video', {
+                    controls: ['play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen']
+                });
             } catch (error) {
-                console.error('Erro ao carregar vídeos:', error);
-                alert('Não foi possível carregar os vídeos. Tente novamente mais tarde.');
+                console.error('Erro ao carregar detalhes do vídeo:', error);
+                alert('Não foi possível carregar este vídeo.');
             }
         }
 
-        // Função para exibir os vídeos no feed
-        function displayVideos(videos) {
-            const videoFeed = document.getElementById('video-feed');
-            videoFeed.innerHTML = ''; // Limpa o feed antes de adicionar novos vídeos
-
-            videos.forEach(video => {
-                const videoItem = document.createElement('div');
-                videoItem.classList.add('video-item');
-
-                // Cria a estrutura do vídeo
-                videoItem.innerHTML = `
-                    <img src="${video.thumbnailPath}" alt="${video.name}" onerror="this.src='https://via.placeholder.com/300';">
-                    <h3>${video.name}</h3>
-                `;
-
-                // Adiciona o evento de clique para abrir a página de detalhes
-                videoItem.addEventListener('click', () => openVideoPage(video));
-
-                videoFeed.appendChild(videoItem);
-            });
-        }
-
-        // Função para abrir a página de detalhes do vídeo
-        function openVideoPage(video) {
-            // Salva os dados do vídeo no localStorage
-            localStorage.setItem('selectedVideo', JSON.stringify(video));
-            window.location.href = 'https://lucasok3555.github.io/Lucasweb/Youccvideo.html'; // Redireciona para a página de detalhes
-        }
-
-        // Função para pesquisar vídeos
-        async function searchVideos() {
-            const query = document.getElementById('search-input').value.trim();
-            if (!query) {
-                alert('Por favor, insira um termo de pesquisa.');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${PEERTUBE_API_URL}?search=${encodeURIComponent(query)}&count=10`);
-                const data = await response.json();
-                displayVideos(data.data);
-            } catch (error) {
-                console.error('Erro ao pesquisar vídeos:', error);
-                alert('Não foi possível encontrar vídeos com esse termo.');
-            }
-        }
-
-        // Carrega os vídeos quando a página é carregada
-        document.addEventListener('DOMContentLoaded', loadTrendingVideos);
+        // Carrega o vídeo inicial quando a página é carregada
+        document.addEventListener('DOMContentLoaded', () => {
+            loadVideoDetails(INITIAL_VIDEO_ID);
+        });
     </script>
 </body>
 </html>
