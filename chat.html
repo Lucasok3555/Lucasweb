@@ -124,6 +124,11 @@
       text-align: center;
     }
 
+    .modal p {
+      margin: 10px 0;
+      font-size: 14px;
+    }
+
     .modal input {
       width: 100%;
       padding: 10px;
@@ -190,10 +195,11 @@
     </div>
   </div>
 
-  <!-- Modal para Inserir ID -->
+  <!-- Modal para Iniciar Conversa -->
   <div id="overlay"></div>
   <div id="new-conversation-modal" class="modal">
     <h3>Iniciar Nova Conversa</h3>
+    <p>Seu ID: <strong id="modal-user-id"></strong></p>
     <input type="text" id="recipient-id-input" placeholder="Digite o ID do destinatário" />
     <button id="start-conversation">Iniciar</button>
   </div>
@@ -209,11 +215,13 @@
     if (savedPeerId) {
       localPeerId = savedPeerId;
       document.getElementById('displayed-user-id').textContent = localPeerId;
+      document.getElementById('modal-user-id').textContent = localPeerId;
     } else {
       peer.on('open', (id) => {
         localPeerId = id;
         localStorage.setItem('peerId', localPeerId); // Salvar ID no localStorage
         document.getElementById('displayed-user-id').textContent = localPeerId;
+        document.getElementById('modal-user-id').textContent = localPeerId;
       });
     }
 
