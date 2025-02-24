@@ -21,6 +21,10 @@
       box-sizing: border-box;
     }
 
+    #sidebar h2 {
+      margin-top: 0;
+    }
+
     #chat-container {
       flex-grow: 1;
       display: flex;
@@ -138,9 +142,9 @@
 </head>
 <body>
   <div id="sidebar">
-    <h2>Conversas</h2>
+    <h2>Contatos</h2>
     <button id="open-modal">+</button>
-    <ul id="conversation-list"></ul>
+    <ul id="contact-list"></ul>
   </div>
 
   <div id="chat-container">
@@ -175,10 +179,40 @@
     let localPeerId = null;
     let currentConnection = null;
 
+    // Carregar contatos salvos no localStorage
+    let contacts = JSON.parse(localStorage.getItem('contacts')) || [];
+    const contactList = document.getElementById('contact-list');
+
+    // Salvar contatos no localStorage
+    function saveContacts() {
+      localStorage.setItem('contacts', JSON.stringify(contacts));
+    }
+
+    // Adicionar contato à lista
+    function addContact(userId) {
+      if (!contacts.includes(userId)) {
+        contacts.push(userId);
+        saveContacts();
+        renderContacts();
+      }
+    }
+
+    // Renderizar contatos na barra lateral
+    function renderContacts() {
+      contactList.innerHTML = '';
+      contacts.forEach(contact => {
+        const listItem = document.createElement('li');
+        listItem.textContent = `Usuário ${contact}`;
+        listItem.addEventListener('click', () => switchConversation(contact));
+        contactList.appendChild(listItem);
+      });
+    }
+
     // Quando o ID do PeerJS estiver disponível
     peer.on('open', (id) => {
       localPeerId = id;
       document.getElementById('displayed-user-id').textContent = localPeerId;
+      renderContacts(); // Renderizar contatos ao carregar a página
     });
 
     // Quando receber uma conexão de outro peer
@@ -213,6 +247,7 @@
       if (recipientId && recipientId !== localPeerId) {
         const conn = peer.connect(recipientId);
         setupConnection(conn);
+        addContact(recipientId); // Adicionar contato à lista
         switchConversation(recipientId);
         closeModal();
       } else {
