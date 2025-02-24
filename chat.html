@@ -21,10 +21,6 @@
       box-sizing: border-box;
     }
 
-    #sidebar h2 {
-      margin-top: 0;
-    }
-
     #chat-container {
       flex-grow: 1;
       display: flex;
@@ -64,13 +60,6 @@
     .message.received {
       background-color: #e9ecef;
       align-self: flex-start;
-    }
-
-    .message .sender-id {
-      font-size: 12px;
-      color: #666;
-      margin-bottom: 5px;
-      display: block;
     }
 
     #chat-input {
@@ -183,9 +172,8 @@
   <script src="https://cdn.jsdelivr.net/npm/peerjs@1.4.7/dist/peerjs.min.js"></script>
   <script>
     const peer = new Peer();
-    const connections = {};
     let localPeerId = null;
-    let currentConversationId = null;
+    let currentConnection = null;
 
     // Quando o ID do PeerJS estiver disponível
     peer.on('open', (id) => {
@@ -195,24 +183,23 @@
 
     // Quando receber uma conexão de outro peer
     peer.on('connection', (conn) => {
-      const remotePeerId = conn.peer;
       setupConnection(conn);
     });
 
     function setupConnection(conn) {
-      const remotePeerId = conn.peer;
-      connections[remotePeerId] = conn;
+      currentConnection = conn;
 
       conn.on('data', (data) => {
-        displayMessage(remotePeerId, data, 'received');
+        displayMessage(conn.peer, data, 'received');
       });
 
       conn.on('open', () => {
-        console.log(`Conexão aberta com ${remotePeerId}`);
+        console.log(`Conexão aberta com ${conn.peer}`);
       });
 
       conn.on('close', () => {
-        console.log(`Conexão fechada com ${remotePeerId}`);
+        console.log(`Conexão fechada com ${conn.peer}`);
+        currentConnection = null;
       });
     }
 
@@ -224,24 +211,23 @@
     document.getElementById('start-conversation').addEventListener('click', () => {
       const recipientId = document.getElementById('recipient-id-input').value.trim();
       if (recipientId && recipientId !== localPeerId) {
-        if (!connections[recipientId]) {
-          const conn = peer.connect(recipientId);
-          setupConnection(conn);
-        }
+        const conn = peer.connect(recipientId);
+        setupConnection(conn);
         switchConversation(recipientId);
         closeModal();
+      } else {
+        alert('Por favor, insira um ID válido.');
       }
     });
 
     document.getElementById('send-message').addEventListener('click', () => {
       const message = document.getElementById('message-input').value.trim();
-      if (message && currentConversationId) {
-        const conn = connections[currentConversationId];
-        if (conn && conn.open) {
-          conn.send(message);
-          displayMessage(currentConversationId, message, 'sent');
-          document.getElementById('message-input').value = '';
-        }
+      if (message && currentConnection && currentConnection.open) {
+        currentConnection.send(message);
+        displayMessage(localPeerId, message, 'sent');
+        document.getElementById('message-input').value = '';
+      } else {
+        alert('Você precisa estar conectado a alguém para enviar mensagens.');
       }
     });
 
@@ -251,8 +237,10 @@
       messageDiv.className = `message ${type}`;
 
       const senderIdSpan = document.createElement('span');
-      senderIdSpan.className = 'sender-id';
       senderIdSpan.textContent = type === 'sent' ? `Você` : `Remetente: ${peerId}`;
+      senderIdSpan.style.fontSize = '12px';
+      senderIdSpan.style.color = '#666';
+      senderIdSpan.style.display = 'block';
 
       const messageText = document.createElement('span');
       messageText.textContent = message;
@@ -265,7 +253,6 @@
     }
 
     function switchConversation(userId) {
-      currentConversationId = userId;
       document.getElementById('chat-header').textContent = `Chat com Usuário ${userId}`;
     }
 
