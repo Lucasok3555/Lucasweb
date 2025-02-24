@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detalhes do Vídeo - PeerTube</title>
+    <title>Detalhes do Vídeo - Invidious</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -57,32 +57,35 @@
     </div>
 
     <script>
-        // Função para carregar os dados do vídeo salvo no localStorage
-        function loadVideoDetails() {
-            const selectedVideo = JSON.parse(localStorage.getItem('selectedVideo'));
+        // Função para carregar os detalhes do vídeo
+        async function loadVideoDetails() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const videoId = urlParams.get('videoId');
 
-            if (!selectedVideo) {
+            if (!videoId) {
                 alert('Vídeo não encontrado.');
-                window.location.href = 'index.html'; // Redireciona de volta para a página inicial
+                window.close(); // Fecha a janela se o vídeo não for encontrado
                 return;
             }
 
-            const videoElement = document.getElementById('video-element');
-            const videoTitle = document.getElementById('video-title');
-            const videoDescription = document.getElementById('video-description');
+            try {
+                const response = await fetch(`https://inv.nadeko.net/api/v1/videos/${videoId}`);
+                const video = await response.json();
 
-            // Define o título e a descrição do vídeo
-            videoTitle.textContent = selectedVideo.name;
-            videoDescription.textContent = selectedVideo.description || 'Sem descrição disponível.';
+                const videoElement = document.getElementById('video-element');
+                const videoTitle = document.getElementById('video-title');
+                const videoDescription = document.getElementById('video-description');
 
-            // Define a fonte do vídeo
-            if (selectedVideo.streamingPlaylists && selectedVideo.streamingPlaylists.length > 0) {
-                videoElement.src = selectedVideo.streamingPlaylists[0].playlistUrl;
-            } else if (selectedVideo.files && selectedVideo.files.length > 0) {
-                videoElement.src = selectedVideo.files[0].fileUrl;
-            } else {
-                alert('Este vídeo não está disponível para reprodução.');
-                window.location.href = 'index.html'; // Redireciona de volta para a página inicial
+                // Define o título e a descrição do vídeo
+                videoTitle.textContent = video.title;
+                videoDescription.textContent = video.description || 'Sem descrição disponível.';
+
+                // Define a fonte do vídeo
+                videoElement.src = `https://inv.nadeko.net/latest_version?id=${videoId}&itag=22`;
+            } catch (error) {
+                console.error('Erro ao carregar detalhes do vídeo:', error);
+                alert('Não foi possível carregar este vídeo.');
+                window.close(); // Fecha a janela se ocorrer um erro
             }
         }
 
