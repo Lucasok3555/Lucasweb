@@ -22,10 +22,6 @@
       font-size: 16px;
       cursor: pointer;
     }
-    #audio-player {
-      margin-top: 20px;
-      display: none;
-    }
     #download-btn {
       display: none;
       margin-top: 20px;
@@ -36,19 +32,13 @@
   <h1>Conversor de Texto para Voz</h1>
   <textarea id="text-input" placeholder="Digite o texto aqui..."></textarea><br>
   <button id="speak-btn">Falar</button>
-  <button id="play-btn" style="display: none;">Escutar Áudio</button>
   <button id="download-btn">Baixar Áudio</button>
-
-  <!-- Elemento de áudio oculto -->
-  <audio id="audio-player" controls></audio>
 
   <script src="https://cdn.jsdelivr.net/npm/recorder-js@latest/dist/recorder.min.js"></script>
   <script>
     const textInput = document.getElementById('text-input');
     const speakBtn = document.getElementById('speak-btn');
-    const playBtn = document.getElementById('play-btn');
     const downloadBtn = document.getElementById('download-btn');
-    const audioPlayer = document.getElementById('audio-player');
 
     let audioChunks = [];
     let mediaRecorder;
@@ -63,17 +53,9 @@
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
         const audioUrl = URL.createObjectURL(audioBlob);
-
-        // Configura o player de áudio para reproduzir o áudio gravado
-        audioPlayer.src = audioUrl;
-        audioPlayer.style.display = 'block';
-        playBtn.style.display = 'inline-block';
-
-        // Configura o botão de download
         downloadBtn.href = audioUrl;
         downloadBtn.download = 'voz-gravada.wav';
         downloadBtn.style.display = 'inline-block';
-
         audioChunks = [];
       };
       mediaRecorder.start();
@@ -102,11 +84,6 @@
       utterance.onend = () => {
         stopRecording();
       };
-    });
-
-    // Evento para reproduzir o áudio
-    playBtn.addEventListener('click', () => {
-      audioPlayer.play();
     });
   </script>
 </body>
