@@ -38,6 +38,67 @@
       align-items: center;
     }
 
+    #chat-messages {
+      flex-grow: 1;
+      padding: 20px;
+      overflow-y: auto;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .message {
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 5px;
+      max-width: 70%;
+      position: relative;
+    }
+
+    .message.sent {
+      background-color: #dcf8c6;
+      align-self: flex-end;
+    }
+
+    .message.received {
+      background-color: #e9ecef;
+      align-self: flex-start;
+    }
+
+    .message .trash-icon {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      cursor: pointer;
+      color: red;
+      font-size: 14px;
+    }
+
+    #chat-input {
+      display: flex;
+      padding: 10px;
+      border-top: 1px solid #ddd;
+    }
+
+    #chat-input input[type="text"] {
+      flex-grow: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-right: 10px;
+    }
+
+    #chat-input button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #chat-input button:hover {
+      background-color: #0056b3;
+    }
+
     /* Modal */
     #overlay {
       display: none;
@@ -83,25 +144,95 @@
     .modal button:hover {
       background-color: #0056b3;
     }
+
+    /* Contact List */
+    .contact {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .contact .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: #ccc;
+      margin-right: 10px;
+    }
+
+    .contact .details {
+      flex-grow: 1;
+    }
+
+    .contact .actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .contact .actions span {
+      cursor: pointer;
+    }
+
+    .contact .actions .edit-icon {
+      color: blue;
+    }
+
+    .contact .actions .delete-icon {
+      color: red;
+    }
+
+    /* Botão de Mais */
+    #open-contacts {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    #open-contacts .user-id {
+      position: absolute;
+      bottom: -25px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #007bff;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
   <div id="sidebar">
     <h2>Conversas</h2>
-    <button id="open-contacts">+</button>
+    <button id="open-contacts">+
+      <div class="user-id" id="displayed-user-id"></div>
+    </button>
+    <ul id="conversation-list"></ul>
   </div>
 
   <div id="chat-container">
     <div id="chat-header">Chat</div>
+    <div id="chat-messages"></div>
+    <div id="chat-input">
+      <input type="text" id="message-input" placeholder="Digite sua mensagem..." />
+      <button id="send-message">Enviar</button>
+    </div>
   </div>
 
   <!-- Modal para Contatos -->
   <div id="overlay"></div>
   <div id="contacts-modal" class="modal">
     <h3>Contatos</h3>
-    <p>Seu ID: <strong id="displayed-user-id"></strong></p>
-    <input type="text" id="recipient-id-input" placeholder="Digite o ID do destinatário" />
-    <button id="start-conversation">Iniciar Conversa</button>
+    <div id="contact-list"></div>
+    <p>Seu ID: <strong id="displayed-user-id-modal"></strong></p>
+    <button id="copy-id">Copiar ID</button>
     <button id="close-contacts-modal">Fechar</button>
   </div>
 
@@ -109,46 +240,168 @@
   <script>
     const peer = new Peer();
     let localPeerId = null;
+    let currentConnection = null;
 
     // Carregar ID fixo do localStorage
     const savedPeerId = localStorage.getItem('peerId');
     if (savedPeerId) {
       localPeerId = savedPeerId;
       document.getElementById('displayed-user-id').textContent = localPeerId;
+      document.getElementById('displayed-user-id-modal').textContent = localPeerId;
     } else {
       peer.on('open', (id) => {
         localPeerId = id;
         localStorage.setItem('peerId', localPeerId); // Salvar ID no localStorage
         document.getElementById('displayed-user-id').textContent = localPeerId;
+        document.getElementById('displayed-user-id-modal').textContent = localPeerId;
       });
     }
 
-    // Abrir modal de contatos
+    // Lista de contatos (exemplo)
+    const contacts = [
+      { id: 'user1', name: 'João', color: '#FF5733' },
+      { id: 'user2', name: 'Maria', color: '#33FF57' },
+      { id: 'user3', name: 'Pedro', color: '#3357FF' }
+    ];
+
+    // Quando receber uma conexão de outro peer
+    peer.on('connection', (conn) => {
+      setupConnection(conn);
+    });
+
+    function setupConnection(conn) {
+      currentConnection = conn;
+
+      conn.on('data', (data) => {
+        displayMessage(conn.peer, data, 'received');
+      });
+
+      conn.on('open', () => {
+        console.log(`Conexão aberta com ${conn.peer}`);
+      });
+
+      conn.on('close', () => {
+        console.log(`Conexão fechada com ${conn.peer}`);
+        currentConnection = null;
+      });
+    }
+
     document.getElementById('open-contacts').addEventListener('click', () => {
       document.getElementById('overlay').style.display = 'block';
       document.getElementById('contacts-modal').style.display = 'block';
+      loadContacts();
     });
 
-    // Fechar modal de contatos
     document.getElementById('close-contacts-modal').addEventListener('click', closeModal);
 
-    // Iniciar conversa com outro usuário
-    document.getElementById('start-conversation').addEventListener('click', () => {
-      const recipientId = document.getElementById('recipient-id-input').value.trim();
-      if (recipientId && recipientId !== localPeerId) {
-        alert(`Conversa iniciada com o usuário ${recipientId}`);
-        closeModal();
+    document.getElementById('copy-id').addEventListener('click', () => {
+      navigator.clipboard.writeText(localPeerId).then(() => {
+        alert('ID copiado para a área de transferência!');
+      }).catch((err) => {
+        console.error('Erro ao copiar ID:', err);
+      });
+    });
+
+    function loadContacts() {
+      const contactList = document.getElementById('contact-list');
+      contactList.innerHTML = '';
+
+      contacts.forEach((contact, index) => {
+        const contactDiv = document.createElement('div');
+        contactDiv.className = 'contact';
+
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar';
+        avatar.style.backgroundColor = contact.color;
+
+        const details = document.createElement('div');
+        details.className = 'details';
+        details.textContent = `${contact.name} (${contact.id})`;
+
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+
+        const editIcon = document.createElement('span');
+        editIcon.innerHTML = '✎';
+        editIcon.className = 'edit-icon';
+        editIcon.addEventListener('click', () => editContact(index));
+
+        const deleteIcon = document.createElement('span');
+        deleteIcon.innerHTML = '🗑️';
+        deleteIcon.className = 'delete-icon';
+        deleteIcon.addEventListener('click', () => deleteContact(index));
+
+        actions.appendChild(editIcon);
+        actions.appendChild(deleteIcon);
+
+        contactDiv.appendChild(avatar);
+        contactDiv.appendChild(details);
+        contactDiv.appendChild(actions);
+
+        contactList.appendChild(contactDiv);
+      });
+    }
+
+    function editContact(index) {
+      const newName = prompt('Digite o novo nome:');
+      if (newName) {
+        contacts[index].name = newName;
+        loadContacts();
+      }
+    }
+
+    function deleteContact(index) {
+      contacts.splice(index, 1);
+      loadContacts();
+    }
+
+    document.getElementById('send-message').addEventListener('click', () => {
+      const messageInput = document.getElementById('message-input');
+      const message = messageInput.value.trim();
+
+      if (message && currentConnection && currentConnection.open) {
+        currentConnection.send(message);
+        displayMessage(localPeerId, message, 'sent');
+        messageInput.value = '';
       } else {
-        alert('Por favor, insira um ID válido.');
+        alert('Você precisa estar conectado a alguém para enviar mensagens.');
       }
     });
+
+    function displayMessage(peerId, message, type) {
+      const chatMessages = document.getElementById('chat-messages');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${type}`;
+
+      const senderIdSpan = document.createElement('span');
+      senderIdSpan.textContent = type === 'sent' ? `Você` : `Remetente: ${peerId}`;
+      senderIdSpan.style.fontSize = '12px';
+      senderIdSpan.style.color = '#666';
+      senderIdSpan.style.display = 'block';
+
+      const messageText = document.createElement('span');
+      messageText.textContent = message;
+
+      const trashIcon = document.createElement('span');
+      trashIcon.innerHTML = '🗑️';
+      trashIcon.className = 'trash-icon';
+      trashIcon.addEventListener('click', () => {
+        messageDiv.remove(); // Remove a mensagem quando clicar na lixeira
+      });
+
+      messageDiv.appendChild(senderIdSpan);
+      messageDiv.appendChild(messageText);
+      messageDiv.appendChild(trashIcon);
+
+      chatMessages.appendChild(messageDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
 
     function closeModal() {
       document.getElementById('overlay').style.display = 'none';
       document.querySelectorAll('.modal').forEach(modal => {
         modal.style.display = 'none';
       });
-      document.getElementById('recipient-id-input').value = '';
     }
   </script>
 </body>
