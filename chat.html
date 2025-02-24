@@ -21,10 +21,6 @@
       box-sizing: border-box;
     }
 
-    #sidebar h2 {
-      margin-top: 0;
-    }
-
     #chat-container {
       flex-grow: 1;
       display: flex;
@@ -138,20 +134,23 @@
     .modal button:hover {
       background-color: #0056b3;
     }
+
+    /* Trash Icon */
+    .trash-icon {
+      cursor: pointer;
+      margin-left: 10px;
+      color: red;
+    }
   </style>
 </head>
 <body>
   <div id="sidebar">
-    <h2>Contatos</h2>
-    <button id="open-modal">+</button>
-    <ul id="contact-list"></ul>
+    <h2>Conversas</h2>
+    <ul id="conversation-list"></ul>
   </div>
 
   <div id="chat-container">
-    <div id="chat-header">
-      Chat
-      <button id="show-user-id">Mostrar ID</button>
-    </div>
+    <div id="chat-header">Chat</div>
     <div id="chat-messages"></div>
     <div id="chat-input">
       <input type="text" id="message-input" placeholder="Digite sua mensagem..." />
@@ -167,87 +166,62 @@
     <button id="start-conversation">Iniciar</button>
   </div>
 
-  <!-- Modal para Mostrar ID -->
-  <div id="user-id-modal" class="modal">
-    <p>Seu ID de Usuário é: <strong id="displayed-user-id"></strong></p>
-    <button id="close-user-id-modal">Fechar</button>
-  </div>
-
   <script src="https://cdn.jsdelivr.net/npm/peerjs@1.4.7/dist/peerjs.min.js"></script>
   <script>
     const peer = new Peer();
     let localPeerId = null;
-    let currentConnection = null;
+    let currentConversationId = null;
 
-    // Carregar contatos salvos no localStorage
-    let contacts = JSON.parse(localStorage.getItem('contacts')) || [];
-    const contactList = document.getElementById('contact-list');
+    // Carregar dados do localStorage
+    const savedData = JSON.parse(localStorage.getItem('chatData')) || {};
+    const conversations = savedData.conversations || {};
 
-    // Salvar contatos no localStorage
-    function saveContacts() {
-      localStorage.setItem('contacts', JSON.stringify(contacts));
+    // Salvar dados no localStorage
+    function saveData() {
+      localStorage.setItem('chatData', JSON.stringify({ conversations }));
     }
 
-    // Adicionar contato à lista
-    function addContact(userId) {
-      if (!contacts.includes(userId)) {
-        contacts.push(userId);
-        saveContacts();
-        renderContacts();
-      }
-    }
-
-    // Renderizar contatos na barra lateral
-    function renderContacts() {
-      contactList.innerHTML = '';
-      contacts.forEach(contact => {
-        const listItem = document.createElement('li');
-        listItem.textContent = `Usuário ${contact}`;
-        listItem.addEventListener('click', () => switchConversation(contact));
-        contactList.appendChild(listItem);
-      });
-    }
-
-    // Quando o ID do PeerJS estiver disponível
+    // Quando o PeerJS ID estiver disponível
     peer.on('open', (id) => {
       localPeerId = id;
-      document.getElementById('displayed-user-id').textContent = localPeerId;
-      renderContacts(); // Renderizar contatos ao carregar a página
+      console.log(`Seu ID: ${localPeerId}`);
     });
 
-    // Quando receber uma conexão de outro peer
+    // Lidar com conexões recebidas
     peer.on('connection', (conn) => {
       setupConnection(conn);
     });
 
     function setupConnection(conn) {
-      currentConnection = conn;
+      const remotePeerId = conn.peer;
 
-      conn.on('data', (data) => {
-        displayMessage(conn.peer, data, 'received');
-      });
+      if (!conversations[remotePeerId]) {
+        conversations[remotePeerId] = [];
+        addConversationToList(remotePeerId);
+        saveData();
+      }
 
-      conn.on('open', () => {
-        console.log(`Conexão aberta com ${conn.peer}`);
+      conn.on('data', (message) => {
+        conversations[remotePeerId].push({ sender: 'received', text: message });
+        if (currentConversationId === remotePeerId) {
+          renderMessages();
+        }
+        saveData();
       });
 
       conn.on('close', () => {
-        console.log(`Conexão fechada com ${conn.peer}`);
-        currentConnection = null;
+        console.log(`Conexão fechada com ${remotePeerId}`);
       });
     }
-
-    document.getElementById('open-modal').addEventListener('click', () => {
-      document.getElementById('overlay').style.display = 'block';
-      document.getElementById('new-conversation-modal').style.display = 'block';
-    });
 
     document.getElementById('start-conversation').addEventListener('click', () => {
       const recipientId = document.getElementById('recipient-id-input').value.trim();
       if (recipientId && recipientId !== localPeerId) {
-        const conn = peer.connect(recipientId);
-        setupConnection(conn);
-        addContact(recipientId); // Adicionar contato à lista
+        if (!conversations[recipientId]) {
+          conversations[recipientId] = [];
+          addConversationToList(recipientId);
+          saveData();
+        }
         switchConversation(recipientId);
         closeModal();
       } else {
@@ -257,46 +231,65 @@
 
     document.getElementById('send-message').addEventListener('click', () => {
       const message = document.getElementById('message-input').value.trim();
-      if (message && currentConnection && currentConnection.open) {
-        currentConnection.send(message);
-        displayMessage(localPeerId, message, 'sent');
+      if (message && currentConversationId) {
+        const conn = peer.connect(currentConversationId);
+        conn.on('open', () => {
+          conn.send(message);
+          conversations[currentConversationId].push({ sender: 'sent', text: message });
+          renderMessages();
+          saveData();
+        });
         document.getElementById('message-input').value = '';
-      } else {
-        alert('Você precisa estar conectado a alguém para enviar mensagens.');
       }
     });
 
-    function displayMessage(peerId, message, type) {
-      const chatMessages = document.getElementById('chat-messages');
-      const messageDiv = document.createElement('div');
-      messageDiv.className = `message ${type}`;
+    function addConversationToList(userId) {
+      const conversationList = document.getElementById('conversation-list');
+      const listItem = document.createElement('li');
 
-      const senderIdSpan = document.createElement('span');
-      senderIdSpan.textContent = type === 'sent' ? `Você` : `Remetente: ${peerId}`;
-      senderIdSpan.style.fontSize = '12px';
-      senderIdSpan.style.color = '#666';
-      senderIdSpan.style.display = 'block';
+      const userName = document.createElement('span');
+      userName.textContent = `Usuário ${userId}`;
 
-      const messageText = document.createElement('span');
-      messageText.textContent = message;
+      const trashIcon = document.createElement('span');
+      trashIcon.innerHTML = '🗑️';
+      trashIcon.className = 'trash-icon';
+      trashIcon.addEventListener('click', () => {
+        delete conversations[userId];
+        listItem.remove();
+        saveData();
+      });
 
-      messageDiv.appendChild(senderIdSpan);
-      messageDiv.appendChild(messageText);
-
-      chatMessages.appendChild(messageDiv);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
+      listItem.appendChild(userName);
+      listItem.appendChild(trashIcon);
+      listItem.addEventListener('click', () => switchConversation(userId));
+      conversationList.appendChild(listItem);
     }
 
     function switchConversation(userId) {
+      currentConversationId = userId;
       document.getElementById('chat-header').textContent = `Chat com Usuário ${userId}`;
+      renderMessages();
     }
 
-    document.getElementById('show-user-id').addEventListener('click', () => {
-      document.getElementById('overlay').style.display = 'block';
-      document.getElementById('user-id-modal').style.display = 'block';
-    });
+    function renderMessages() {
+      const chatMessages = document.getElementById('chat-messages');
+      chatMessages.innerHTML = '';
 
-    document.getElementById('close-user-id-modal').addEventListener('click', closeModal);
+      if (currentConversationId && conversations[currentConversationId]) {
+        conversations[currentConversationId].forEach(msg => {
+          const messageDiv = document.createElement('div');
+          messageDiv.className = `message ${msg.sender}`;
+
+          const messageText = document.createElement('span');
+          messageText.textContent = msg.text;
+
+          messageDiv.appendChild(messageText);
+          chatMessages.appendChild(messageDiv);
+        });
+      }
+
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
 
     function closeModal() {
       document.getElementById('overlay').style.display = 'none';
@@ -304,6 +297,16 @@
         modal.style.display = 'none';
       });
       document.getElementById('recipient-id-input').value = '';
+    }
+
+    // Carregar conversas salvas ao iniciar
+    Object.keys(conversations).forEach(userId => {
+      addConversationToList(userId);
+    });
+
+    // Renderizar mensagens da conversa ativa ao recarregar
+    if (currentConversationId) {
+      renderMessages();
     }
   </script>
 </body>
