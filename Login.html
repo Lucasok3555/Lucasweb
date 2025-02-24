@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Login</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Tela de Login -->
+  <div id="login-screen" class="screen">
+    <h2>Login</h2>
+    <form id="login-form">
+      <input type="text" id="login-name" placeholder="Nome" required>
+      <input type="password" id="login-password" placeholder="Senha" required>
+      <button type="submit">Entrar</button>
+    </form>
+    <p>Não tem uma conta? <a href="#" id="register-link">Registrar</a></p>
+  </div>
+
+  <!-- Tela de Registro -->
+  <div id="register-screen" class="screen hidden">
+    <h2>Registrar</h2>
+    <form id="register-form">
+      <input type="text" id="register-name" placeholder="Nome" required>
+      <input type="date" id="register-birthdate" required>
+      <input type="password" id="register-password" placeholder="Senha" required>
+      <button type="submit">Registrar</button>
+    </form>
+    <p>Já tem uma conta? <a href="#" id="login-link">Login</a></p>
+  </div>
+
+  <!-- Painel da Conta -->
+  <div id="account-panel" class="screen hidden">
+    <h2>Painel da Conta</h2>
+    <p id="user-info"></p>
+    <p><strong>Chave de Acesso:</strong> <span id="access-key"></span></p>
+    <button id="change-password-btn">Alterar Senha</button>
+    <button id="logout-btn">Sair</button>
+  </div>
+
+  <script src="js/script.js"></script>
+</body>
+</html>
