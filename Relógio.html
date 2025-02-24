@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relógio com NTP</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #282c34;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+    .clock {
+      font-size: 3rem;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+    .date {
+      font-size: 1.5rem;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="clock">
+    <div id="time">Carregando...</div>
+    <div id="date" class="date">Carregando...</div>
+  </div>
+
+  <script>
+    // Função para buscar a hora do servidor NTP
+    async function getNTPTime() {
+      try {
+        const response = await fetch('https://worldtimeapi.org/api/timezone/America/Sao_Paulo'); // API pública para obter a hora
+        const data = await response.json();
+        const datetime = new Date(data.datetime);
+
+        const hours = String(datetime.getHours()).padStart(2, '0');
+        const minutes = String(datetime.getMinutes()).padStart(2, '0');
+        const seconds = String(datetime.getSeconds()).padStart(2, '0');
+
+        const day = String(datetime.getDate()).padStart(2, '0');
+        const month = String(datetime.getMonth() + 1).padStart(2, '0');
+        const year = datetime.getFullYear();
+
+        document.getElementById('time').textContent = `${hours}:${minutes}:${seconds}`;
+        document.getElementById('date').textContent = `${day}/${month}/${year}`;
+      } catch (error) {
+        console.error('Erro ao obter a hora NTP:', error);
+        document.getElementById('time').textContent = 'Erro ao carregar';
+        document.getElementById('date').textContent = '';
+      }
+    }
+
+    // Atualiza a hora a cada segundo
+    setInterval(getNTPTime, 1000);
+
+    // Carrega a hora imediatamente ao iniciar
+    getNTPTime();
+  </script>
+</body>
+</html>
