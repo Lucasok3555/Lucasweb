@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Feed do Fediverso</title>
-    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -73,16 +72,6 @@
             max-height: 100px;
             border-radius: 5px;
         }
-
-        .video-container {
-            margin: 20px 0;
-        }
-
-        .views {
-            font-size: 14px;
-            color: #666;
-            margin-top: 10px;
-        }
     </style>
 </head>
 <body>
@@ -91,49 +80,89 @@
         <div id="search-bar">
             <input type="text" id="search-input" placeholder="Pesquisar por usuário ou instância..." />
         </div>
-        <div id="feed">
-            <!-- Exemplo de post com vídeo -->
-            <div class="post">
-                <div class="post-header">Usuário Exemplo</div>
-                <div class="post-content">Este é um post com um vídeo do YouTube.</div>
-                <div class="video-container">
-                    <div id="player" data-plyr-provider="youtube" data-plyr-embed-id="dQw4w9WgXcQ"></div>
-                </div>
-                <div class="views">Visualizações: <span id="view-count">Carregando...</span></div>
-            </div>
-        </div>
+        <div id="feed"></div>
     </div>
 
-    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
     <script>
-        // Configuração do Plyr
-        const player = new Plyr('#player', {
-            youtube: {
-                noCookie: true,
-                rel: 0,
-                showinfo: 0,
-                iv_load_policy: 3,
-                modestbranding: 1
-            }
-        });
-
-        // Função para buscar visualizações do vídeo do YouTube
-        async function fetchVideoViews(videoId) {
-            const apiKey = 'AIzaSyDR0YdRMRJUTwJtdQExWTpIKmGxiW9F4Iw';
-            const url = `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${videoId}&key=${apiKey}`;
-
+        // Função para buscar posts públicos de uma instância do Fediverso
+        async function fetchFediversePosts(instanceUrl, username = null) {
             try {
+                let url = `${instanceUrl}/api/v1/timelines/public`;
+                if (username) {
+                    url = `${instanceUrl}/api/v1/accounts/${username}/statuses`;
+                }
+
                 const response = await fetch(url);
                 if (!response.ok) {
-                    throw new Error(`Erro ao buscar visualizações: ${response.statusText}`);
+                    throw new Error(`Erro ao buscar posts: ${response.statusText}`);
                 }
-                const data = await response.json();
-                const views = data.items[0].statistics.viewCount;
-                document.getElementById('view-count').textContent = views;
+                const posts = await response.json();
+                return posts;
             } catch (error) {
-                console.error("Erro ao carregar visualizações:", error);
-                document.getElementById('view-count').textContent = 'Erro ao carregar';
+                console.error("Erro ao carregar os posts:", error);
+                return [];
             }
+        }
+
+        // Função para exibir os posts na tela
+        function displayPosts(posts) {
+            const feedElement = document.getElementById('feed');
+            feedElement.innerHTML = ''; // Limpa o feed antes de adicionar novos posts
+
+            posts.forEach(post => {
+                const postElement = document.createElement('div');
+                postElement.classList.add('post');
+
+                const postHeader = document.createElement('div');
+                postHeader.classList.add('post-header');
+                postHeader.textContent = `${post.account.display_name || post.account.username} (@${post.account.username})`;
+
+                const postContent = document.createElement('div');
+                postContent.classList.add('post-content');
+                postContent.innerHTML = post.content; // Mantém o HTML para formatar links e outras tags
+
+                postElement.appendChild(postHeader);
+                postElement.appendChild(postContent);
+
+                // Exibir imagens, se houver
+                if (post.media_attachments && post.media_attachments.length > 0) {
+                    const imagesContainer = document.createElement('div');
+                    imagesContainer.classList.add('post-images');
+
+                    post.media_attachments.forEach(media => {
+                        if (media.type === 'image') {
+                            const img = document.createElement('img');
+                            img.src = media.url;
+                            img.alt = 'Imagem do post';
+                            imagesContainer.appendChild(img);
+                        }
+                    });
+
+                    postElement.appendChild(imagesContainer);
+                }
+
+                feedElement.appendChild(postElement);
+            });
+        }
+
+        // Função para lidar com a busca
+        async function handleSearch() {
+            const searchInput = document.getElementById('search-input').value.trim();
+            let instanceUrl = 'https://mastodon.social'; // Instância padrão
+            let username = null;
+
+            if (searchInput.includes('@')) {
+                // Se o usuário inseriu um nome de usuário no formato "user@instancia"
+                const [usernamePart, instancePart] = searchInput.split('@');
+                instanceUrl = `https://${instancePart}`;
+                username = usernamePart;
+            } else if (searchInput.includes('.')) {
+                // Se o usuário inseriu apenas uma instância (ex: mastodon.social)
+                instanceUrl = `https://${searchInput}`;
+            }
+
+            const posts = await fetchFediversePosts(instanceUrl, username);
+            displayPosts(posts);
         }
 
         // Inicializa o feed ao carregar a página
@@ -148,10 +177,6 @@
                     handleSearch();
                 }
             });
-
-            // Busca visualizações do vídeo
-            const videoId = 'dQw4w9WgXcQ'; // ID do vídeo do YouTube
-            fetchVideoViews(videoId);
         }
 
         // Inicia o feed quando a página carregar
