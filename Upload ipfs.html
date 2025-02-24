@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enviar Arquivo para IPFS</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+    h1 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+    input[type="file"] {
+      margin-bottom: 20px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .result {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #555;
+    }
+    .result a {
+      color: #007bff;
+      text-decoration: none;
+    }
+    .result a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Enviar Arquivo para IPFS</h1>
+    <input type="file" id="fileInput" />
+    <button onclick="uploadFile()">Enviar para IPFS</button>
+    <div class="result" id="result"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ipfs-http-client/dist/index.min.js"></script>
+  <script>
+    async function uploadFile() {
+      const fileInput = document.getElementById('fileInput');
+      const resultDiv = document.getElementById('result');
+
+      if (!fileInput.files.length) {
+        resultDiv.textContent = 'Por favor, selecione um arquivo.';
+        return;
+      }
+
+      const file = fileInput.files[0];
+      resultDiv.textContent = 'Enviando arquivo para IPFS...';
+
+      try {
+        // Conecta ao nó IPFS (usando o gateway público)
+        const ipfs = window.IpfsHttpClient.create({ host: 'ipfs.infura.io', port: 5001, protocol: 'https' });
+
+        // Adiciona o arquivo ao IPFS
+        const added = await ipfs.add(file);
+
+        // Exibe o link do arquivo no IPFS
+        const fileUrl = `https://ipfs.io/ipfs/${added.path}`;
+        resultDiv.innerHTML = `Arquivo enviado com sucesso! <a href="${fileUrl}" target="_blank">Ver no IPFS</a>`;
+      } catch (error) {
+        console.error('Erro ao enviar arquivo para IPFS:', error);
+        resultDiv.textContent = 'Ocorreu um erro ao enviar o arquivo para IPFS.';
+      }
+    }
+  </script>
+</body>
+</html>
