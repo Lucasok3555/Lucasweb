@@ -145,32 +145,52 @@
       background-color: #0056b3;
     }
 
-    /* User Profile */
-    .profile-picture {
+    /* Contact List */
+    .contact {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .contact .avatar {
       width: 40px;
       height: 40px;
       border-radius: 50%;
       background-color: #ccc;
-      display: inline-block;
       margin-right: 10px;
+    }
+
+    .contact .details {
+      flex-grow: 1;
+    }
+
+    .contact .actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .contact .actions span {
+      cursor: pointer;
+    }
+
+    .contact .actions .edit-icon {
+      color: blue;
+    }
+
+    .contact .actions .delete-icon {
+      color: red;
     }
   </style>
 </head>
 <body>
   <div id="sidebar">
     <h2>Conversas</h2>
-    <button id="open-modal">+</button>
+    <button id="open-contacts">+</button>
     <ul id="conversation-list"></ul>
   </div>
 
   <div id="chat-container">
-    <div id="chat-header">
-      <div style="display: flex; align-items: center;">
-        <div class="profile-picture"></div>
-        Chat
-      </div>
-      <button id="show-user-id">Mostrar ID</button>
-    </div>
+    <div id="chat-header">Chat</div>
     <div id="chat-messages"></div>
     <div id="chat-input">
       <input type="text" id="message-input" placeholder="Digite sua mensagem..." />
@@ -178,18 +198,13 @@
     </div>
   </div>
 
-  <!-- Modal para Nova Conversa -->
+  <!-- Modal para Contatos -->
   <div id="overlay"></div>
-  <div id="new-conversation-modal" class="modal">
-    <h3>Iniciar Nova Conversa</h3>
-    <input type="text" id="recipient-id-input" placeholder="Digite o ID do destinatário" />
-    <button id="start-conversation">Iniciar</button>
-  </div>
-
-  <!-- Modal para Mostrar ID -->
-  <div id="user-id-modal" class="modal">
-    <p>Seu ID de Usuário é: <strong id="displayed-user-id"></strong></p>
-    <button id="close-user-id-modal">Fechar</button>
+  <div id="contacts-modal" class="modal">
+    <h3>Contatos</h3>
+    <div id="contact-list"></div>
+    <p>Seu ID: <strong id="displayed-user-id"></strong></p>
+    <button id="close-contacts-modal">Fechar</button>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/peerjs@1.4.7/dist/peerjs.min.js"></script>
@@ -209,6 +224,13 @@
         document.getElementById('displayed-user-id').textContent = localPeerId;
       });
     }
+
+    // Lista de contatos (exemplo)
+    const contacts = [
+      { id: 'user1', name: 'João', color: '#FF5733' },
+      { id: 'user2', name: 'Maria', color: '#33FF57' },
+      { id: 'user3', name: 'Pedro', color: '#3357FF' }
+    ];
 
     // Quando receber uma conexão de outro peer
     peer.on('connection', (conn) => {
@@ -232,22 +254,66 @@
       });
     }
 
-    document.getElementById('open-modal').addEventListener('click', () => {
+    document.getElementById('open-contacts').addEventListener('click', () => {
       document.getElementById('overlay').style.display = 'block';
-      document.getElementById('new-conversation-modal').style.display = 'block';
+      document.getElementById('contacts-modal').style.display = 'block';
+      loadContacts();
     });
 
-    document.getElementById('start-conversation').addEventListener('click', () => {
-      const recipientId = document.getElementById('recipient-id-input').value.trim();
-      if (recipientId && recipientId !== localPeerId) {
-        const conn = peer.connect(recipientId);
-        setupConnection(conn);
-        switchConversation(recipientId);
-        closeModal();
-      } else {
-        alert('Por favor, insira um ID válido.');
+    document.getElementById('close-contacts-modal').addEventListener('click', closeModal);
+
+    function loadContacts() {
+      const contactList = document.getElementById('contact-list');
+      contactList.innerHTML = '';
+
+      contacts.forEach((contact, index) => {
+        const contactDiv = document.createElement('div');
+        contactDiv.className = 'contact';
+
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar';
+        avatar.style.backgroundColor = contact.color;
+
+        const details = document.createElement('div');
+        details.className = 'details';
+        details.textContent = `${contact.name} (${contact.id})`;
+
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+
+        const editIcon = document.createElement('span');
+        editIcon.innerHTML = '✎';
+        editIcon.className = 'edit-icon';
+        editIcon.addEventListener('click', () => editContact(index));
+
+        const deleteIcon = document.createElement('span');
+        deleteIcon.innerHTML = '🗑️';
+        deleteIcon.className = 'delete-icon';
+        deleteIcon.addEventListener('click', () => deleteContact(index));
+
+        actions.appendChild(editIcon);
+        actions.appendChild(deleteIcon);
+
+        contactDiv.appendChild(avatar);
+        contactDiv.appendChild(details);
+        contactDiv.appendChild(actions);
+
+        contactList.appendChild(contactDiv);
+      });
+    }
+
+    function editContact(index) {
+      const newName = prompt('Digite o novo nome:');
+      if (newName) {
+        contacts[index].name = newName;
+        loadContacts();
       }
-    });
+    }
+
+    function deleteContact(index) {
+      contacts.splice(index, 1);
+      loadContacts();
+    }
 
     document.getElementById('send-message').addEventListener('click', () => {
       const messageInput = document.getElementById('message-input');
@@ -291,23 +357,11 @@
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    function switchConversation(userId) {
-      document.getElementById('chat-header').textContent = `Chat com Usuário ${userId}`;
-    }
-
-    document.getElementById('show-user-id').addEventListener('click', () => {
-      document.getElementById('overlay').style.display = 'block';
-      document.getElementById('user-id-modal').style.display = 'block';
-    });
-
-    document.getElementById('close-user-id-modal').addEventListener('click', closeModal);
-
     function closeModal() {
       document.getElementById('overlay').style.display = 'none';
       document.querySelectorAll('.modal').forEach(modal => {
         modal.style.display = 'none';
       });
-      document.getElementById('recipient-id-input').value = '';
     }
   </script>
 </body>
