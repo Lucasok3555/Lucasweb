@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gravação de Áudio</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f0f0f0;
+      font-family: Arial, sans-serif;
+    }
+
+    .container {
+      text-align: center;
+    }
+
+    button {
+      padding: 15px 30px;
+      font-size: 18px;
+      color: white;
+      background-color: #007BFF;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #timer {
+      margin-top: 20px;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    #download-link {
+      margin-top: 20px;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <button id="recordButton">Gravar Áudio</button>
+    <div id="timer">00:00</div>
+    <a id="download-link" style="display:none;">Baixar Áudio</a>
+  </div>
+
+  <script>
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
+    let timerInterval;
+    let minutes = 0;
+    let seconds = 0;
+
+    const recordButton = document.getElementById('recordButton');
+    const timerDisplay = document.getElementById('timer');
+    const downloadLink = document.getElementById('download-link');
+
+    // Função para iniciar a gravação
+    async function startRecording() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = event => {
+          audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          downloadLink.href = audioUrl;
+          downloadLink.download = 'gravacao.wav';
+          downloadLink.style.display = 'block';
+          downloadLink.textContent = 'Baixar Áudio';
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+        startTimer();
+      } catch (err) {
+        console.error('Erro ao acessar o microfone:', err);
+      }
+    }
+
+    // Função para parar a gravação
+    function stopRecording() {
+      if (mediaRecorder && isRecording) {
+        mediaRecorder.stop();
+        isRecording = false;
+        clearInterval(timerInterval);
+        resetTimer();
+      }
+    }
+
+    // Função para alternar entre gravar e parar
+    recordButton.addEventListener('click', () => {
+      if (isRecording) {
+        recordButton.textContent = 'Gravar Áudio';
+        stopRecording();
+      } else {
+        recordButton.textContent = 'Parar Gravação';
+        startRecording();
+      }
+    });
+
+    // Função para iniciar o cronômetro
+    function startTimer() {
+      timerInterval = setInterval(() => {
+        seconds++;
+        if (seconds === 60) {
+          minutes++;
+          seconds = 0;
+        }
+        updateTimerDisplay();
+      }, 1000);
+    }
+
+    // Função para atualizar o cronômetro na tela
+    function updateTimerDisplay() {
+      const formattedMinutes = String(minutes).padStart(2, '0');
+      const formattedSeconds = String(seconds).padStart(2, '0');
+      timerDisplay.textContent = `${formattedMinutes}:${formattedSeconds}`;
+    }
+
+    // Função para resetar o cronômetro
+    function resetTimer() {
+      minutes = 0;
+      seconds = 0;
+      updateTimerDisplay();
+    }
+  </script>
+
+</body>
+</html>
