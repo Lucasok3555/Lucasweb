@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Player de Vídeo - Lucas TV</title>
+  <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
+    .video-container {
+      max-width: 800px;
+      margin: 50px auto;
+    }
+    .video-title {
+      margin-top: 20px;
+      font-size: 24px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="video-container">
+    <!-- Player de Vídeo -->
+    <video id="player" controls playsinline poster="thumbnail.jpg"></video>
+    <!-- Título -->
+    <div class="video-title">Lucas TV</div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
+  <script>
+    // Lista de vídeos do canal do YouTube
+    const videos = [
+      'https://m.youtube.com/channel/UC03-lrJIckVRKMlPK0PpsmQ',
+      'https://www.youtube.com/watch?v=VIDEO_ID_2',
+      'https://www.youtube.com/watch?v=VIDEO_ID_3'
+    ];
+
+    let currentVideoIndex = 0;
+
+    // Função para extrair o ID do vídeo do YouTube
+    function getYouTubeVideoId(url) {
+      const regex = /[?&]v=([^&#]*)/;
+      const match = url.match(regex);
+      return match ? match[1] : null;
+    }
+
+    // Inicializa o Plyr
+    const player = new Plyr('#player', {
+      controls: ['play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen']
+    });
+
+    // Função para carregar o próximo vídeo
+    function loadNextVideo() {
+      currentVideoIndex = (currentVideoIndex + 1) % videos.length; // Loop na lista de vídeos
+      const videoId = getYouTubeVideoId(videos[currentVideoIndex]);
+      if (videoId) {
+        player.source = {
+          type: 'video',
+          sources: [
+            {
+              src: videoId,
+              provider: 'youtube'
+            }
+          ]
+        };
+      }
+    }
+
+    // Evento quando o vídeo termina
+    player.on('ended', () => {
+      loadNextVideo();
+    });
+
+    // Carrega o primeiro vídeo ao iniciar
+    document.addEventListener('DOMContentLoaded', () => {
+      const firstVideoId = getYouTubeVideoId(videos[currentVideoIndex]);
+      if (firstVideoId) {
+        player.source = {
+          type: 'video',
+          sources: [
+            {
+              src: firstVideoId,
+              provider: 'youtube'
+            }
+          ]
+        };
+      }
+    });
+  </script>
+</body>
+</html>
