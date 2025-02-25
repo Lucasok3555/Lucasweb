@@ -1,161 +1,191 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Feed do Fediverso</title>
+    <title>Feed de Vídeos - YouTube</title>
     <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
             margin: 0;
             padding: 0;
+            background-color: #f4f4f4;
         }
 
-        .container {
-            max-width: 600px;
-            margin: 50px auto;
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        h1 {
+        /* Estilo do vídeo principal */
+        #main-video {
             text-align: center;
-            color: #333;
-        }
-
-        #search-bar {
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: center;
-        }
-
-        #search-bar input {
-            width: 80%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-
-        #feed {
             margin-top: 20px;
         }
 
-        .post {
-            background-color: #e9ecef;
-            padding: 15px;
-            margin-bottom: 10px;
+        #main-video video {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Estilo das informações do vídeo */
+        #video-info {
+            margin: 20px;
+            padding: 20px;
+            background-color: #fff;
             border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        #video-info h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        #video-info p {
+            font-size: 16px;
+            line-height: 1.5;
             color: #333;
         }
 
-        .post-header {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .post-content {
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-
-        .post-images {
+        /* Estilo do feed de vídeos */
+        #video-feed {
             display: flex;
-            gap: 10px;
             flex-wrap: wrap;
+            justify-content: center;
+            padding: 20px;
         }
 
-        .post-images img {
-            max-width: 100px;
-            max-height: 100px;
+        .video-item {
+            width: 300px;
+            margin: 10px;
+            cursor: pointer;
+            border: 1px solid #ddd;
             border-radius: 5px;
+            overflow: hidden;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
-        .video-container {
-            margin: 20px 0;
+        .video-item img {
+            width: 100%;
+            height: auto;
+            object-fit: cover; /* Garante que a imagem cubra o espaço sem distorção */
         }
 
-        .views {
+        .video-item h3 {
+            font-size: 16px;
+            margin: 10px;
+            text-align: center;
+            word-wrap: break-word; /* Quebra palavras longas */
+        }
+
+        .video-item p {
             font-size: 14px;
             color: #666;
-            margin-top: 10px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Feed do Fediverso</h1>
-        <div id="search-bar">
-            <input type="text" id="search-input" placeholder="Pesquisar por usuário ou instância..." />
+    <!-- Vídeo Principal -->
+    <div id="main-video">
+        <div class="plyr__video-embed" id="player">
+            <iframe src="" allowfullscreen allowtransparency allow="autoplay"></iframe>
         </div>
-        <div id="feed">
-            <!-- Exemplo de post com vídeo -->
-            <div class="post">
-                <div class="post-header">Usuário Exemplo</div>
-                <div class="post-content">Este é um post com um vídeo do YouTube.</div>
-                <div class="video-container">
-                    <div id="player" data-plyr-provider="youtube" data-plyr-embed-id="dQw4w9WgXcQ"></div>
-                </div>
-                <div class="views">Visualizações: <span id="view-count">Carregando...</span></div>
-            </div>
+        <div id="video-info">
+            <h2 id="video-title">Carregando...</h2>
+            <p id="video-views">Visualizações: Carregando...</p>
+            <p id="video-description">Descrição: Carregando...</p>
         </div>
     </div>
 
+    <!-- Feed de Vídeos -->
+    <div id="video-feed"></div>
+
     <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
     <script>
-        // Configuração do Plyr
-        const player = new Plyr('#player', {
-            youtube: {
-                noCookie: true,
-                rel: 0,
-                showinfo: 0,
-                iv_load_policy: 3,
-                modestbranding: 1
-            }
-        });
+        // Chave da API do YouTube
+        const YOUTUBE_API_KEY = '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';
+        const CHANNEL_ID = 'UC-lHJZR3Gqxm24_Vd_AJ5YQ'; // ID do canal @lucastves
 
-        // Função para buscar visualizações do vídeo do YouTube
-        async function fetchVideoViews(videoId) {
-            const apiKey = 'AIzaSyDR0YdRMRJUTwJtdQExWTpIKmGxiW9F4Iw';
-            const url = `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${videoId}&key=${apiKey}`;
+        // Variáveis globais
+        let videosList = [];
 
+        // Função para carregar os vídeos do canal
+        async function loadVideos() {
             try {
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`Erro ao buscar visualizações: ${response.statusText}`);
-                }
+                // Busca a playlist "Uploads" do canal
+                const response = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${YOUTUBE_API_KEY}`);
                 const data = await response.json();
-                const views = data.items[0].statistics.viewCount;
-                document.getElementById('view-count').textContent = views;
+                const uploadsPlaylistId = data.items[0].contentDetails.relatedPlaylists.uploads;
+
+                // Busca os vídeos da playlist "Uploads"
+                const videosResponse = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=10&key=${YOUTUBE_API_KEY}`);
+                const videosData = await videosResponse.json();
+                videosList = videosData.items;
+
+                // Exibe o primeiro vídeo como principal
+                if (videosList.length > 0) {
+                    displayMainVideo(videosList[0]);
+                }
+
+                // Exibe todos os vídeos no feed
+                displayVideoFeed(videosList);
             } catch (error) {
-                console.error("Erro ao carregar visualizações:", error);
-                document.getElementById('view-count').textContent = 'Erro ao carregar';
+                console.error('Erro ao carregar vídeos:', error);
+                alert('Não foi possível carregar os vídeos. Tente novamente mais tarde.');
             }
         }
 
-        // Inicializa o feed ao carregar a página
-        async function initFeed() {
-            const instanceUrl = 'https://mastodon.social'; // Instância padrão
-            const posts = await fetchFediversePosts(instanceUrl);
-            displayPosts(posts);
+        // Função para exibir o vídeo principal
+        function displayMainVideo(video) {
+            const player = document.getElementById('player').querySelector('iframe');
+            const videoTitle = document.getElementById('video-title');
+            const videoViews = document.getElementById('video-views');
+            const videoDescription = document.getElementById('video-description');
 
-            // Adiciona evento de busca ao pressionar Enter
-            document.getElementById('search-input').addEventListener('keypress', function (e) {
-                if (e.key === 'Enter') {
-                    handleSearch();
-                }
-            });
+            const videoId = video.snippet.resourceId.videoId;
+            const title = video.snippet.title;
+            const description = video.snippet.description;
 
-            // Busca visualizações do vídeo
-            const videoId = 'dQw4w9WgXcQ'; // ID do vídeo do YouTube
-            fetchVideoViews(videoId);
+            // Define o vídeo no player
+            player.src = `https://www.youtube.com/embed/${videoId}?origin=https://plyr.io&amp;iv_load_policy=3&amp;modestbranding=1&amp;playsinline=1&amp;showinfo=0&amp;rel=0&amp;enablejsapi=1`;
+
+            // Define as informações do vídeo
+            videoTitle.textContent = title;
+            videoViews.textContent = 'Visualizações: Carregando...'; // As visualizações precisam de uma chamada separada
+            videoDescription.textContent = description || 'Sem descrição disponível.';
         }
 
-        // Inicia o feed quando a página carregar
-        document.addEventListener('DOMContentLoaded', initFeed);
+        // Função para exibir o feed de vídeos
+        function displayVideoFeed(videos) {
+            const videoFeed = document.getElementById('video-feed');
+            videoFeed.innerHTML = ''; // Limpa o feed antes de adicionar novos vídeos
+
+            videos.forEach(video => {
+                const videoItem = document.createElement('div');
+                videoItem.classList.add('video-item');
+
+                const videoId = video.snippet.resourceId.videoId;
+                const title = video.snippet.title;
+                const thumbnail = video.snippet.thumbnails.medium.url;
+
+                // Cria a estrutura do vídeo
+                videoItem.innerHTML = `
+                    <img src="${thumbnail}" alt="${title}">
+                    <h3>${title}</h3>
+                    <p>Visualizações: Carregando...</p>
+                `;
+
+                // Adiciona o evento de clique para reproduzir o vídeo
+                videoItem.addEventListener('click', () => displayMainVideo(video));
+
+                videoFeed.appendChild(videoItem);
+            });
+        }
+
+        // Inicializa o Plyr
+        const player = new Plyr('#player');
+
+        // Carrega os vídeos quando a página é carregada
+        document.addEventListener('DOMContentLoaded', loadVideos);
     </script>
 </body>
 </html>
