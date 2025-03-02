@@ -171,8 +171,11 @@
                 const latestRealValue = realData[realData.length - 1].valor; // Último valor
                 document.getElementById('realPrice').textContent = `R$${latestRealValue}`;
 
-                // Dólar (simulação)
-                document.getElementById('dollarPrice').textContent = '$1.00';
+                // Dólar (USD-BRL)
+                const dollarResponse = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
+                const dollarData = await dollarResponse.json();
+                const dollarRate = dollarData.USDBRL.bid; // Preço de compra do dólar
+                document.getElementById('dollarPrice').textContent = `R$${dollarRate}`;
             } catch (error) {
                 document.getElementById('bitcoinPrice').textContent = 'Erro ao carregar';
                 document.getElementById('realPrice').textContent = 'Erro ao carregar';
