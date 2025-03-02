@@ -155,6 +155,7 @@
     </footer>
 
     <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/rss-parser/dist/rss-parser.min.js"></script>
     <script>
         // Função para buscar preços das moedas
         async function fetchCurrencyPrices() {
@@ -179,18 +180,20 @@
             }
         }
 
-        // Função para carregar feed de notícias
-        async function fetchNewsFeed() {
+        // Função para carregar feed de notícias via RSS
+        async function fetchRSSFeed() {
+            const parser = new RSSParser();
+            const rssUrl = 'https://news.google.com/rss?hl=pt-BR&gl=BR&ceid=BR:pt-419';
+
             try {
-                const response = await fetch('https://newsapi.org/v2/top-headlines?country=br&apiKey=4be940ebd7994556a37772df141623cc');
-                const data = await response.json();
+                const feed = await parser.parseURL(rssUrl);
                 const newsFeed = document.getElementById('newsFeed');
                 newsFeed.innerHTML = ''; // Limpa o conteúdo anterior
 
-                data.articles.forEach(article => {
+                feed.items.slice(0, 5).forEach(item => { // Exibe as 5 primeiras notícias
                     const newsItem = document.createElement('div');
                     newsItem.className = 'news-item';
-                    newsItem.innerHTML = `<strong>${article.title}</strong><br>${article.description}`;
+                    newsItem.innerHTML = `<strong>${item.title}</strong><br><a href="${item.link}" target="_blank">Leia mais</a>`;
                     newsFeed.appendChild(newsItem);
                 });
             } catch (error) {
@@ -218,7 +221,7 @@
                 // Definir emoji de clima
                 let weatherEmoji = '';
                 if (weatherCondition === 'Clear') {
-                    weatherEmoji = '🌥️'; // Sol
+                    weatherEmoji = '🌤️'; // Sol
                 } else if (weatherCondition === 'Clouds') {
                     weatherEmoji = '☁️'; // Nublado
                 } else if (weatherCondition === 'Rain') {
@@ -260,7 +263,7 @@
 
         // Inicializa as funções
         fetchCurrencyPrices();
-        fetchNewsFeed();
+        fetchRSSFeed();
         fetchLocationAndWeather();
         setupVoiceSearch();
 
