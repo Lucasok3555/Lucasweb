@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Feed de Postagens</title>
+  <title>Feed P2P</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -65,7 +65,7 @@
 </head>
 <body>
   <header>
-    <h1>Feed de Postagens</h1>
+    <h1>Feed P2P</h1>
     <button id="openPostModal">+</button>
   </header>
   <div class="container">
@@ -91,6 +91,10 @@
       localStorage.setItem('userId', userId);
     }
 
+    // Armazenamento local de postagens (cada usuário armazena apenas uma parte)
+    const LOCAL_POSTS_KEY = `posts-${userId}`;
+    let localPosts = JSON.parse(localStorage.getItem(LOCAL_POSTS_KEY)) || [];
+
     // Elementos do DOM
     const postFeed = document.getElementById('postFeed');
     const postModal = document.getElementById('postModal');
@@ -113,33 +117,36 @@
       });
     }
 
-    // Função para buscar postagens do servidor
-    async function fetchPosts() {
-      try {
-        const response = await fetch('https://lucasok3555.github.io/Lucasweb/Poste.js');
-        const posts = await response.json();
-        renderPosts(posts);
-      } catch (error) {
-        console.error('Erro ao buscar postagens:', error);
-      }
+    // Função para buscar postagens de outros usuários (simulação P2P)
+    function fetchPeerPosts() {
+      const allUsers = Object.keys(localStorage).filter(key => key.startsWith('posts-'));
+      const allPosts = [];
+
+      allUsers.forEach(userKey => {
+        const userPosts = JSON.parse(localStorage.getItem(userKey)) || [];
+        allPosts.push(...userPosts);
+      });
+
+      // Remover duplicatas e ordenar por data (se necessário)
+      const uniquePosts = Array.from(new Set(allPosts.map(post => JSON.stringify(post)))).map(post => JSON.parse(post));
+      return uniquePosts;
+    }
+
+    // Função para salvar uma nova postagem localmente
+    function saveLocalPost(post) {
+      localPosts.push(post);
+      localStorage.setItem(LOCAL_POSTS_KEY, JSON.stringify(localPosts));
     }
 
     // Função para enviar uma nova postagem
-    submitPostButton.addEventListener('click', async () => {
+    submitPostButton.addEventListener('click', () => {
       const content = postContent.value.trim();
       if (content) {
-        try {
-          await fetch('https://lucasok3555.github.io/Lucasweb/Poste.js', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId, content }),
-          });
-          postContent.value = '';
-          postModal.style.display = 'none';
-          fetchPosts(); // Atualiza o feed após criar a postagem
-        } catch (error) {
-          console.error('Erro ao criar postagem:', error);
-        }
+        const newPost = { userId, content, likes: 0 };
+        saveLocalPost(newPost); // Salvar localmente
+        postContent.value = '';
+        postModal.style.display = 'none';
+        renderPosts(fetchPeerPosts()); // Atualizar feed com todas as postagens
       }
     });
 
@@ -156,7 +163,9 @@
     });
 
     // Carregar postagens ao iniciar
-    fetchPosts();
+    window.addEventListener('load', () => {
+      renderPosts(fetchPeerPosts());
+    });
   </script>
 </body>
 </html>
