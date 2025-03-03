@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Feed P2P</title>
+  <title>Feed Compartilhado</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -65,7 +65,7 @@
 </head>
 <body>
   <header>
-    <h1>Feed P2P</h1>
+    <h1>Feed Compartilhado</h1>
     <button id="openPostModal">+</button>
   </header>
   <div class="container">
@@ -91,9 +91,9 @@
       localStorage.setItem('userId', userId);
     }
 
-    // Armazenamento local de postagens (cada usuário armazena apenas uma parte)
-    const LOCAL_POSTS_KEY = `posts-${userId}`;
-    let localPosts = JSON.parse(localStorage.getItem(LOCAL_POSTS_KEY)) || [];
+    // Armazenamento local de postagens (compartilhado entre todos os usuários)
+    const POSTS_KEY = 'sharedPosts';
+    let posts = JSON.parse(localStorage.getItem(POSTS_KEY)) || [];
 
     // Elementos do DOM
     const postFeed = document.getElementById('postFeed');
@@ -104,38 +104,24 @@
     const closePostModalButton = document.getElementById('closePostModal');
 
     // Função para renderizar postagens
-    function renderPosts(posts) {
+    function renderPosts() {
       postFeed.innerHTML = '';
-      posts.forEach((post) => {
+      posts.forEach((post, index) => {
         const postDiv = document.createElement('div');
         postDiv.className = 'post';
         postDiv.innerHTML = `
           <p><strong>${post.userId}:</strong> ${post.content}</p>
-          <button onclick="likePost('${post.userId}', '${post.content}')">👍 ${post.likes} Curtidas</button>
+          <button onclick="likePost(${index})">👍 ${post.likes} Curtidas</button>
         `;
         postFeed.appendChild(postDiv);
       });
     }
 
-    // Função para buscar postagens de outros usuários (simulação P2P)
-    function fetchPeerPosts() {
-      const allUsers = Object.keys(localStorage).filter(key => key.startsWith('posts-'));
-      const allPosts = [];
-
-      allUsers.forEach(userKey => {
-        const userPosts = JSON.parse(localStorage.getItem(userKey)) || [];
-        allPosts.push(...userPosts);
-      });
-
-      // Remover duplicatas e ordenar por data (se necessário)
-      const uniquePosts = Array.from(new Set(allPosts.map(post => JSON.stringify(post)))).map(post => JSON.parse(post));
-      return uniquePosts;
-    }
-
-    // Função para salvar uma nova postagem localmente
-    function saveLocalPost(post) {
-      localPosts.push(post);
-      localStorage.setItem(LOCAL_POSTS_KEY, JSON.stringify(localPosts));
+    // Função para curtir uma postagem
+    function likePost(index) {
+      posts[index].likes++;
+      localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
+      renderPosts();
     }
 
     // Função para enviar uma nova postagem
@@ -143,10 +129,12 @@
       const content = postContent.value.trim();
       if (content) {
         const newPost = { userId, content, likes: 0 };
-        saveLocalPost(newPost); // Salvar localmente
+        posts.push(newPost);
+        localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
         postContent.value = '';
         postModal.style.display = 'none';
-        renderPosts(fetchPeerPosts()); // Atualizar feed com todas as postagens
+        overlay.style.display = 'none';
+        renderPosts();
       }
     });
 
@@ -164,7 +152,7 @@
 
     // Carregar postagens ao iniciar
     window.addEventListener('load', () => {
-      renderPosts(fetchPeerPosts());
+      renderPosts();
     });
   </script>
 </body>
