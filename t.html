@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rede Social Simples</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f9;
+    }
+    header {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px;
+      text-align: center;
+    }
+    .container {
+      padding: 20px;
+    }
+    .post-feed {
+      margin-top: 20px;
+    }
+    .post {
+      background-color: white;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .post button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    .post button:hover {
+      background-color: #45a049;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      padding: 20px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+    }
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+    }
+    .profile-modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      padding: 20px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+    }
+    .profile-posts {
+      margin-top: 10px;
+    }
+    .profile-post {
+      background-color: #f9f9f9;
+      padding: 10px;
+      margin-bottom: 5px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Minha Rede Social</h1>
+    <button id="openPostModal">+</button>
+    <button id="openProfileModal">😀</button>
+  </header>
+  <div class="container">
+    <div class="post-feed" id="postFeed"></div>
+  </div>
+
+  <!-- Modal para criar post -->
+  <div class="modal" id="postModal">
+    <h2>Criar Postagem</h2>
+    <textarea id="postContent" placeholder="Escreva sua postagem aqui..." rows="5" style="width: 100%;"></textarea>
+    <button id="submitPost">Postar</button>
+    <button id="closePostModal">Cancelar</button>
+  </div>
+
+  <!-- Modal para perfil do usuário -->
+  <div class="profile-modal" id="profileModal">
+    <h2>Perfil do Usuário</h2>
+    <p>ID do Usuário: <span id="userId"></span></p>
+    <h3>Minhas Postagens</h3>
+    <div class="profile-posts" id="profilePosts"></div>
+    <button id="closeProfileModal">Fechar</button>
+  </div>
+
+  <!-- Overlay para modal -->
+  <div class="overlay" id="overlay"></div>
+
+  <script>
+    // Gerar ou recuperar ID do usuário
+    let userId = localStorage.getItem('userId');
+    if (!userId) {
+      userId = 'user-' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('userId', userId);
+    }
+
+    // Recuperar postagens do localStorage
+    let posts = JSON.parse(localStorage.getItem('posts')) || [];
+
+    // Elementos do DOM
+    const postFeed = document.getElementById('postFeed');
+    const postModal = document.getElementById('postModal');
+    const overlay = document.getElementById('overlay');
+    const profileModal = document.getElementById('profileModal');
+    const profilePosts = document.getElementById('profilePosts');
+    const userIdDisplay = document.getElementById('userId');
+
+    // Função para renderizar postagens
+    function renderPosts() {
+      postFeed.innerHTML = '';
+      posts.forEach((post, index) => {
+        const postDiv = document.createElement('div');
+        postDiv.className = 'post';
+        postDiv.innerHTML = `
+          <p>${post.content}</p>
+          <button onclick="likePost(${index})">👍 ${post.likes} Curtidas</button>
+        `;
+        postFeed.appendChild(postDiv);
+      });
+    }
+
+    // Função para curtir uma postagem
+    function likePost(index) {
+      posts[index].likes++;
+      localStorage.setItem('posts', JSON.stringify(posts));
+      renderPosts();
+    }
+
+    // Função para abrir o modal de postagem
+    document.getElementById('openPostModal').addEventListener('click', () => {
+      postModal.style.display = 'block';
+      overlay.style.display = 'block';
+    });
+
+    // Função para fechar o modal de postagem
+    document.getElementById('closePostModal').addEventListener('click', () => {
+      postModal.style.display = 'none';
+      overlay.style.display = 'none';
+    });
+
+    // Função para enviar uma nova postagem
+    document.getElementById('submitPost').addEventListener('click', () => {
+      const content = document.getElementById('postContent').value.trim();
+      if (content) {
+        posts.push({ content, likes: 0, userId });
+        localStorage.setItem('posts', JSON.stringify(posts));
+        document.getElementById('postContent').value = '';
+        postModal.style.display = 'none';
+        overlay.style.display = 'none';
+        renderPosts();
+      }
+    });
+
+    // Função para abrir o modal de perfil
+    document.getElementById('openProfileModal').addEventListener('click', () => {
+      profileModal.style.display = 'block';
+      overlay.style.display = 'block';
+      userIdDisplay.textContent = userId;
+
+      // Filtrar postagens do usuário atual
+      const userPosts = posts.filter(post => post.userId === userId);
+      profilePosts.innerHTML = '';
+      if (userPosts.length > 0) {
+        userPosts.forEach(post => {
+          const postDiv = document.createElement('div');
+          postDiv.className = 'profile-post';
+          postDiv.textContent = post.content;
+          profilePosts.appendChild(postDiv);
+        });
+      } else {
+        profilePosts.innerHTML = '<p>Nenhuma postagem encontrada.</p>';
+      }
+    });
+
+    // Função para fechar o modal de perfil
+    document.getElementById('closeProfileModal').addEventListener('click', () => {
+      profileModal.style.display = 'none';
+      overlay.style.display = 'none';
+    });
+
+    // Inicializar a interface
+    renderPosts();
+  </script>
+</body>
+</html>
