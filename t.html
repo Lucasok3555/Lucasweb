@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rede Social Simples</title>
+  <title>Feed de Postagens Compartilhado</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -61,34 +61,12 @@
       background-color: rgba(0, 0, 0, 0.5);
       z-index: 999;
     }
-    .profile-modal {
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background-color: white;
-      padding: 20px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-      z-index: 1000;
-    }
-    .profile-posts {
-      margin-top: 10px;
-    }
-    .profile-post {
-      background-color: #f9f9f9;
-      padding: 10px;
-      margin-bottom: 5px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-    }
   </style>
 </head>
 <body>
   <header>
-    <h1>Minha Rede Social</h1>
+    <h1>Feed de Postagens Compartilhado</h1>
     <button id="openPostModal">+</button>
-    <button id="openProfileModal">😀</button>
   </header>
   <div class="container">
     <div class="post-feed" id="postFeed"></div>
@@ -100,15 +78,6 @@
     <textarea id="postContent" placeholder="Escreva sua postagem aqui..." rows="5" style="width: 100%;"></textarea>
     <button id="submitPost">Postar</button>
     <button id="closePostModal">Cancelar</button>
-  </div>
-
-  <!-- Modal para perfil do usuário -->
-  <div class="profile-modal" id="profileModal">
-    <h2>Perfil do Usuário</h2>
-    <p>ID do Usuário: <span id="userId"></span></p>
-    <h3>Minhas Postagens</h3>
-    <div class="profile-posts" id="profilePosts"></div>
-    <button id="closeProfileModal">Fechar</button>
   </div>
 
   <!-- Overlay para modal -->
@@ -129,9 +98,6 @@
     const postFeed = document.getElementById('postFeed');
     const postModal = document.getElementById('postModal');
     const overlay = document.getElementById('overlay');
-    const profileModal = document.getElementById('profileModal');
-    const profilePosts = document.getElementById('profilePosts');
-    const userIdDisplay = document.getElementById('userId');
 
     // Função para renderizar postagens
     function renderPosts() {
@@ -177,33 +143,6 @@
         overlay.style.display = 'none';
         renderPosts();
       }
-    });
-
-    // Função para abrir o modal de perfil
-    document.getElementById('openProfileModal').addEventListener('click', () => {
-      profileModal.style.display = 'block';
-      overlay.style.display = 'block';
-      userIdDisplay.textContent = userId;
-
-      // Filtrar postagens do usuário atual
-      const userPosts = posts.filter(post => post.userId === userId);
-      profilePosts.innerHTML = '';
-      if (userPosts.length > 0) {
-        userPosts.forEach(post => {
-          const postDiv = document.createElement('div');
-          postDiv.className = 'profile-post';
-          postDiv.textContent = post.content;
-          profilePosts.appendChild(postDiv);
-        });
-      } else {
-        profilePosts.innerHTML = '<p>Nenhuma postagem encontrada.</p>';
-      }
-    });
-
-    // Função para fechar o modal de perfil
-    document.getElementById('closeProfileModal').addEventListener('click', () => {
-      profileModal.style.display = 'none';
-      overlay.style.display = 'none';
     });
 
     // Inicializar a interface
