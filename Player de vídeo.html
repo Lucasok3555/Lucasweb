@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Visualizador de Vídeo com Botão Play</title>
+  <title>Visualizador de Vídeo com Upload Automático</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -28,7 +28,7 @@
       max-width: 600px;
     }
 
-    input[type="file"], input[type="text"] {
+    input[type="file"] {
       margin-bottom: 20px;
       padding: 10px;
       width: 100%;
@@ -51,39 +51,19 @@
       background-color: #0056b3;
     }
 
-    .video-wrapper {
-      position: relative;
+    video {
+      margin-top: 20px;
       width: 100%;
       max-width: 600px;
-      margin-top: 20px;
-    }
-
-    video {
-      width: 100%;
       border: 2px solid #ddd;
       border-radius: 10px;
     }
 
-    .play-button {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 60px;
-      height: 60px;
-      background-color: rgba(0, 0, 0, 0.6);
-      color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 24px;
-      z-index: 10;
-    }
-
-    .play-button.hidden {
-      display: none;
+    .video-link {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #007bff;
+      word-break: break-all;
     }
   </style>
 </head>
@@ -92,80 +72,42 @@
     <h1>Visualizador de Vídeo</h1>
 
     <!-- Upload de Vídeo -->
-    <input type="file" id="videoFileInput" accept="video/*" class="hidden" />
-    <button onclick="document.getElementById('videoFileInput').click()">Carregar Vídeo Local</button>
-
-    <!-- Inserir Link de Vídeo -->
-    <input type="text" id="videoLinkInput" placeholder="Insira o link do vídeo" class="hidden" />
-    <button onclick="toggleInput('link')">Inserir Link de Vídeo</button>
+    <input type="file" id="videoFileInput" accept="video/*" />
 
     <!-- Reprodutor de Vídeo -->
-    <div class="video-wrapper">
-      <video id="videoPlayer" controls class="hidden"></video>
-      <div id="playButton" class="play-button">▶</div>
-    </div>
+    <video id="videoPlayer" controls></video>
+
+    <!-- Exibir Link do Vídeo -->
+    <div id="videoLinkContainer" class="video-link"></div>
   </div>
 
   <script>
-    // Função para alternar entre os modos de entrada (upload ou link)
-    function toggleInput(mode) {
-      const fileInput = document.getElementById('videoFileInput');
-      const linkInput = document.getElementById('videoLinkInput');
-      const videoPlayer = document.getElementById('videoPlayer');
-
-      // Oculta todos os elementos
-      fileInput.classList.add('hidden');
-      linkInput.classList.add('hidden');
-      videoPlayer.classList.add('hidden');
-
-      if (mode === 'file') {
-        fileInput.classList.remove('hidden');
-        fileInput.addEventListener('change', handleFileUpload);
-      } else if (mode === 'link') {
-        linkInput.classList.remove('hidden');
-        linkInput.addEventListener('input', handleLinkInput);
-      }
-    }
+    // Elementos do DOM
+    const videoFileInput = document.getElementById('videoFileInput');
+    const videoPlayer = document.getElementById('videoPlayer');
+    const videoLinkContainer = document.getElementById('videoLinkContainer');
 
     // Manipulador para upload de arquivo
-    function handleFileUpload(event) {
+    videoFileInput.addEventListener('change', (event) => {
       const file = event.target.files[0];
-      const videoPlayer = document.getElementById('videoPlayer');
-      const playButton = document.getElementById('playButton');
 
       if (file) {
+        // Cria uma URL temporária para o arquivo
         const videoURL = URL.createObjectURL(file);
+
+        // Define a URL do vídeo no player
         videoPlayer.src = videoURL;
-        videoPlayer.classList.remove('hidden');
-        playButton.classList.remove('hidden'); // Mostra o botão de play
+
+        // Exibe o vídeo automaticamente
+        videoPlayer.play();
+
+        // Exibe o link do vídeo para o usuário
+        videoLinkContainer.textContent = `Link do Vídeo: ${videoURL}`;
+      } else {
+        // Limpa o player e o link se nenhum arquivo for selecionado
+        videoPlayer.src = '';
+        videoLinkContainer.textContent = '';
       }
-    }
-
-    // Manipulador para inserir link
-    function handleLinkInput(event) {
-      const videoPlayer = document.getElementById('videoPlayer');
-      const playButton = document.getElementById('playButton');
-      const videoURL = event.target.value;
-
-      if (videoURL) {
-        videoPlayer.src = videoURL;
-        videoPlayer.classList.remove('hidden');
-        playButton.classList.remove('hidden'); // Mostra o botão de play
-      }
-    }
-
-    // Manipulador para o botão de play
-    const playButton = document.getElementById('playButton');
-    const videoPlayer = document.getElementById('videoPlayer');
-
-    playButton.addEventListener('click', () => {
-      videoPlayer.play(); // Inicia a reprodução do vídeo
-      playButton.classList.add('hidden'); // Oculta o botão de play
-    });
-
-    // Oculta o botão de play quando o vídeo termina
-    videoPlayer.addEventListener('ended', () => {
-      playButton.classList.add('hidden');
     });
   </script>
 </body>
