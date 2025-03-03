@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compartilhamento P2P com WebRTC</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 350px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+
+    input[type="text"], input[type="file"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .progress-bar {
+      width: 100%;
+      background-color: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 20px;
+    }
+
+    .progress {
+      width: 0%;
+      height: 20px;
+      background-color: #28a745;
+      text-align: center;
+      line-height: 20px;
+      color: white;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Compartilhamento P2P com WebRTC</h1>
+    <label for="offer-id">ID da Oferta:</label>
+    <input type="text" id="offer-id" placeholder="Insira o ID da oferta">
+
+    <label for="answer-id">ID da Resposta:</label>
+    <input type="text" id="answer-id" placeholder="Insira o ID da resposta">
+
+    <label for="file-input">Selecione o Arquivo:</label>
+    <input type="file" id="file-input">
+
+    <button id="start-button">Iniciar Conexão</button>
+    <button id="send-button" disabled>Enviar Arquivo</button>
+
+    <div class="progress-bar">
+      <div class="progress" id="progress"></div>
+    </div>
+  </div>
+
+  <script>
+    const offerIdInput = document.getElementById('offer-id');
+    const answerIdInput = document.getElementById('answer-id');
+    const fileInput = document.getElementById('file-input');
+    const startButton = document.getElementById('start-button');
+    const sendButton = document.getElementById('send-button');
+    const progressBar = document.getElementById('progress');
+
+    let peerConnection;
+    let dataChannel;
+
+    // Configurações do WebRTC
+    const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+    startButton.addEventListener('click', async () => {
+      // Inicializa a conexão WebRTC
+      peerConnection = new RTCPeerConnection(configuration);
+
+      // Cria um canal de dados para transferência de arquivos
+      dataChannel = peerConnection.createDataChannel('fileTransfer', { reliable: true });
+
+      // Evento quando a conexão é aberta
+      dataChannel.onopen = () => {
+        console.log('Conexão aberta!');
+        sendButton.disabled = false;
+      };
+
+      // Evento para receber dados
+      dataChannel.onmessage = (event) => {
+        console.log('Arquivo recebido:', event.data);
+        alert('Arquivo recebido com sucesso!');
+      };
+
+      // Gera a oferta SDP
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+
+      // Exibe o ID da oferta para ser compartilhado
+      offerIdInput.value = JSON.stringify(peerConnection.localDescription);
+    });
+
+    sendButton.addEventListener('click', () => {
+      const file = fileInput.files[0];
+
+      if (!file) {
+        alert('Por favor, selecione um arquivo para enviar.');
+        return;
+      }
+
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        const arrayBuffer = event.target.result;
+
+        // Envia o arquivo em partes
+        let offset = 0;
+        const chunkSize = 16384; // Tamanho máximo por parte (16KB)
+
+        function sendChunk() {
+          const chunk = arrayBuffer.slice(offset, offset + chunkSize);
+          dataChannel.send(chunk);
+
+          offset += chunkSize;
+
+          const progress = Math.min((offset / arrayBuffer.byteLength) * 100, 100);
+          progressBar.style.width = `${progress}%`;
+          progressBar.textContent = `${Math.round(progress)}%`;
+
+          if (offset < arrayBuffer.byteLength) {
+            setTimeout(sendChunk, 0); // Continua enviando o próximo pedaço
+          } else {
+            alert('Arquivo enviado com sucesso!');
+          }
+        }
+
+        sendChunk();
+      };
+
+      reader.readAsArrayBuffer(file);
+    });
+
+    // Função para aceitar a oferta e criar a resposta
+    answerIdInput.addEventListener('input', async () => {
+      const answerId = answerIdInput.value.trim();
+
+      if (!answerId) return;
+
+      const offer = JSON.parse(answerId);
+
+      peerConnection = new RTCPeerConnection(configuration);
+
+      peerConnection.ondatachannel = (event) => {
+        dataChannel = event.channel;
+
+        dataChannel.onopen = () => {
+          console.log('Conexão aberta!');
+        };
+
+        dataChannel.onmessage = (event) => {
+          console.log('Arquivo recebido:', event.data);
+          alert('Arquivo recebido com sucesso!');
+        };
+      };
+
+      await peerConnection.setRemoteDescription(offer);
+
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+
+      alert('Resposta criada! Compartilhe este ID com o remetente:');
+      alert(JSON.stringify(peerConnection.localDescription));
+    });
+  </script>
+</body>
+  </html>
