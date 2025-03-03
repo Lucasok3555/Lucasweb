@@ -123,7 +123,7 @@
     }
 
     // Recuperar postagens do localStorage
-    let posts = JSON.parse(localStorage.getItem('posts')) || [];
+    let posts = JSON.parse(localStorage.getItem('allPosts')) || [];
 
     // Elementos do DOM
     const postFeed = document.getElementById('postFeed');
@@ -140,7 +140,7 @@
         const postDiv = document.createElement('div');
         postDiv.className = 'post';
         postDiv.innerHTML = `
-          <p>${post.content}</p>
+          <p><strong>${post.userId}:</strong> ${post.content}</p>
           <button onclick="likePost(${index})">👍 ${post.likes} Curtidas</button>
         `;
         postFeed.appendChild(postDiv);
@@ -150,7 +150,7 @@
     // Função para curtir uma postagem
     function likePost(index) {
       posts[index].likes++;
-      localStorage.setItem('posts', JSON.stringify(posts));
+      localStorage.setItem('allPosts', JSON.stringify(posts));
       renderPosts();
     }
 
@@ -171,7 +171,7 @@
       const content = document.getElementById('postContent').value.trim();
       if (content) {
         posts.push({ content, likes: 0, userId });
-        localStorage.setItem('posts', JSON.stringify(posts));
+        localStorage.setItem('allPosts', JSON.stringify(posts));
         document.getElementById('postContent').value = '';
         postModal.style.display = 'none';
         overlay.style.display = 'none';
