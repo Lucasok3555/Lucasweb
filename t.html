@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Feed de Postagens Compartilhado</title>
+  <title>Feed de Postagens</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -65,7 +65,7 @@
 </head>
 <body>
   <header>
-    <h1>Feed de Postagens Compartilhado</h1>
+    <h1>Feed de Postagens</h1>
     <button id="openPostModal">+</button>
   </header>
   <div class="container">
@@ -91,62 +91,72 @@
       localStorage.setItem('userId', userId);
     }
 
-    // Recuperar postagens do localStorage
-    let posts = JSON.parse(localStorage.getItem('allPosts')) || [];
-
     // Elementos do DOM
     const postFeed = document.getElementById('postFeed');
     const postModal = document.getElementById('postModal');
     const overlay = document.getElementById('overlay');
+    const postContent = document.getElementById('postContent');
+    const submitPostButton = document.getElementById('submitPost');
+    const closePostModalButton = document.getElementById('closePostModal');
 
     // Função para renderizar postagens
-    function renderPosts() {
+    function renderPosts(posts) {
       postFeed.innerHTML = '';
-      posts.forEach((post, index) => {
+      posts.forEach((post) => {
         const postDiv = document.createElement('div');
         postDiv.className = 'post';
         postDiv.innerHTML = `
           <p><strong>${post.userId}:</strong> ${post.content}</p>
-          <button onclick="likePost(${index})">👍 ${post.likes} Curtidas</button>
+          <button onclick="likePost('${post.userId}', '${post.content}')">👍 ${post.likes} Curtidas</button>
         `;
         postFeed.appendChild(postDiv);
       });
     }
 
-    // Função para curtir uma postagem
-    function likePost(index) {
-      posts[index].likes++;
-      localStorage.setItem('allPosts', JSON.stringify(posts));
-      renderPosts();
+    // Função para buscar postagens do servidor
+    async function fetchPosts() {
+      try {
+        const response = await fetch('https://lucasok3555.github.io/Lucasweb/Poste.js');
+        const posts = await response.json();
+        renderPosts(posts);
+      } catch (error) {
+        console.error('Erro ao buscar postagens:', error);
+      }
     }
 
-    // Função para abrir o modal de postagem
+    // Função para enviar uma nova postagem
+    submitPostButton.addEventListener('click', async () => {
+      const content = postContent.value.trim();
+      if (content) {
+        try {
+          await fetch('https://lucasok3555.github.io/Lucasweb/Poste.js', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, content }),
+          });
+          postContent.value = '';
+          postModal.style.display = 'none';
+          fetchPosts(); // Atualiza o feed após criar a postagem
+        } catch (error) {
+          console.error('Erro ao criar postagem:', error);
+        }
+      }
+    });
+
+    // Fechar modal
+    closePostModalButton.addEventListener('click', () => {
+      postModal.style.display = 'none';
+      overlay.style.display = 'none';
+    });
+
+    // Abrir modal
     document.getElementById('openPostModal').addEventListener('click', () => {
       postModal.style.display = 'block';
       overlay.style.display = 'block';
     });
 
-    // Função para fechar o modal de postagem
-    document.getElementById('closePostModal').addEventListener('click', () => {
-      postModal.style.display = 'none';
-      overlay.style.display = 'none';
-    });
-
-    // Função para enviar uma nova postagem
-    document.getElementById('submitPost').addEventListener('click', () => {
-      const content = document.getElementById('postContent').value.trim();
-      if (content) {
-        posts.push({ content, likes: 0, userId });
-        localStorage.setItem('allPosts', JSON.stringify(posts));
-        document.getElementById('postContent').value = '';
-        postModal.style.display = 'none';
-        overlay.style.display = 'none';
-        renderPosts();
-      }
-    });
-
-    // Inicializar a interface
-    renderPosts();
+    // Carregar postagens ao iniciar
+    fetchPosts();
   </script>
 </body>
 </html>
