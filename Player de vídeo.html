@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visualizador de Vídeo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #f4f4f9;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .container {
+      text-align: center;
+      width: 80%;
+      max-width: 600px;
+    }
+
+    input[type="file"], input[type="text"] {
+      margin-bottom: 20px;
+      padding: 10px;
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    video {
+      margin-top: 20px;
+      width: 100%;
+      max-width: 600px;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Visualizador de Vídeo</h1>
+
+    <!-- Upload de Vídeo -->
+    <input type="file" id="videoFileInput" accept="video/*" class="hidden" />
+    <button onclick="document.getElementById('videoFileInput').click()">Carregar Vídeo Local</button>
+
+    <!-- Inserir Link de Vídeo -->
+    <input type="text" id="videoLinkInput" placeholder="Insira o link do vídeo" class="hidden" />
+    <button onclick="toggleInput('link')">Inserir Link de Vídeo</button>
+
+    <!-- Reprodutor de Vídeo -->
+    <video id="videoPlayer" controls class="hidden"></video>
+  </div>
+
+  <script>
+    // Função para alternar entre os modos de entrada (upload ou link)
+    function toggleInput(mode) {
+      const fileInput = document.getElementById('videoFileInput');
+      const linkInput = document.getElementById('videoLinkInput');
+      const videoPlayer = document.getElementById('videoPlayer');
+
+      // Oculta todos os elementos
+      fileInput.classList.add('hidden');
+      linkInput.classList.add('hidden');
+      videoPlayer.classList.add('hidden');
+
+      if (mode === 'file') {
+        fileInput.classList.remove('hidden');
+        fileInput.addEventListener('change', handleFileUpload);
+      } else if (mode === 'link') {
+        linkInput.classList.remove('hidden');
+        linkInput.addEventListener('input', handleLinkInput);
+      }
+    }
+
+    // Manipulador para upload de arquivo
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      const videoPlayer = document.getElementById('videoPlayer');
+
+      if (file) {
+        const videoURL = URL.createObjectURL(file);
+        videoPlayer.src = videoURL;
+        videoPlayer.classList.remove('hidden');
+      }
+    }
+
+    // Manipulador para inserir link
+    function handleLinkInput(event) {
+      const videoPlayer = document.getElementById('videoPlayer');
+      const videoURL = event.target.value;
+
+      if (videoURL) {
+        videoPlayer.src = videoURL;
+        videoPlayer.classList.remove('hidden');
+      }
+    }
+  </script>
+</body>
+</html>
