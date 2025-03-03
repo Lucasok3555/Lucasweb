@@ -77,12 +77,13 @@
     async function setupCamera() {
       const constraints = {
         video: { facingMode: currentFacingMode },
+        audio: true, // Habilita o áudio
       };
       try {
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         video.srcObject = stream;
 
-        // Configurar MediaRecorder para gravação de vídeo
+        // Configurar MediaRecorder para gravação de vídeo com áudio
         mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
         mediaRecorder.ondataavailable = (event) => {
           if (event.data.size > 0) {
@@ -95,7 +96,7 @@
           recordedChunks = [];
         };
       } catch (error) {
-        console.error('Erro ao acessar a câmera:', error);
+        console.error('Erro ao acessar a câmera ou microfone:', error);
       }
     }
 
