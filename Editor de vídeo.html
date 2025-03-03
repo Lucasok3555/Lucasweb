@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editor de Vídeo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background-color: #f4f4f4;
+    }
+    h1 {
+      margin-top: 20px;
+    }
+    .container {
+      width: 90%;
+      max-width: 800px;
+      margin: 20px auto;
+      text-align: center;
+    }
+    video {
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .controls button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .frames {
+      display: flex;
+      overflow-x: auto;
+      gap: 5px;
+      margin-bottom: 20px;
+    }
+    .frames img {
+      height: 50px;
+      border: 1px solid #ccc;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+    }
+    .modal input, .modal select {
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 16px;
+    }
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+    }
+    .progress {
+      width: 100%;
+      background: #ddd;
+      height: 10px;
+      border-radius: 5px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: #4caf50;
+    }
+  </style>
+</head>
+<body>
+  <h1>Editor de Vídeo</h1>
+  <div class="container">
+    <input type="file" id="video-upload" accept="video/*">
+    <video id="video-player" controls></video>
+    <div class="frames" id="frames"></div>
+    <div class="controls">
+      <button onclick="openModal('cut')">Cortar Vídeo</button>
+      <button onclick="openModal('text')">Adicionar Texto</button>
+      <button onclick="openModal('audio')">Ajustar Áudio</button>
+      <button onclick="exportVideo()">Exportar Vídeo</button>
+    </div>
+    <div class="progress">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+  </div>
+
+  <!-- Modal Cortar -->
+  <div class="modal" id="cut-modal">
+    <h2>Cortar Vídeo</h2>
+    <label>Início (segundos): <input type="number" id="start-time" value="0"></label>
+    <label>Fim (segundos): <input type="number" id="end-time" value="10"></label>
+    <button onclick="cutVideo()">Aplicar Corte</button>
+    <button onclick="closeModal('cut')">Fechar</button>
+  </div>
+
+  <!-- Modal Texto -->
+  <div class="modal" id="text-modal">
+    <h2>Adicionar Texto</h2>
+    <label>Texto: <input type="text" id="text-input" placeholder="Digite o texto"></label>
+    <label>Posição X: <input type="number" id="text-x" value="50"></label>
+    <label>Posição Y: <input type="number" id="text-y" value="50"></label>
+    <button onclick="addText()">Aplicar Texto</button>
+    <button onclick="closeModal('text')">Fechar</button>
+  </div>
+
+  <!-- Modal Áudio -->
+  <div class="modal" id="audio-modal">
+    <h2>Ajustar Áudio</h2>
+    <label>Volume (0-100): <input type="range" id="volume-slider" min="0" max="100" value="100"></label>
+    <button onclick="adjustAudio()">Aplicar Volume</button>
+    <button onclick="closeModal('audio')">Fechar</button>
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+
+  <script>
+    const videoPlayer = document.getElementById('video-player');
+    const videoUpload = document.getElementById('video-upload');
+    const framesContainer = document.getElementById('frames');
+    const progressBar = document.getElementById('progress-bar');
+
+    let videoBlob;
+
+    // Upload de vídeo
+    videoUpload.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        const url = URL.createObjectURL(file);
+        videoPlayer.src = url;
+        videoBlob = file;
+        generateFrames();
+      }
+    });
+
+    // Gerar frames do vídeo
+    function generateFrames() {
+      framesContainer.innerHTML = '';
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const interval = 1; // Intervalo em segundos
+      const duration = videoPlayer.duration;
+
+      for (let time = 0; time < duration; time += interval) {
+        setTimeout(() => {
+          canvas.width = videoPlayer.videoWidth / 4;
+          canvas.height = videoPlayer.videoHeight / 4;
+          ctx.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height);
+          const img = document.createElement('img');
+          img.src = canvas.toDataURL();
+          framesContainer.appendChild(img);
+        }, time * 1000);
+      }
+    }
+
+    // Abrir modal
+    function openModal(type) {
+      document.getElementById(`${type}-modal`).style.display = 'block';
+      document.getElementById('overlay').style.display = 'block';
+    }
+
+    // Fechar modal
+    function closeModal(type) {
+      document.getElementById(`${type}-modal`).style.display = 'none';
+      document.getElementById('overlay').style.display = 'none';
+    }
+
+    // Cortar vídeo
+    function cutVideo() {
+      const startTime = parseFloat(document.getElementById('start-time').value);
+      const endTime = parseFloat(document.getElementById('end-time').value);
+      if (startTime >= 0 && endTime > startTime) {
+        alert(`Vídeo cortado de ${startTime}s a ${endTime}s`);
+        closeModal('cut');
+      } else {
+        alert('Valores inválidos para corte.');
+      }
+    }
+
+    // Adicionar texto
+    function addText() {
+      const text = document.getElementById('text-input').value;
+      const x = parseInt(document.getElementById('text-x').value);
+      const y = parseInt(document.getElementById('text-y').value);
+      alert(`Texto "${text}" adicionado na posição (${x}, ${y})`);
+      closeModal('text');
+    }
+
+    // Ajustar áudio
+    function adjustAudio() {
+      const volume = parseFloat(document.getElementById('volume-slider').value) / 100;
+      videoPlayer.volume = volume;
+      alert(`Volume ajustado para ${volume * 100}%`);
+      closeModal('audio');
+    }
+
+    // Exportar vídeo
+    function exportVideo() {
+      const progressInterval = setInterval(() => {
+        const progress = Math.min(progressBar.style.width.replace('%', '') * 1 + 10, 100);
+        progressBar.style.width = `${progress}%`;
+        if (progress >= 100) {
+          clearInterval(progressInterval);
+          alert('Vídeo exportado com sucesso!');
+        }
+      }, 500);
+    }
+  </script>
+</body>
+</html>
