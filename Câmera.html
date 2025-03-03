@@ -1,22 +1,162 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Câmera Web</title>
-    <style>
-        video, canvas {
-            width: 100%;
-            max-width: 500px;
-            border: 2px solid black;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aplicativo de Câmera</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #f4f4f9;
+    }
+    video, canvas {
+      width: 100%;
+      max-width: 600px;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      background-color: #000;
+    }
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .preview {
+      margin-top: 20px;
+      text-align: center;
+    }
+    .preview img, .preview video {
+      max-width: 100%;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+    }
+  </style>
 </head>
 <body>
-    <h1>Aplicativo de Câmera</h1>
-    <video id="video" autoplay></video>
-    <button id="capture">📷 Tirar Foto</button>
-    <canvas id="canvas"></canvas>
-    <script src="https://lucas75677.github.io/PASN-site/C%C3%A2mera.js"></script>
+  <h1>Aplicativo de Câmera</h1>
+  <video id="camera" autoplay playsinline></video>
+  <div class="controls">
+    <button id="capture">Tirar Foto</button>
+    <button id="record">Gravar Vídeo</button>
+    <button id="toggleCamera">Alternar Câmera</button>
+  </div>
+  <div class="preview" id="preview"></div>
+
+  <script>
+    const video = document.getElementById('camera');
+    const captureButton = document.getElementById('capture');
+    const recordButton = document.getElementById('record');
+    const toggleCameraButton = document.getElementById('toggleCamera');
+    const preview = document.getElementById('preview');
+
+    let mediaRecorder;
+    let recordedChunks = [];
+    let isRecording = false;
+    let currentFacingMode = 'user'; // 'user' para frontal, 'environment' para traseira
+
+    async function setupCamera() {
+      const constraints = {
+        video: { facingMode: currentFacingMode },
+      };
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream;
+
+        // Configurar MediaRecorder para gravação de vídeo
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            recordedChunks.push(event.data);
+          }
+        };
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: 'video/webm' });
+          showPreview(blob, 'video');
+          recordedChunks = [];
+        };
+      } catch (error) {
+        console.error('Erro ao acessar a câmera:', error);
+      }
+    }
+
+    function takePhoto() {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob((blob) => {
+        showPreview(blob, 'image');
+      }, 'image/jpeg', 0.9);
+    }
+
+    function startRecording() {
+      if (!isRecording) {
+        recordedChunks = [];
+        mediaRecorder.start();
+        isRecording = true;
+        recordButton.textContent = 'Parar Gravação';
+      } else {
+        mediaRecorder.stop();
+        isRecording = false;
+        recordButton.textContent = 'Gravar Vídeo';
+      }
+    }
+
+    function toggleCamera() {
+      currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+      video.srcObject.getTracks().forEach(track => track.stop());
+      setupCamera();
+    }
+
+    function showPreview(blob, type) {
+      const url = URL.createObjectURL(blob);
+      const container = document.createElement('div');
+      const mediaElement = type === 'image' ? document.createElement('img') : document.createElement('video');
+      mediaElement.src = url;
+      mediaElement.controls = type === 'video';
+      mediaElement.style.maxWidth = '100%';
+
+      const downloadLink = document.createElement('a');
+      downloadLink.href = url;
+      downloadLink.download = type === 'image' ? 'foto.jpg' : 'video.webm';
+      downloadLink.textContent = `Baixar ${type === 'image' ? 'Foto' : 'Vídeo'}`;
+      downloadLink.style.display = 'block';
+      downloadLink.style.marginTop = '10px';
+
+      container.appendChild(mediaElement);
+      container.appendChild(downloadLink);
+      preview.prepend(container);
+    }
+
+    // Inicialização
+    setupCamera();
+
+    // Eventos
+    captureButton.addEventListener('click', takePhoto);
+    recordButton.addEventListener('click', startRecording);
+    toggleCameraButton.addEventListener('click', toggleCamera);
+  </script>
 </body>
 </html>
