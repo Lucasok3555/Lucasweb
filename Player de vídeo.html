@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Visualizador de Vídeo</title>
+  <title>Visualizador de Vídeo com Botão Play</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -51,15 +51,38 @@
       background-color: #0056b3;
     }
 
-    video {
-      margin-top: 20px;
+    .video-wrapper {
+      position: relative;
       width: 100%;
       max-width: 600px;
+      margin-top: 20px;
+    }
+
+    video {
+      width: 100%;
       border: 2px solid #ddd;
       border-radius: 10px;
     }
 
-    .hidden {
+    .play-button {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60px;
+      height: 60px;
+      background-color: rgba(0, 0, 0, 0.6);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 24px;
+      z-index: 10;
+    }
+
+    .play-button.hidden {
       display: none;
     }
   </style>
@@ -77,7 +100,10 @@
     <button onclick="toggleInput('link')">Inserir Link de Vídeo</button>
 
     <!-- Reprodutor de Vídeo -->
-    <video id="videoPlayer" controls class="hidden"></video>
+    <div class="video-wrapper">
+      <video id="videoPlayer" controls class="hidden"></video>
+      <div id="playButton" class="play-button">▶</div>
+    </div>
   </div>
 
   <script>
@@ -105,24 +131,42 @@
     function handleFileUpload(event) {
       const file = event.target.files[0];
       const videoPlayer = document.getElementById('videoPlayer');
+      const playButton = document.getElementById('playButton');
 
       if (file) {
         const videoURL = URL.createObjectURL(file);
         videoPlayer.src = videoURL;
         videoPlayer.classList.remove('hidden');
+        playButton.classList.remove('hidden'); // Mostra o botão de play
       }
     }
 
     // Manipulador para inserir link
     function handleLinkInput(event) {
       const videoPlayer = document.getElementById('videoPlayer');
+      const playButton = document.getElementById('playButton');
       const videoURL = event.target.value;
 
       if (videoURL) {
         videoPlayer.src = videoURL;
         videoPlayer.classList.remove('hidden');
+        playButton.classList.remove('hidden'); // Mostra o botão de play
       }
     }
+
+    // Manipulador para o botão de play
+    const playButton = document.getElementById('playButton');
+    const videoPlayer = document.getElementById('videoPlayer');
+
+    playButton.addEventListener('click', () => {
+      videoPlayer.play(); // Inicia a reprodução do vídeo
+      playButton.classList.add('hidden'); // Oculta o botão de play
+    });
+
+    // Oculta o botão de play quando o vídeo termina
+    videoPlayer.addEventListener('ended', () => {
+      playButton.classList.add('hidden');
+    });
   </script>
 </body>
 </html>
