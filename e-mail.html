@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serviço de E-mail</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        .container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 500px;
+            overflow: hidden;
+        }
+        header {
+            background-color: #007bff;
+            color: #fff;
+            padding: 15px;
+            text-align: center;
+        }
+        form {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        input[type="email"] {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .emails-list {
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            border-top: 1px solid #ddd;
+        }
+        .email-item {
+            background-color: #f9f9f9;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .email-item:last-child {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Serviço de E-mail</h1>
+        </header>
+        <form id="emailForm">
+            <label for="email">Insira seu e-mail:</label>
+            <input type="email" id="email" placeholder="exemplo@dominio.com" required>
+            <button type="submit">Conectar ao Servidor de E-mail</button>
+        </form>
+        <div class="emails-list" id="emailsList">
+            <!-- Os e-mails serão exibidos aqui -->
+        </div>
+    </div>
+
+    <script>
+        // Simulação de conexão ao servidor de e-mail
+        document.getElementById('emailForm').addEventListener('submit', function (e) {
+            e.preventDefault(); // Impede o envio do formulário
+
+            const emailInput = document.getElementById('email');
+            const userEmail = emailInput.value;
+
+            if (userEmail) {
+                alert(`Conectado com sucesso ao servidor de e-mail usando: ${userEmail}`);
+                loadMockEmails(); // Carrega e-mails fictícios
+            } else {
+                alert('Por favor, insira um e-mail válido.');
+            }
+        });
+
+        // Função para carregar e-mails fictícios
+        function loadMockEmails() {
+            const emailsList = document.getElementById('emailsList');
+            emailsList.innerHTML = ''; // Limpa a lista atual
+
+            const mockEmails = [
+                { from: 'amigo@exemplo.com', subject: 'Reunião amanhã', body: 'Não se esqueça da reunião às 10h.' },
+                { from: 'trabalho@empresa.com', subject: 'Relatório mensal', body: 'Segue o relatório solicitado.' },
+                { from: 'newsletter@noticias.com', subject: 'Últimas notícias', body: 'Confira as principais notícias do dia.' }
+            ];
+
+            mockEmails.forEach(email => {
+                const emailItem = document.createElement('div');
+                emailItem.classList.add('email-item');
+                emailItem.innerHTML = `
+                    <strong>De:</strong> ${email.from}<br>
+                    <strong>Assunto:</strong> ${email.subject}<br>
+                    <p>${email.body}</p>
+                `;
+                emailsList.appendChild(emailItem);
+            });
+        }
+    </script>
+</body>
+</html>
