@@ -175,15 +175,15 @@
     <div class="currency-section">
         <div class="currency-box">
             <h3>Bitcoin</h3>
-            <p id="bitcoinPrice">Carregando...</p>
+            <p id="bitcoinPrice">Carregando... <span id="bitcoinArrow"></span></p>
         </div>
         <div class="currency-box">
             <h3>Real</h3>
-            <p id="realPrice">Carregando...</p>
+            <p id="realPrice">Carregando... <span id="realArrow"></span></p>
         </div>
         <div class="currency-box">
             <h3>Dólar</h3>
-            <p id="dollarPrice">Carregando...</p>
+            <p id="dollarPrice">Carregando... <span id="dollarArrow"></span></p>
         </div>
     </div>
 
@@ -200,29 +200,57 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/rss-parser/dist/rss-parser.min.js"></script>
     <script>
+        // Variáveis globais para armazenar valores anteriores
+        let previousBitcoinPrice = null;
+        let previousRealPrice = null;
+        let previousDollarPrice = null;
+
         // Função para buscar preços das moedas
         async function fetchCurrencyPrices() {
             try {
                 // Bitcoin
                 const bitcoinResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
                 const bitcoinData = await bitcoinResponse.json();
-                document.getElementById('bitcoinPrice').textContent = `$${bitcoinData.bitcoin.usd}`;
+                const currentBitcoinPrice = bitcoinData.bitcoin.usd;
+                document.getElementById('bitcoinPrice').textContent = `$${currentBitcoinPrice} `;
+                updateArrow('bitcoinArrow', currentBitcoinPrice, previousBitcoinPrice);
+                previousBitcoinPrice = currentBitcoinPrice;
 
                 // Real Brasileiro (BRL)
                 const realResponse = await fetch('https://api.bcb.gov.br/dados/serie/bcdata.sgs.1/dados?formato=json');
                 const realData = await realResponse.json();
                 const latestRealValue = realData[realData.length - 1].valor; // Último valor
-                document.getElementById('realPrice').textContent = `R$${latestRealValue}`;
+                document.getElementById('realPrice').textContent = `R$${latestRealValue} `;
+                updateArrow('realArrow', latestRealValue, previousRealPrice);
+                previousRealPrice = latestRealValue;
 
                 // Dólar (USD-BRL)
                 const dollarResponse = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
                 const dollarData = await dollarResponse.json();
                 const dollarRate = dollarData.USDBRL.bid; // Preço de compra do dólar
-                document.getElementById('dollarPrice').textContent = `R$${dollarRate}`;
+                document.getElementById('dollarPrice').textContent = `R$${dollarRate} `;
+                updateArrow('dollarArrow', dollarRate, previousDollarPrice);
+                previousDollarPrice = dollarRate;
             } catch (error) {
                 document.getElementById('bitcoinPrice').textContent = 'Erro ao carregar';
                 document.getElementById('realPrice').textContent = 'Erro ao carregar';
                 document.getElementById('dollarPrice').textContent = 'Erro ao carregar';
+            }
+        }
+
+        // Função para atualizar setas de variação
+        function updateArrow(elementId, currentValue, previousValue) {
+            const arrowElement = document.getElementById(elementId);
+            if (previousValue === null) {
+                arrowElement.textContent = ''; // Primeira vez, não há comparação
+                return;
+            }
+            if (currentValue > previousValue) {
+                arrowElement.textContent = '⬆️'; // Aumentou
+            } else if (currentValue < previousValue) {
+                arrowElement.textContent = '⬇️'; // Diminuiu
+            } else {
+                arrowElement.textContent = ''; // Sem alteração
             }
         }
 
@@ -235,6 +263,11 @@
                 const feed = await parser.parseURL(rssUrl);
                 const newsFeed = document.getElementById('newsFeed');
                 newsFeed.innerHTML = ''; // Limpa o conteúdo anterior
+
+                if (feed.items.length === 0) {
+                    newsFeed.innerHTML = '<div class="news-item">Nenhuma notícia disponível.</div>';
+                    return;
+                }
 
                 feed.items.slice(0, 5).forEach(item => { // Exibe as 5 primeiras notícias
                     const newsItem = document.createElement('div');
@@ -250,14 +283,16 @@
         // Função para obter a localização do usuário
         async function fetchLocationAndWeather() {
             try {
-                // Obter localização baseada no IP
-                const ipResponse = await fetch('https://ipapi.co/json/');
-                const ipData = await ipResponse.json();
-                const city = ipData.city || 'Local desconhecido';
-                document.getElementById('location').textContent = city;
+                // Solicitar permissão de localização
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject);
+                });
+
+                const latitude = position.coords.latitude;
+                const longitude = position.coords.longitude;
 
                 // Obter clima usando OpenWeatherMap API
-                const weatherResponse = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=529a6e5f1740d956920e49238124587f`);
+                const weatherResponse = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&appid=529a6e5f1740d956920e49238124587f`);
                 const weatherData = await weatherResponse.json();
                 const temperature = weatherData.main.temp;
                 const weatherCondition = weatherData.weather[0].main;
@@ -266,17 +301,34 @@
 
                 // Definir emoji de clima
                 let weatherEmoji = '';
-                if (weatherCondition === 'Clear') {
-                    weatherEmoji = '🌤️'; // Sol
-                } else if (weatherCondition === 'Clouds') {
-                    weatherEmoji = '☁️'; // Nublado
-                } else if (weatherCondition === 'Rain') {
-                    weatherEmoji = '🌧️'; // Chuva
-                } else {
-                    weatherEmoji = '🚫'; // Erro ou condição desconhecida
+                switch (weatherCondition) {
+                    case 'Clear':
+                        weatherEmoji = '☀️'; // Sol
+                        break;
+                    case 'Clouds':
+                        weatherEmoji = '☁️'; // Nublado
+                        break;
+                    case 'Rain':
+                        weatherEmoji = '🌧️'; // Chuva
+                        break;
+                    case 'Thunderstorm':
+                        weatherEmoji = '⛈️'; // Trovoadas
+                        break;
+                    case 'Snow':
+                        weatherEmoji = '🌨️'; // Neve
+                        break;
+                    case 'Drizzle':
+                        weatherEmoji = '🌦️'; // Garoa
+                        break;
+                    case 'Mist':
+                        weatherEmoji = '🌫️'; // Neblina
+                        break;
+                    default:
+                        weatherEmoji = '🚫'; // Erro ou condição desconhecida
                 }
 
                 document.getElementById('weatherEmoji').textContent = weatherEmoji;
+                document.getElementById('location').textContent = weatherData.name || 'Local desconhecido';
             } catch (error) {
                 document.getElementById('location').textContent = 'Erro ao carregar local';
                 document.getElementById('temperature').textContent = 'Erro ao carregar temperatura';
