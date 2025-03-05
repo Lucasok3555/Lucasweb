@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Comandos de Voz</title>
+  <title>Comandos de Voz com TTS</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -36,7 +36,7 @@
   </style>
 </head>
 <body>
-  <h1>Comandos de Voz</h1>
+  <h1>Comandos de Voz com TTS</h1>
   <button id="startButton">Ativar Comando de Voz</button>
   <div class="output" id="output"></div>
 
@@ -54,6 +54,13 @@
     recognition.lang = 'pt-BR';
     recognition.interimResults = false;
 
+    // Função para falar texto usando TTS
+    function speak(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'pt-BR'; // Define o idioma como português do Brasil
+      window.speechSynthesis.speak(utterance);
+    }
+
     startButton.addEventListener('click', () => {
       output.textContent = 'Escutando... Fale algo!';
       recognition.start();
@@ -65,6 +72,7 @@
 
       if (transcript === 'pesquisa') {
         output.textContent = 'O que você deseja pesquisar?';
+        speak('O que você deseja pesquisar?'); // Usa TTS para perguntar
         recognition.stop();
         setTimeout(() => {
           recognition.start();
@@ -72,22 +80,28 @@
       } else if (transcript.includes('pesquisa')) {
         const query = transcript.replace('pesquisa', '').trim();
         window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+        speak(`Pesquisando por ${query}`); // Usa TTS para confirmar a pesquisa
       } else if (transcript === 'olá') {
         output.textContent = 'Olá! Está tudo bem?';
+        speak('Olá! Está tudo bem?'); // Usa TTS para responder
       } else if (transcript === 'whatsapp') {
         window.open('https://web.whatsapp.com/', '_blank');
         output.textContent = 'Abrindo WhatsApp...';
+        speak('Abrindo WhatsApp...'); // Usa TTS para confirmar
       } else {
         output.textContent = 'Comando não reconhecido.';
+        speak('Comando não reconhecido.'); // Usa TTS para informar
       }
     };
 
     recognition.onerror = (event) => {
       output.textContent = 'Erro no reconhecimento de voz.';
+      speak('Erro no reconhecimento de voz.'); // Usa TTS para informar
     };
 
     recognition.onend = () => {
       output.textContent += ' Pronto para ouvir novamente.';
+      speak('Pronto para ouvir novamente.'); // Usa TTS para informar
     };
   </script>
 </body>
