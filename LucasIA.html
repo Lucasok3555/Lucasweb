@@ -12,44 +12,52 @@
         /* Estilo geral */
         body {
             margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: black;
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to bottom, #1a1a1a, #000000);
             color: white;
             text-align: center;
         }
 
         /* Título principal */
         h1 {
-            font-size: 5rem;
+            font-size: 4rem;
             margin-top: 20px;
+            text-shadow: 0 4px 6px rgba(255, 255, 255, 0.3);
         }
 
         /* Barra de pesquisa */
         .search-bar-container {
             position: relative;
-            width: 60%;
-            margin: 20px auto;
+            width: 70%;
+            max-width: 600px;
+            margin: 30px auto;
         }
 
         .search-bar {
             width: 100%;
-            padding: 10px;
+            padding: 15px;
             font-size: 1.2rem;
-            border: 2px solid white;
-            border-radius: 5px;
-            background-color: transparent;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.1);
             color: white;
+            outline: none;
+            transition: background 0.3s ease;
+        }
+
+        .search-bar:focus {
+            background: rgba(255, 255, 255, 0.2);
         }
 
         .voice-search {
             position: absolute;
-            right: 10px;
+            right: 15px;
             top: 50%;
             transform: translateY(-50%);
             background: none;
             border: none;
             color: white;
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             cursor: pointer;
         }
 
@@ -61,53 +69,86 @@
             text-align: right;
         }
 
+        .weather-info p {
+            margin: 5px 0;
+            font-size: 1rem;
+        }
+
         /* Seção de moedas */
         .currency-section {
-            margin: 20px auto;
+            margin: 40px auto;
             display: flex;
             justify-content: center;
-            gap: 20px;
+            gap: 30px;
         }
 
         .currency-box {
-            background-color: #333;
-            padding: 15px;
-            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
             width: 150px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .currency-box:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.4);
         }
 
         .currency-box h3 {
             margin: 0;
             font-size: 1.2rem;
+            color: #ffcc00;
         }
 
         .currency-box p {
-            margin: 5px 0 0;
+            margin: 10px 0 0;
             font-size: 1.5rem;
             font-weight: bold;
+            color: #ffffff;
         }
 
         /* Feed de notícias */
         .news-feed {
-            margin: 20px auto;
+            margin: 40px auto;
             width: 80%;
-            max-height: 200px;
+            max-height: 300px;
             overflow-y: auto;
-            border: 1px solid white;
-            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 15px;
             border-radius: 10px;
-            background-color: #444;
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         }
 
         .news-item {
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease, background 0.3s ease;
+        }
+
+        .news-item:hover {
+            transform: scale(1.02);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .news-item a {
+            color: #00ffff;
+            text-decoration: none;
+        }
+
+        .news-item a:hover {
+            text-decoration: underline;
         }
 
         /* Rodapé */
         footer {
-            margin-top: 20px;
+            margin-top: 40px;
             font-size: 1rem;
-            color: #aaa;
+            color: rgba(255, 255, 255, 0.6);
         }
     </style>
 </head>
@@ -124,8 +165,10 @@
 
     <!-- Barra de pesquisa -->
     <div class="search-bar-container">
-        <input type="text" id="searchInput" class="search-bar" placeholder="Pesquisar...">
-        <button id="voiceSearchButton" class="voice-search">&#127908;</button>
+        <form id="searchForm" action="https://lucasiabr.wordpress.com/" method="GET">
+            <input type="text" name="s" id="searchInput" class="search-bar" placeholder="Pesquisar no Lucas IA...">
+            <button type="submit" class="voice-search">&#128269;</button>
+        </form>
     </div>
 
     <!-- Seção de moedas -->
@@ -243,7 +286,7 @@
 
         // Função para pesquisa por voz
         function setupVoiceSearch() {
-            const voiceSearchButton = document.getElementById('voiceSearchButton');
+            const voiceSearchButton = document.querySelector('.voice-search');
             const searchInput = document.getElementById('searchInput');
 
             voiceSearchButton.addEventListener('click', () => {
