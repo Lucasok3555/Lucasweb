@@ -1,30 +1,3 @@
-<!doctype html>
-<html PASN lang="en">
-  <head>
-    <meta charset="utf-8">
-    <script async src="https://lucas75677.github.io/PASN/PASN.js"></script>
-    <title>maps</title>
-    <link rel="canonical" href="https://lucas75677.github.io/PASN/PASN.js">
-    <meta name="viewport" content="width=device-width">
-    <script type="application/ld+json">
-      {
-        "@context": "http://schema.org",
-        "@type": "NewsArticle",
-        "headline": "Open-source framework for publishing content",
-        "datePublished": "2015-10-07T12:02:41Z",
-        "image": [
-          "https://lucas75677.github.io/PASN/PASN.js"
-        ]
-      }
-    </script>
-    <style PASN-boilerplate>body{-webkit-animation:-PASN-start 8s steps(1,end) 0s 1 normal both;-moz-animation:-PASN-start 8s steps(1,end) 0s 1 normal both;-ms-animation:-PASN-start 8s steps(1,end) 0s 1 normal both;animation:-PASN-start 8s steps(1,end) 0s 1 normal both}@-webkit-keyframes -PASN-start{from{visibility:hidden}to{visibility:visible}}@-moz-keyframes -PASN-start{from{visibility:hidden}to{visibility:visible}}@-ms-keyframes -PASN-start{from{visibility:hidden}to{visibility:visible}}@-o-keyframes -PASN-start{from{visibility:hidden}to{visibility:visible}}@keyframes -PASN-start{from{visibility:hidden}to{visibility:visible}}</style><noscript><style amp-boilerplate>body{-webkit-animation:none;-moz-animation:none;-ms-animation:none;animation:none}</style></noscript>
-  </head>
-  <body>
-    <h1></h1>
-  </body>
-</html>
-
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -38,31 +11,39 @@
             padding: 0;
             height: 100%;
             overflow: hidden;
+            font-family: Arial, sans-serif;
         }
 
         /* Estilo do mapa */
         #map {
             width: 100%;
-            height: calc(100% - 50px); /* Deixa espaço para a barra de pesquisa */
+            height: calc(100% - 60px); /* Deixa espaço para a barra de pesquisa */
         }
 
         /* Estilo da barra de pesquisa */
         #search-bar {
             width: 100%;
-            height: 50px;
+            height: 60px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: #f4f4f4;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            background-color: #ffffff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
         }
 
         #search-bar input {
-            width: 80%;
-            padding: 10px;
+            width: 70%;
+            padding: 15px;
             font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            border: 2px solid #007bff;
+            border-radius: 25px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        #search-bar input:focus {
+            border-color: #0056b3;
         }
 
         #search-bar button {
@@ -72,12 +53,27 @@
             border: none;
             background-color: #007bff;
             color: white;
-            border-radius: 4px;
+            border-radius: 25px;
             cursor: pointer;
+            transition: background-color 0.3s ease;
         }
 
         #search-bar button:hover {
             background-color: #0056b3;
+        }
+
+        /* Estilo dos marcadores personalizados */
+        .custom-marker {
+            background-color: #ff5722;
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -99,12 +95,19 @@
 
     <script>
         // Inicializa o mapa
-        const map = L.map('map').setView([-23.5505, -46.6333], 10); // Coordenadas iniciais (São Paulo)
+        const map = L.map('map').setView([-23.5505, -46.6333], 12); // Coordenadas iniciais (São Paulo)
 
         // Adiciona o tile layer do OpenStreetMap
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Adiciona camada de trânsito (exemplo com Mapbox)
+        L.tileLayer('https://api.mapbox.com/styles/v1/mapbox/streets-v11/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+            tileSize: 512,
+            zoomOffset: -1,
+            attribution: '© Mapbox'
         }).addTo(map);
 
         // Função para buscar endereço
@@ -138,6 +141,48 @@
                 }
             });
         }
+
+        // Obter localização em tempo real
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
+                    // Centraliza o mapa na localização atual
+                    map.setView([lat, lng], 15);
+
+                    // Adiciona um marcador personalizado para a localização
+                    L.marker([lat, lng], { icon: L.divIcon({ className: 'custom-marker', html: '📍' }) })
+                        .addTo(map)
+                        .bindPopup('Você está aqui!')
+                        .openPopup();
+                }, (error) => {
+                    alert('Erro ao obter localização: ' + error.message);
+                });
+            } else {
+                alert('Geolocalização não suportada pelo navegador.');
+            }
+        }
+
+        // Adiciona serviços próximos (exemplo: lojas)
+        function addNearbyServices() {
+            const services = [
+                { name: 'Loja A', lat: -23.5505, lng: -46.6333 },
+                { name: 'Loja B', lat: -23.5525, lng: -46.6353 },
+                { name: 'Loja C', lat: -23.5485, lng: -46.6313 }
+            ];
+
+            services.forEach((service) => {
+                L.marker([service.lat, service.lng], { icon: L.divIcon({ className: 'custom-marker', html: '🏪' }) })
+                    .addTo(map)
+                    .bindPopup(service.name);
+            });
+        }
+
+        // Inicializa as funcionalidades
+        getLocation(); // Obtém a localização em tempo real
+        addNearbyServices(); // Adiciona serviços próximos
     </script>
 </body>
 </html>
