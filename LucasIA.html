@@ -13,51 +13,51 @@
         body {
             margin: 0;
             font-family: 'Arial', sans-serif;
-            background: linear-gradient(to bottom, #1a1a1a, #000000);
+            background: #121212;
             color: white;
             text-align: center;
         }
 
         /* Título principal */
         h1 {
-            font-size: 4rem;
+            font-size: 3rem;
             margin-top: 20px;
-            text-shadow: 0 4px 6px rgba(255, 255, 255, 0.3);
+            letter-spacing: 2px;
         }
 
         /* Barra de pesquisa */
         .search-bar-container {
             position: relative;
             width: 70%;
-            max-width: 600px;
+            max-width: 500px;
             margin: 30px auto;
         }
 
         .search-bar {
             width: 100%;
             padding: 15px;
-            font-size: 1.2rem;
-            border: none;
-            border-radius: 25px;
-            background: rgba(255, 255, 255, 0.1);
+            font-size: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            background: transparent;
             color: white;
             outline: none;
-            transition: background 0.3s ease;
+            transition: border-color 0.3s ease;
         }
 
         .search-bar:focus {
-            background: rgba(255, 255, 255, 0.2);
+            border-color: white;
         }
 
         .voice-search {
             position: absolute;
-            right: 15px;
+            right: 10px;
             top: 50%;
             transform: translateY(-50%);
             background: none;
             border: none;
             color: white;
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             cursor: pointer;
         }
 
@@ -71,7 +71,7 @@
 
         .weather-info p {
             margin: 5px 0;
-            font-size: 1rem;
+            font-size: 0.9rem;
         }
 
         /* Seção de moedas */
@@ -79,34 +79,29 @@
             margin: 40px auto;
             display: flex;
             justify-content: center;
-            gap: 30px;
+            gap: 20px;
         }
 
         .currency-box {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 20px;
-            border-radius: 15px;
-            width: 150px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .currency-box:hover {
-            transform: scale(1.05);
-            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.4);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            width: 120px;
+            text-align: center;
         }
 
         .currency-box h3 {
             margin: 0;
-            font-size: 1.2rem;
+            font-size: 1rem;
             color: #ffcc00;
         }
 
         .currency-box p {
             margin: 10px 0 0;
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             font-weight: bold;
-            color: #ffffff;
+            color: white;
         }
 
         /* Feed de notícias */
@@ -115,24 +110,17 @@
             width: 80%;
             max-height: 300px;
             overflow-y: auto;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             padding: 15px;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.05);
         }
 
         .news-item {
             margin-bottom: 15px;
             padding: 10px;
             border-radius: 5px;
-            background: rgba(255, 255, 255, 0.1);
-            transition: transform 0.3s ease, background 0.3s ease;
-        }
-
-        .news-item:hover {
-            transform: scale(1.02);
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
         }
 
         .news-item a {
@@ -147,7 +135,7 @@
         /* Rodapé */
         footer {
             margin-top: 40px;
-            font-size: 1rem;
+            font-size: 0.9rem;
             color: rgba(255, 255, 255, 0.6);
         }
     </style>
@@ -167,7 +155,7 @@
     <div class="search-bar-container">
         <form id="searchForm" action="https://lucasiabr.wordpress.com/" method="GET">
             <input type="text" name="s" id="searchInput" class="search-bar" placeholder="Pesquisar no Lucas IA...">
-            <button type="submit" class="voice-search">&#128269;</button>
+            <button type="submit" class="voice-search">&#127908;</button>
         </form>
     </div>
 
@@ -315,7 +303,7 @@
                         weatherEmoji = '⛈️'; // Trovoadas
                         break;
                     case 'Snow':
-                        weatherEmoji = '🌨️'; // Neve
+                        weatherEmoji = '❄️'; // Neve
                         break;
                     case 'Drizzle':
                         weatherEmoji = '🌦️'; // Garoa
