@@ -13,51 +13,51 @@
         body {
             margin: 0;
             font-family: 'Arial', sans-serif;
-            background: #121212;
+            background: linear-gradient(to bottom, #1a1a1a, #000000);
             color: white;
             text-align: center;
         }
 
         /* Título principal */
         h1 {
-            font-size: 3rem;
+            font-size: 4rem;
             margin-top: 20px;
-            letter-spacing: 2px;
+            text-shadow: 0 4px 6px rgba(255, 255, 255, 0.3);
         }
 
         /* Barra de pesquisa */
         .search-bar-container {
             position: relative;
             width: 70%;
-            max-width: 500px;
+            max-width: 600px;
             margin: 30px auto;
         }
 
         .search-bar {
             width: 100%;
             padding: 15px;
-            font-size: 1rem;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 5px;
-            background: transparent;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.1);
             color: white;
             outline: none;
-            transition: border-color 0.3s ease;
+            transition: background 0.3s ease;
         }
 
         .search-bar:focus {
-            border-color: white;
+            background: rgba(255, 255, 255, 0.2);
         }
 
         .voice-search {
             position: absolute;
-            right: 10px;
+            right: 15px;
             top: 50%;
             transform: translateY(-50%);
             background: none;
             border: none;
             color: white;
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             cursor: pointer;
         }
 
@@ -71,7 +71,7 @@
 
         .weather-info p {
             margin: 5px 0;
-            font-size: 0.9rem;
+            font-size: 1rem;
         }
 
         /* Seção de moedas */
@@ -79,29 +79,34 @@
             margin: 40px auto;
             display: flex;
             justify-content: center;
-            gap: 20px;
+            gap: 30px;
         }
 
         .currency-box {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 5px;
-            width: 120px;
-            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            width: 150px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .currency-box:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.4);
         }
 
         .currency-box h3 {
             margin: 0;
-            font-size: 1rem;
+            font-size: 1.2rem;
             color: #ffcc00;
         }
 
         .currency-box p {
             margin: 10px 0 0;
-            font-size: 1.2rem;
+            font-size: 1.5rem;
             font-weight: bold;
-            color: white;
+            color: #ffffff;
         }
 
         /* Feed de notícias */
@@ -110,17 +115,24 @@
             width: 80%;
             max-height: 300px;
             overflow-y: auto;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             padding: 15px;
-            border-radius: 5px;
-            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         }
 
         .news-item {
             margin-bottom: 15px;
             padding: 10px;
             border-radius: 5px;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease, background 0.3s ease;
+        }
+
+        .news-item:hover {
+            transform: scale(1.02);
+            background: rgba(255, 255, 255, 0.2);
         }
 
         .news-item a {
@@ -135,7 +147,7 @@
         /* Rodapé */
         footer {
             margin-top: 40px;
-            font-size: 0.9rem;
+            font-size: 1rem;
             color: rgba(255, 255, 255, 0.6);
         }
     </style>
@@ -155,7 +167,7 @@
     <div class="search-bar-container">
         <form id="searchForm" action="https://lucasiabr.wordpress.com/" method="GET">
             <input type="text" name="s" id="searchInput" class="search-bar" placeholder="Pesquisar no Lucas IA...">
-            <button type="submit" class="voice-search">&#127908;</button>
+            <button type="submit" class="voice-search">&#128269;</button>
         </form>
     </div>
 
@@ -177,7 +189,7 @@
 
     <!-- Feed de notícias -->
     <div class="news-feed" id="newsFeed">
-        <div class="news-item">Carregando notícias...</div>
+        Carregando notícias...
     </div>
 
     <!-- Rodapé -->
@@ -186,7 +198,6 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/rss-parser/dist/rss-parser.min.js"></script>
     <script>
         // Variáveis globais para armazenar valores anteriores
         let previousBitcoinPrice = null;
@@ -239,32 +250,6 @@
                 arrowElement.textContent = '⬇️'; // Diminuiu
             } else {
                 arrowElement.textContent = ''; // Sem alteração
-            }
-        }
-
-        // Função para carregar feed de notícias via RSS
-        async function fetchRSSFeed() {
-            const parser = new RSSParser();
-            const rssUrl = 'https://news.google.com/rss?hl=pt-BR&gl=BR&ceid=BR:pt-419';
-
-            try {
-                const feed = await parser.parseURL(rssUrl);
-                const newsFeed = document.getElementById('newsFeed');
-                newsFeed.innerHTML = ''; // Limpa o conteúdo anterior
-
-                if (feed.items.length === 0) {
-                    newsFeed.innerHTML = '<div class="news-item">Nenhuma notícia disponível.</div>';
-                    return;
-                }
-
-                feed.items.slice(0, 5).forEach(item => { // Exibe as 5 primeiras notícias
-                    const newsItem = document.createElement('div');
-                    newsItem.className = 'news-item';
-                    newsItem.innerHTML = `<strong>${item.title}</strong><br><a href="${item.link}" target="_blank">Leia mais</a>`;
-                    newsFeed.appendChild(newsItem);
-                });
-            } catch (error) {
-                document.getElementById('newsFeed').innerHTML = '<div class="news-item">Erro ao carregar notícias.</div>';
             }
         }
 
@@ -349,7 +334,6 @@
 
         // Inicializa as funções
         fetchCurrencyPrices();
-        fetchRSSFeed();
         fetchLocationAndWeather();
         setupVoiceSearch();
 
@@ -366,5 +350,8 @@
             });
         }
     </script>
+
+    <!-- Feed de Notícias via Bloople -->
+    <script src="//rss.bloople.net/?url=https%3A%2F%2Fnews.google.com%2Frss&detail=&showtitle=false&type=js"></script>
 </body>
 </html>
