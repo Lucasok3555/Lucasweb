@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Captura de Imagem (.LXS)</title>
+  <title>Gravação de Vídeo (.LXSV)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -21,7 +21,7 @@
       margin-top: 20px;
       text-align: center;
     }
-    video, canvas {
+    video {
       max-width: 100%;
       border: 2px solid #ddd;
       border-radius: 10px;
@@ -37,6 +37,9 @@
     }
     button:hover {
       background-color: #0056b3;
+    }
+    #controls {
+      margin-top: 20px;
     }
     #metadata {
       margin-top: 20px;
@@ -65,36 +68,45 @@
   </style>
 </head>
 <body>
-  <h1>Captura de Imagem (.LXS)</h1>
+  <h1>Gravação de Vídeo (.LXSV)</h1>
   <div id="camera-container">
     <video id="video" autoplay playsinline></video>
     <br>
-    <button id="capture-btn">Tirar Foto</button>
-    <button id="flip-btn">Virar Câmera</button>
-    <canvas id="canvas" style="display:none;"></canvas>
+    <div id="controls">
+      <button id="start-recording">Iniciar Gravação</button>
+      <button id="stop-recording" disabled>Parar Gravação</button>
+      <button id="flip-camera">Virar Câmera</button>
+      <button id="zoom-in">Zoom In</button>
+      <button id="zoom-out">Zoom Out</button>
+    </div>
   </div>
 
   <div id="metadata" style="display:none;">
-    <h3>Metadados da Imagem</h3>
+    <h3>Metadados do Vídeo</h3>
     <p><strong>Data e Hora:</strong> <span id="datetime"></span></p>
-    <p><strong>Endereço IP:</strong> <span id="ip-address"></span></p>
+    <p><strong>Tamanho do Arquivo:</strong> <span id="file-size"></span></p>
   </div>
 
-  <a id="download-link" href="#" download="imagem.lxs" style="display:none;">Baixar Imagem (.lxs)</a>
+  <a id="download-link" href="#" download="video.lxsv" style="display:none;">Baixar Vídeo (.lxsv)</a>
 
   <script>
     // Variáveis globais
     let video = document.getElementById('video');
-    let canvas = document.getElementById('canvas');
-    let captureBtn = document.getElementById('capture-btn');
-    let flipBtn = document.getElementById('flip-btn');
+    let startRecordingBtn = document.getElementById('start-recording');
+    let stopRecordingBtn = document.getElementById('stop-recording');
+    let flipCameraBtn = document.getElementById('flip-camera');
+    let zoomInBtn = document.getElementById('zoom-in');
+    let zoomOutBtn = document.getElementById('zoom-out');
     let metadataDiv = document.getElementById('metadata');
-    let downloadLink = document.getElementById('download-link');
     let datetimeSpan = document.getElementById('datetime');
-    let ipAddressSpan = document.getElementById('ip-address');
+    let fileSizeSpan = document.getElementById('file-size');
+    let downloadLink = document.getElementById('download-link');
 
     let stream = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
     let currentFacingMode = 'user'; // 'user' para câmera frontal, 'environment' para traseira
+    let zoomLevel = 1; // Nível de zoom inicial
 
     // Função para iniciar a câmera
     async function startCamera() {
@@ -109,7 +121,7 @@
     }
 
     // Função para virar a câmera
-    flipBtn.addEventListener('click', () => {
+    flipCameraBtn.addEventListener('click', () => {
       currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
       if (stream) {
         stopCamera();
@@ -126,40 +138,68 @@
       }
     }
 
-    // Capturar foto
-    captureBtn.addEventListener('click', async () => {
-      const context = canvas.getContext('2d');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // Gerar metadados
-      const now = new Date();
-      datetimeSpan.textContent = now.toLocaleString();
-      const ip = await fetch('https://api.ipify.org?format=json')
-        .then(response => response.json())
-        .then(data => data.ip)
-        .catch(() => 'Não disponível');
-      ipAddressSpan.textContent = ip;
-
-      // Exibir metadados
-      metadataDiv.style.display = 'block';
-
-      // Criar arquivo .lxs (simulação)
-      const imageData = canvas.toDataURL('image/jpeg', 0.8); // Qualidade 80%
-      const lxsData = JSON.stringify({
-        image: imageData,
-        metadata: {
-          datetime: now.toISOString(),
-          ip: ip
+    // Função para aplicar zoom
+    function applyZoom() {
+      if (video && video.srcObject) {
+        const videoTrack = stream.getVideoTracks()[0];
+        if (videoTrack) {
+          const capabilities = videoTrack.getCapabilities();
+          if (capabilities.zoom) {
+            videoTrack.applyConstraints({ advanced: [{ zoom: zoomLevel }] });
+          }
         }
-      });
+      }
+    }
 
-      // Criar link de download
-      const blob = new Blob([lxsData], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      downloadLink.href = url;
-      downloadLink.style.display = 'block';
+    zoomInBtn.addEventListener('click', () => {
+      zoomLevel += 0.5;
+      applyZoom();
+    });
+
+    zoomOutBtn.addEventListener('click', () => {
+      zoomLevel = Math.max(1, zoomLevel - 0.5);
+      applyZoom();
+    });
+
+    // Função para iniciar a gravação
+    startRecordingBtn.addEventListener('click', () => {
+      recordedChunks = [];
+      const options = { mimeType: 'video/webm; codecs=vp9' };
+      mediaRecorder = new MediaRecorder(stream, options);
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+
+        // Gerar metadados
+        const now = new Date();
+        datetimeSpan.textContent = now.toLocaleString();
+        fileSizeSpan.textContent = (blob.size / 1024).toFixed(2) + ' KB';
+
+        // Exibir metadados
+        metadataDiv.style.display = 'block';
+
+        // Criar link de download
+        downloadLink.href = url;
+        downloadLink.style.display = 'block';
+      };
+
+      mediaRecorder.start();
+      startRecordingBtn.disabled = true;
+      stopRecordingBtn.disabled = false;
+    });
+
+    // Função para parar a gravação
+    stopRecordingBtn.addEventListener('click', () => {
+      mediaRecorder.stop();
+      startRecordingBtn.disabled = false;
+      stopRecordingBtn.disabled = true;
     });
 
     // Iniciar câmera ao carregar a página
