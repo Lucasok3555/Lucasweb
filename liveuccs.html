@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Visualização de Imagem (.LXS)</title>
+  <title>Visualização de Vídeo (.LXSV)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -21,7 +21,7 @@
       margin-top: 20px;
       text-align: center;
     }
-    img {
+    video {
       max-width: 100%;
       border: 2px solid #ddd;
       border-radius: 10px;
@@ -45,24 +45,24 @@
   </style>
 </head>
 <body>
-  <h1>Visualização de Imagem (.LXS)</h1>
+  <h1>Visualização de Vídeo (.LXSV)</h1>
   <div id="upload-container">
-    <input type="file" id="file-input" accept=".lxs" />
+    <input type="file" id="file-input" accept=".lxsv" />
     <br><br>
-    <img id="image-preview" src="#" alt="Imagem LXS" style="display:none;" />
+    <video id="video-preview" controls style="display:none;"></video>
     <div id="metadata" style="display:none;">
-      <h3>Metadados da Imagem</h3>
+      <h3>Metadados do Vídeo</h3>
       <p><strong>Data e Hora:</strong> <span id="datetime"></span></p>
-      <p><strong>Endereço IP:</strong> <span id="ip-address"></span></p>
+      <p><strong>Tamanho do Arquivo:</strong> <span id="file-size"></span></p>
     </div>
   </div>
 
   <script>
     const fileInput = document.getElementById('file-input');
-    const imagePreview = document.getElementById('image-preview');
+    const videoPreview = document.getElementById('video-preview');
     const metadataDiv = document.getElementById('metadata');
     const datetimeSpan = document.getElementById('datetime');
-    const ipAddressSpan = document.getElementById('ip-address');
+    const fileSizeSpan = document.getElementById('file-size');
 
     fileInput.addEventListener('change', (event) => {
       const file = event.target.files[0];
@@ -71,17 +71,17 @@
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const lxsData = JSON.parse(e.target.result);
-          const imageData = lxsData.image;
-          const metadata = lxsData.metadata;
+          const lxsvData = JSON.parse(e.target.result);
+          const videoData = lxsvData.video;
+          const metadata = lxsvData.metadata;
 
-          // Exibir imagem
-          imagePreview.src = imageData;
-          imagePreview.style.display = 'block';
+          // Exibir vídeo
+          videoPreview.src = videoData;
+          videoPreview.style.display = 'block';
 
           // Exibir metadados
           datetimeSpan.textContent = new Date(metadata.datetime).toLocaleString();
-          ipAddressSpan.textContent = metadata.ip;
+          fileSizeSpan.textContent = metadata.fileSize;
           metadataDiv.style.display = 'block';
         } catch (error) {
           alert('Arquivo inválido ou corrompido.');
