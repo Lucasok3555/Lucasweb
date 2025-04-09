@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visualização de Imagem (.LXS)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      color: #333;
+    }
+    #upload-container {
+      margin-top: 20px;
+      text-align: center;
+    }
+    img {
+      max-width: 100%;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+    #metadata {
+      margin-top: 20px;
+      background-color: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+      text-align: left;
+    }
+    #metadata p {
+      margin: 5px 0;
+      font-size: 14px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <h1>Visualização de Imagem (.LXS)</h1>
+  <div id="upload-container">
+    <input type="file" id="file-input" accept=".lxs" />
+    <br><br>
+    <img id="image-preview" src="#" alt="Imagem LXS" style="display:none;" />
+    <div id="metadata" style="display:none;">
+      <h3>Metadados da Imagem</h3>
+      <p><strong>Data e Hora:</strong> <span id="datetime"></span></p>
+      <p><strong>Endereço IP:</strong> <span id="ip-address"></span></p>
+    </div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('file-input');
+    const imagePreview = document.getElementById('image-preview');
+    const metadataDiv = document.getElementById('metadata');
+    const datetimeSpan = document.getElementById('datetime');
+    const ipAddressSpan = document.getElementById('ip-address');
+
+    fileInput.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const lxsData = JSON.parse(e.target.result);
+          const imageData = lxsData.image;
+          const metadata = lxsData.metadata;
+
+          // Exibir imagem
+          imagePreview.src = imageData;
+          imagePreview.style.display = 'block';
+
+          // Exibir metadados
+          datetimeSpan.textContent = new Date(metadata.datetime).toLocaleString();
+          ipAddressSpan.textContent = metadata.ip;
+          metadataDiv.style.display = 'block';
+        } catch (error) {
+          alert('Arquivo inválido ou corrompido.');
+        }
+      };
+      reader.readAsText(file);
+    });
+  </script>
+</body>
+</html>
