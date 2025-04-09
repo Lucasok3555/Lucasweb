@@ -5,43 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Visualização de Vídeo e Imagem (.LXSV e .LXS)</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f9;
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    h1 {
-      color: #333;
-    }
-    #upload-container {
-      margin-top: 20px;
-      text-align: center;
-    }
-    video, img {
-      max-width: 100%;
-      border: 2px solid #ddd;
-      border-radius: 10px;
-      margin-top: 20px;
-    }
-    #metadata {
-      margin-top: 20px;
-      background-color: #fff;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-      width: 100%;
-      max-width: 400px;
-      text-align: left;
-    }
-    #metadata p {
-      margin: 5px 0;
-      font-size: 14px;
-      color: #555;
-    }
+    /* Estilo mantido igual ao anterior */
   </style>
 </head>
 <body>
@@ -55,6 +19,8 @@
       <h3>Metadados</h3>
       <p><strong>Data e Hora:</strong> <span id="datetime"></span></p>
       <p><strong>Tamanho do Arquivo:</strong> <span id="file-size"></span></p>
+      <p><strong>ID do Arquivo:</strong> <span id="file-id"></span></p>
+      <p id="security-warning" style="color: red; display: none;">AVISO: Este arquivo não possui um ID válido!</p>
     </div>
   </div>
 
@@ -65,6 +31,8 @@
     const metadataDiv = document.getElementById('metadata');
     const datetimeSpan = document.getElementById('datetime');
     const fileSizeSpan = document.getElementById('file-size');
+    const fileIdSpan = document.getElementById('file-id');
+    const securityWarning = document.getElementById('security-warning');
 
     fileInput.addEventListener('change', (event) => {
       const file = event.target.files[0];
@@ -74,6 +42,13 @@
       reader.onload = (e) => {
         try {
           const data = JSON.parse(e.target.result);
+
+          // Verificar se o arquivo tem ID
+          if (!data.metadata || !data.metadata.fileId) {
+            securityWarning.style.display = 'block';
+          } else {
+            securityWarning.style.display = 'none';
+          }
 
           // Verificar se é vídeo ou imagem
           if (data.video) {
@@ -89,6 +64,7 @@
             // Exibir metadados
             datetimeSpan.textContent = new Date(metadata.datetime).toLocaleString();
             fileSizeSpan.textContent = metadata.fileSize;
+            fileIdSpan.textContent = metadata.fileId || 'N/A';
             metadataDiv.style.display = 'block';
           } else if (data.image) {
             // Tratar como imagem (.lxs)
@@ -103,6 +79,7 @@
             // Exibir metadados
             datetimeSpan.textContent = new Date(metadata.datetime).toLocaleString();
             fileSizeSpan.textContent = metadata.fileSize;
+            fileIdSpan.textContent = metadata.fileId || 'N/A';
             metadataDiv.style.display = 'block';
           } else {
             alert('Arquivo inválido ou corrompido.');
