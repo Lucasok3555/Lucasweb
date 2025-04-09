@@ -1,9 +1,3 @@
-// Função para verificar se já passou da meia-noite
-function isAfterMidnight() {
-    const now = new Date();
-    return now.getHours() === 0 && now.getMinutes() === 0 && now.getSeconds() === 0;
-}
-
 // Função para converter o horário
 function convertTime(originalHour) {
     const conversionTable = {
@@ -44,14 +38,9 @@ function updateClock() {
     const currentMinute = String(now.getMinutes()).padStart(2, '0');
     const formattedTime = `${currentHour}:${currentMinute}`;
 
-    // Verifica se já passou da meia-noite
-    if (!isAfterMidnight()) {
-        document.getElementById("horario").textContent = "Travado até meia-noite...";
-    } else {
-        // Converte o horário usando a tabela
-        const convertedTime = convertTime(formattedTime);
-        document.getElementById("horario").textContent = `Horário Convertido: ${convertedTime}`;
-    }
+    // Converte o horário usando a tabela
+    const convertedTime = convertTime(formattedTime);
+    document.getElementById("horario").textContent = `Horário Convertido: ${convertedTime}`;
 }
 
 // Atualiza o relógio a cada segundo
