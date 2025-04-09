@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Captura de Imagem no Formato LXS</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      color: #333;
+    }
+    #camera-container {
+      margin-top: 20px;
+      text-align: center;
+    }
+    video, canvas {
+      max-width: 100%;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+    }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #metadata {
+      margin-top: 20px;
+      background-color: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+      text-align: left;
+    }
+    #metadata p {
+      margin: 5px 0;
+      font-size: 14px;
+      color: #555;
+    }
+    #download-link {
+      margin-top: 20px;
+      display: block;
+      color: #007bff;
+      text-decoration: none;
+    }
+    #download-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <h1>Captura de Imagem no Formato .LXS</h1>
+  <div id="camera-container">
+    <video id="video" autoplay playsinline></video>
+    <br>
+    <button id="capture-btn">Tirar Foto</button>
+    <button id="flip-btn">Virar Câmera</button>
+    <canvas id="canvas" style="display:none;"></canvas>
+  </div>
+
+  <div id="metadata" style="display:none;">
+    <h3>Metadados da Imagem</h3>
+    <p><strong>Data e Hora:</strong> <span id="datetime"></span></p>
+    <p><strong>Endereço IP:</span> <span id="ip-address"></span></p>
+  </div>
+
+  <a id="download-link" href="#" download="imagem.lxs" style="display:none;">Baixar Imagem (.lxs)</a>
+
+  <script>
+    // Variáveis globais
+    let video = document.getElementById('video');
+    let canvas = document.getElementById('canvas');
+    let captureBtn = document.getElementById('capture-btn');
+    let flipBtn = document.getElementById('flip-btn');
+    let metadataDiv = document.getElementById('metadata');
+    let downloadLink = document.getElementById('download-link');
+    let datetimeSpan = document.getElementById('datetime');
+    let ipAddressSpan = document.getElementById('ip-address');
+
+    let stream = null;
+    let currentFacingMode = 'user'; // 'user' para câmera frontal, 'environment' para traseira
+
+    // Função para iniciar a câmera
+    async function startCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: currentFacingMode }
+        });
+        video.srcObject = stream;
+      } catch (error) {
+        alert('Erro ao acessar a câmera: ' + error.message);
+      }
+    }
+
+    // Função para virar a câmera
+    flipBtn.addEventListener('click', () => {
+      currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+      if (stream) {
+        stopCamera();
+      }
+      startCamera();
+    });
+
+    // Função para parar a câmera
+    function stopCamera() {
+      if (stream) {
+        const tracks = stream.getTracks();
+        tracks.forEach(track => track.stop());
+        stream = null;
+      }
+    }
+
+    // Capturar foto
+    captureBtn.addEventListener('click', async () => {
+      const context = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Gerar metadados
+      const now = new Date();
+      datetimeSpan.textContent = now.toLocaleString();
+      const ip = await fetch('https://api.ipify.org?format=json')
+        .then(response => response.json())
+        .then(data => data.ip)
+        .catch(() => 'Não disponível');
+      ipAddressSpan.textContent = ip;
+
+      // Exibir metadados
+      metadataDiv.style.display = 'block';
+
+      // Criar arquivo .lxs (simulação)
+      const imageData = canvas.toDataURL('image/jpeg', 0.8); // Qualidade 80%
+      const lxsData = JSON.stringify({
+        image: imageData,
+        metadata: {
+          datetime: now.toISOString(),
+          ip: ip
+        }
+      });
+
+      // Criar link de download
+      const blob = new Blob([lxsData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      downloadLink.href = url;
+      downloadLink.style.display = 'block';
+    });
+
+    // Iniciar câmera ao carregar a página
+    startCamera();
+
+    // Parar câmera ao sair da página
+    window.addEventListener('beforeunload', stopCamera);
+  </script>
+</body>
+                                                                  </html>
