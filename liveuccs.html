@@ -4,8 +4,49 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Visualização de Vídeo e Imagem (.LXSV e .LXS)</title>
+  <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
   <style>
-    /* Estilo mantido igual ao anterior */
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      color: #333;
+    }
+    #upload-container {
+      margin-top: 20px;
+      text-align: center;
+    }
+    video, img {
+      max-width: 100%;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+    .plyr {
+      width: 100%;
+      max-width: 800px;
+    }
+    #metadata {
+      margin-top: 20px;
+      background-color: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+      text-align: left;
+    }
+    #metadata p {
+      margin: 5px 0;
+      font-size: 14px;
+      color: #555;
+    }
   </style>
 </head>
 <body>
@@ -13,7 +54,9 @@
   <div id="upload-container">
     <input type="file" id="file-input" accept=".lxsv,.lxs" />
     <br><br>
-    <video id="video-preview" controls style="display:none;"></video>
+    <div id="video-container" style="display:none;">
+      <video id="video-preview" controls playsinline></video>
+    </div>
     <img id="image-preview" src="#" alt="Imagem LXS" style="display:none;" />
     <div id="metadata" style="display:none;">
       <h3>Metadados</h3>
@@ -24,15 +67,20 @@
     </div>
   </div>
 
+  <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
   <script>
     const fileInput = document.getElementById('file-input');
     const videoPreview = document.getElementById('video-preview');
+    const videoContainer = document.getElementById('video-container');
     const imagePreview = document.getElementById('image-preview');
     const metadataDiv = document.getElementById('metadata');
     const datetimeSpan = document.getElementById('datetime');
     const fileSizeSpan = document.getElementById('file-size');
     const fileIdSpan = document.getElementById('file-id');
     const securityWarning = document.getElementById('security-warning');
+
+    // Inicializar Plyr
+    let plyrPlayer;
 
     fileInput.addEventListener('change', (event) => {
       const file = event.target.files[0];
@@ -58,8 +106,17 @@
 
             // Exibir vídeo
             videoPreview.src = videoData;
-            videoPreview.style.display = 'block';
+            videoContainer.style.display = 'block';
             imagePreview.style.display = 'none';
+
+            // Inicializar Plyr
+            if (plyrPlayer) {
+              plyrPlayer.destroy(); // Destruir instância anterior, se existir
+            }
+            plyrPlayer = new Plyr(videoPreview, {
+              controls: ['play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen'],
+              autoplay: false,
+            });
 
             // Exibir metadados
             datetimeSpan.textContent = new Date(metadata.datetime).toLocaleString();
@@ -74,7 +131,7 @@
             // Exibir imagem
             imagePreview.src = imageData;
             imagePreview.style.display = 'block';
-            videoPreview.style.display = 'none';
+            videoContainer.style.display = 'none';
 
             // Exibir metadados
             datetimeSpan.textContent = new Date(metadata.datetime).toLocaleString();
