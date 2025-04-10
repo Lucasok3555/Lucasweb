@@ -47,6 +47,11 @@
       font-size: 14px;
       color: #555;
     }
+    #error-message {
+      color: red;
+      margin-top: 20px;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -65,6 +70,7 @@
       <p><strong>ID do Arquivo:</strong> <span id="file-id"></span></p>
       <p id="security-warning" style="color: red; display: none;">AVISO: Este arquivo não possui um ID válido!</p>
     </div>
+    <p id="error-message">Erro ao processar o arquivo. Por favor, tente novamente.</p>
   </div>
 
   <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
@@ -78,75 +84,107 @@
     const fileSizeSpan = document.getElementById('file-size');
     const fileIdSpan = document.getElementById('file-id');
     const securityWarning = document.getElementById('security-warning');
+    const errorMessage = document.getElementById('error-message');
 
-    // Inicializar Plyr
+    // Variável para armazenar a instância do Plyr
     let plyrPlayer;
 
-    fileInput.addEventListener('change', (event) => {
+    fileInput.addEventListener('change', async (event) => {
       const file = event.target.files[0];
       if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = JSON.parse(e.target.result);
+      try {
+        const reader = new FileReader();
 
-          // Verificar se o arquivo tem ID
-          if (!data.metadata || !data.metadata.fileId) {
-            securityWarning.style.display = 'block';
-          } else {
-            securityWarning.style.display = 'none';
-          }
+        reader.onload = (e) => {
+          try {
+            const data = JSON.parse(e.target.result);
 
-          // Verificar se é vídeo ou imagem
-          if (data.video) {
-            // Tratar como vídeo (.lxsv)
-            const videoData = data.video;
-            const metadata = data.metadata;
-
-            // Exibir vídeo
-            videoPreview.src = videoData;
-            videoContainer.style.display = 'block';
-            imagePreview.style.display = 'none';
-
-            // Inicializar Plyr
-            if (plyrPlayer) {
-              plyrPlayer.destroy(); // Destruir instância anterior, se existir
+            // Verificar se o arquivo tem ID
+            if (!data.metadata || !data.metadata.fileId) {
+              securityWarning.style.display = 'block';
+            } else {
+              securityWarning.style.display = 'none';
             }
-            plyrPlayer = new Plyr(videoPreview, {
-              controls: ['play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen'],
-              autoplay: false,
-            });
 
-            // Exibir metadados
-            datetimeSpan.textContent = new Date(metadata.datetime).toLocaleString();
-            fileSizeSpan.textContent = metadata.fileSize;
-            fileIdSpan.textContent = metadata.fileId || 'N/A';
-            metadataDiv.style.display = 'block';
-          } else if (data.image) {
-            // Tratar como imagem (.lxs)
-            const imageData = data.image;
-            const metadata = data.metadata;
+            // Verificar se é vídeo ou imagem
+            if (data.video) {
+              // Tratar como vídeo (.lxsv)
+              const videoData = data.video; // Base64 do vídeo
+              const metadata = data.metadata;
 
-            // Exibir imagem
-            imagePreview.src = imageData;
-            imagePreview.style.display = 'block';
-            videoContainer.style.display = 'none';
+              // Converter base64 para Blob (formato webm)
+              const videoBlob = base64ToBlob(videoData.split(',')[1], 'video/webm');
+              const videoUrl = URL.createObjectURL(videoBlob);
 
-            // Exibir metadados
-            datetimeSpan.textContent = new Date(metadata.datetime).toLocaleString();
-            fileSizeSpan.textContent = metadata.fileSize;
-            fileIdSpan.textContent = metadata.fileId || 'N/A';
-            metadataDiv.style.display = 'block';
-          } else {
-            alert('Arquivo inválido ou corrompido.');
+              // Exibir vídeo
+              videoPreview.src = videoUrl;
+              videoContainer.style.display = 'block';
+              imagePreview.style.display = 'none';
+
+              // Inicializar Plyr após o vídeo ser carregado
+              videoPreview.onloadeddata = () => {
+                if (plyrPlayer) {
+                  plyrPlayer.destroy(); // Destruir instância anterior, se existir
+                }
+                plyrPlayer = new Plyr(videoPreview, {
+                  controls: ['play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen'],
+                  autoplay: false,
+                });
+              };
+
+              // Exibir metadados
+              datetimeSpan.textContent = new Date(metadata.datetime).toLocaleString();
+              fileSizeSpan.textContent = metadata.fileSize;
+              fileIdSpan.textContent = metadata.fileId || 'N/A';
+              metadataDiv.style.display = 'block';
+              errorMessage.style.display = 'none';
+            } else if (data.image) {
+              // Tratar como imagem (.lxs)
+              const imageData = data.image;
+              const metadata = data.metadata;
+
+              // Exibir imagem
+              imagePreview.src = imageData;
+              imagePreview.style.display = 'block';
+              videoContainer.style.display = 'none';
+
+              // Exibir metadados
+              datetimeSpan.textContent = new Date(metadata.datetime).toLocaleString();
+              fileSizeSpan.textContent = metadata.fileSize;
+              fileIdSpan.textContent = metadata.fileId || 'N/A';
+              metadataDiv.style.display = 'block';
+              errorMessage.style.display = 'none';
+            } else {
+              throw new Error('Arquivo inválido ou corrompido.');
+            }
+          } catch (error) {
+            console.error(error);
+            errorMessage.style.display = 'block';
           }
-        } catch (error) {
-          alert('Erro ao processar o arquivo.');
-        }
-      };
-      reader.readAsText(file);
+        };
+
+        reader.onerror = () => {
+          errorMessage.style.display = 'block';
+        };
+
+        reader.readAsText(file);
+      } catch (error) {
+        console.error(error);
+        errorMessage.style.display = 'block';
+      }
     });
+
+    // Função para converter base64 para Blob
+    function base64ToBlob(base64, mimeType) {
+      const byteCharacters = atob(base64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      return new Blob([byteArray], { type: mimeType });
+    }
   </script>
 </body>
 </html>
