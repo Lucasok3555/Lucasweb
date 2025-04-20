@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reconhecimento Facial</title>
+  <style>
+    /* Estilo para ocupar a tela inteira */
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+
+    /* Estilo para a câmera */
+    #camera {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Estilo para mensagens */
+    #message {
+      position: absolute;
+      bottom: 20px;
+      text-align: center;
+      font-size: 1.5em;
+    }
+  </style>
+</head>
+<body>
+  <!-- Elemento de vídeo para a câmera -->
+  <video id="camera" autoplay></video>
+  <div id="message">Posicione seu rosto na câmera</div>
+
+  <script>
+    // Acessar a câmera usando a API MediaDevices
+    const camera = document.getElementById('camera');
+    const message = document.getElementById('message');
+
+    async function startCamera() {
+      try {
+        // Solicitar acesso à câmera
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        camera.srcObject = stream;
+
+        // Exemplo de detecção de rosto (simulação)
+        setTimeout(() => {
+          message.textContent = 'Rosto detectado!';
+        }, 3000); // Simula detecção após 3 segundos
+      } catch (error) {
+        console.error('Erro ao acessar a câmera:', error);
+        message.textContent = 'Não foi possível acessar a câmera.';
+      }
+    }
+
+    // Iniciar a câmera ao carregar a página
+    startCamera();
+  </script>
+</body>
+</html>
