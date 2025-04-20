@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -60,10 +61,11 @@
             text-align: center;
             margin-top: 10px;
         }
-        .success {
-            color: green;
+        .key-display {
             text-align: center;
-            margin-top: 10px;
+            margin-top: 20px;
+            font-size: 16px;
+            color: #555;
         }
     </style>
 </head>
@@ -71,61 +73,79 @@
     <div class="container">
         <h1>Carteira Digital L$</h1>
         <div class="balance">Saldo: <span id="balance">L$ 20.00</span></div>
-        <label for="recipientKey">Chave do Destinatário:</label>
-        <input type="text" id="recipientKey" placeholder="Insira a chave do destinatário">
-        <label for="sendAmount">Quantia (L$):</label>
-        <input type="number" id="sendAmount" placeholder="Insira o valor a enviar">
-        <button onclick="sendMoney()">Enviar Dinheiro</button>
+        <label for="sendAmount">Quantia a Enviar (L$):</label>
+        <input type="number" id="sendAmount" placeholder="Insira o valor para enviar">
+        <button onclick="createSendKey()">Criar Chave de Envio</button>
+        <label for="receiveKey">Chave Recebida:</label>
+        <input type="text" id="receiveKey" placeholder="Insira a chave recebida">
+        <button onclick="redeemKey()">Resgatar Chave</button>
+        <div class="key-display" id="keyDisplay"></div>
         <div class="error" id="error"></div>
-        <div class="success" id="success"></div>
     </div>
 
     <script>
-        // Simulação de duas carteiras digitais
-        const users = {
-            user1: { balance: 20, key: "USER1KEY123" }, // Usuário 1 com saldo inicial de L$ 20
-            user2: { balance: 0, key: "USER2KEY456" }   // Usuário 2 com saldo inicial de L$ 0
-        };
-
-        let currentUser = "user1"; // Define o usuário atual como "user1"
+        let balance = 20; // Saldo inicial padrão
         const balanceDisplay = document.getElementById('balance');
         const errorDisplay = document.getElementById('error');
-        const successDisplay = document.getElementById('success');
+        const keyDisplay = document.getElementById('keyDisplay');
+
+        // Armazenamento temporário de chaves e seus valores (simulando P2P)
+        const sendKeys = {};
 
         function updateBalance() {
-            balanceDisplay.textContent = `L$ ${users[currentUser].balance.toFixed(2)}`;
+            balanceDisplay.textContent = `L$ ${balance.toFixed(2)}`;
         }
 
-        function sendMoney() {
-            const recipientKey = document.getElementById('recipientKey').value.trim();
-            const sendAmountInput = document.getElementById('sendAmount');
-            const sendAmount = parseFloat(sendAmountInput.value);
-
-            if (!recipientKey) {
-                errorDisplay.textContent = 'Por favor, insira uma chave válida.';
-                return;
+        function generateRandomKey() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let key = '';
+            for (let i = 0; i < 10; i++) {
+                key += chars.charAt(Math.floor(Math.random() * chars.length));
             }
+            return key;
+        }
 
-            if (isNaN(sendAmount) || sendAmount <= 0) {
+        function createSendKey() {
+            const amountInput = document.getElementById('sendAmount');
+            const amount = parseFloat(amountInput.value);
+
+            if (isNaN(amount) || amount <= 0) {
                 errorDisplay.textContent = 'Por favor, insira um valor válido.';
                 return;
             }
 
-            if (sendAmount > users[currentUser].balance) {
-                errorDisplay.textContent = 'Saldo insuficiente para enviar este valor.';
+            if (amount > balance) {
+                errorDisplay.textContent = 'Saldo insuficiente para criar a chave de envio.';
                 return;
             }
 
-            // Verifica se a chave pertence ao usuário 2
-            if (recipientKey === users.user2.key) {
-                users[currentUser].balance -= sendAmount; // Deduz do remetente
-                users.user2.balance += sendAmount;       // Adiciona ao destinatário
+            const key = generateRandomKey();
+            balance -= amount;
+            sendKeys[key] = amount; // Armazena a chave e o valor associado
+            updateBalance();
+            amountInput.value = '';
+            keyDisplay.textContent = `Chave de envio criada: ${key} (Valor: L$ ${amount.toFixed(2)})`;
+            errorDisplay.textContent = '';
+        }
+
+        function redeemKey() {
+            const keyInput = document.getElementById('receiveKey');
+            const key = keyInput.value.trim();
+
+            if (!key) {
+                errorDisplay.textContent = 'Por favor, insira uma chave válida.';
+                return;
+            }
+
+            if (sendKeys.hasOwnProperty(key)) {
+                const amount = sendKeys[key];
+                balance += amount;
+                delete sendKeys[key]; // Remove a chave após o uso
                 updateBalance();
-                sendAmountInput.value = '';
-                errorDisplay.textContent = '';
-                successDisplay.textContent = `Você enviou L$ ${sendAmount.toFixed(2)} para o usuário 2 com sucesso!`;
+                keyInput.value = '';
+                errorDisplay.textContent = `Você recebeu L$ ${amount.toFixed(2)} com sucesso!`;
             } else {
-                errorDisplay.textContent = 'Chave de destinatário inválida.';
+                errorDisplay.textContent = 'Chave inválida ou já utilizada.';
             }
         }
 
