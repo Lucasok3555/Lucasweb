@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -72,13 +73,14 @@
     <div class="container">
         <h1>Carteira Digital L$</h1>
         <div class="balance">Saldo: <span id="balance">L$ 20.00</span></div>
-        <label for="key">Chave:</label>
-        <input type="text" id="key" placeholder="Insira a chave para receber">
+        <label for="recipientKey">Chave do Destinatário:</label>
+        <input type="text" id="recipientKey" placeholder="Insira a chave do destinatário">
+        <label for="sendAmount">Quantia (L$):</label>
+        <input type="number" id="sendAmount" placeholder="Insira o valor para enviar">
+        <button onclick="sendMoney()">Enviar Dinheiro</button>
+        <label for="receiveKey">Sua Chave:</label>
+        <input type="text" id="receiveKey" placeholder="Insira sua chave para receber">
         <button onclick="receiveMoney()">Receber Dinheiro</button>
-        <label for="amount">Quantia (L$):</label>
-        <input type="number" id="amount" placeholder="Insira o valor para criar chave">
-        <button onclick="createKey()">Criar Chave</button>
-        <div class="key-display" id="keyDisplay"></div>
         <div class="error" id="error"></div>
     </div>
 
@@ -86,27 +88,23 @@
         let balance = 20; // Saldo inicial padrão
         const balanceDisplay = document.getElementById('balance');
         const errorDisplay = document.getElementById('error');
-        const keyDisplay = document.getElementById('keyDisplay');
 
-        // Armazenamento de chaves e seus valores
-        const keys = {};
+        // Simulação de uma conexão P2P com um objeto compartilhado
+        const p2pNetwork = {};
 
         function updateBalance() {
             balanceDisplay.textContent = `L$ ${balance.toFixed(2)}`;
         }
 
-        function generateRandomKey() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-            let key = '';
-            for (let i = 0; i < 10; i++) {
-                key += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return key;
-        }
-
-        function createKey() {
-            const amountInput = document.getElementById('amount');
+        function sendMoney() {
+            const recipientKey = document.getElementById('recipientKey').value.trim();
+            const amountInput = document.getElementById('sendAmount');
             const amount = parseFloat(amountInput.value);
+
+            if (!recipientKey) {
+                errorDisplay.textContent = 'Por favor, insira uma chave válida.';
+                return;
+            }
 
             if (isNaN(amount) || amount <= 0) {
                 errorDisplay.textContent = 'Por favor, insira um valor válido.';
@@ -114,37 +112,34 @@
             }
 
             if (amount > balance) {
-                errorDisplay.textContent = 'Saldo insuficiente para criar a chave.';
+                errorDisplay.textContent = 'Saldo insuficiente para enviar este valor.';
                 return;
             }
 
-            const key = generateRandomKey();
+            // Simula a transação P2P
+            p2pNetwork[recipientKey] = (p2pNetwork[recipientKey] || 0) + amount;
             balance -= amount;
-            keys[key] = amount; // Armazena a chave e o valor associado
             updateBalance();
             amountInput.value = '';
-            keyDisplay.textContent = `Chave criada: ${key} (Valor: L$ ${amount.toFixed(2)})`;
-            errorDisplay.textContent = '';
+            errorDisplay.textContent = `Você enviou L$ ${amount.toFixed(2)} para a chave "${recipientKey}" com sucesso!`;
         }
 
         function receiveMoney() {
-            const keyInput = document.getElementById('key');
-            const key = keyInput.value.trim();
+            const receiveKey = document.getElementById('receiveKey').value.trim();
 
-            if (!key) {
-                errorDisplay.textContent = 'Por favor, insira uma chave válida.';
+            if (!receiveKey) {
+                errorDisplay.textContent = 'Por favor, insira sua chave válida.';
                 return;
             }
 
-            if (keys.hasOwnProperty(key)) {
-                const amount = keys[key];
+            if (p2pNetwork.hasOwnProperty(receiveKey)) {
+                const amount = p2pNetwork[receiveKey];
                 balance += amount;
-                delete keys[key]; // Remove a chave após o uso
+                delete p2pNetwork[receiveKey]; // Remove o valor após o recebimento
                 updateBalance();
-                keyInput.value = '';
                 errorDisplay.textContent = `Você recebeu L$ ${amount.toFixed(2)} com sucesso!`;
             } else {
-                errorDisplay.textContent = 'Chave inválida ou já utilizada.';
+                errorDisplay.textContent = 'Nenhuma transação encontrada para esta chave.';
             }
         }
 
@@ -152,3 +147,4 @@
     </script>
 </body>
 </html>
+```
