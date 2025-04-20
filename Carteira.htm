@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carteira Digital L$</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 400px;
+            margin: 50px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        label {
+            display: block;
+            margin-top: 15px;
+            color: #555;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .balance {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 18px;
+            color: #333;
+        }
+        .error {
+            color: red;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .key-display {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 16px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Carteira Digital L$</h1>
+        <div class="balance">Saldo: <span id="balance">L$ 20.00</span></div>
+        <label for="key">Chave:</label>
+        <input type="text" id="key" placeholder="Insira a chave para receber">
+        <button onclick="receiveMoney()">Receber Dinheiro</button>
+        <label for="amount">Quantia (L$):</label>
+        <input type="number" id="amount" placeholder="Insira o valor para criar chave">
+        <button onclick="createKey()">Criar Chave</button>
+        <div class="key-display" id="keyDisplay"></div>
+        <div class="error" id="error"></div>
+    </div>
+
+    <script>
+        let balance = 20; // Saldo inicial padrão
+        const balanceDisplay = document.getElementById('balance');
+        const errorDisplay = document.getElementById('error');
+        const keyDisplay = document.getElementById('keyDisplay');
+
+        // Armazenamento de chaves e seus valores
+        const keys = {};
+
+        function updateBalance() {
+            balanceDisplay.textContent = `L$ ${balance.toFixed(2)}`;
+        }
+
+        function generateRandomKey() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let key = '';
+            for (let i = 0; i < 10; i++) {
+                key += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return key;
+        }
+
+        function createKey() {
+            const amountInput = document.getElementById('amount');
+            const amount = parseFloat(amountInput.value);
+
+            if (isNaN(amount) || amount <= 0) {
+                errorDisplay.textContent = 'Por favor, insira um valor válido.';
+                return;
+            }
+
+            if (amount > balance) {
+                errorDisplay.textContent = 'Saldo insuficiente para criar a chave.';
+                return;
+            }
+
+            const key = generateRandomKey();
+            balance -= amount;
+            keys[key] = amount; // Armazena a chave e o valor associado
+            updateBalance();
+            amountInput.value = '';
+            keyDisplay.textContent = `Chave criada: ${key} (Valor: L$ ${amount.toFixed(2)})`;
+            errorDisplay.textContent = '';
+        }
+
+        function receiveMoney() {
+            const keyInput = document.getElementById('key');
+            const key = keyInput.value.trim();
+
+            if (!key) {
+                errorDisplay.textContent = 'Por favor, insira uma chave válida.';
+                return;
+            }
+
+            if (keys.hasOwnProperty(key)) {
+                const amount = keys[key];
+                balance += amount;
+                delete keys[key]; // Remove a chave após o uso
+                updateBalance();
+                keyInput.value = '';
+                errorDisplay.textContent = `Você recebeu L$ ${amount.toFixed(2)} com sucesso!`;
+            } else {
+                errorDisplay.textContent = 'Chave inválida ou já utilizada.';
+            }
+        }
+
+        updateBalance();
+    </script>
+</body>
+</html>
