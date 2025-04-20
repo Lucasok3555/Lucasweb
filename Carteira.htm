@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -61,11 +60,10 @@
             text-align: center;
             margin-top: 10px;
         }
-        .key-display {
+        .success {
+            color: green;
             text-align: center;
-            margin-top: 20px;
-            font-size: 16px;
-            color: #555;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -76,70 +74,58 @@
         <label for="recipientKey">Chave do Destinatário:</label>
         <input type="text" id="recipientKey" placeholder="Insira a chave do destinatário">
         <label for="sendAmount">Quantia (L$):</label>
-        <input type="number" id="sendAmount" placeholder="Insira o valor para enviar">
+        <input type="number" id="sendAmount" placeholder="Insira o valor a enviar">
         <button onclick="sendMoney()">Enviar Dinheiro</button>
-        <label for="receiveKey">Sua Chave:</label>
-        <input type="text" id="receiveKey" placeholder="Insira sua chave para receber">
-        <button onclick="receiveMoney()">Receber Dinheiro</button>
         <div class="error" id="error"></div>
+        <div class="success" id="success"></div>
     </div>
 
     <script>
-        let balance = 20; // Saldo inicial padrão
+        // Simulação de duas carteiras digitais
+        const users = {
+            user1: { balance: 20, key: "USER1KEY123" }, // Usuário 1 com saldo inicial de L$ 20
+            user2: { balance: 0, key: "USER2KEY456" }   // Usuário 2 com saldo inicial de L$ 0
+        };
+
+        let currentUser = "user1"; // Define o usuário atual como "user1"
         const balanceDisplay = document.getElementById('balance');
         const errorDisplay = document.getElementById('error');
-
-        // Simulação de uma conexão P2P com um objeto compartilhado
-        const p2pNetwork = {};
+        const successDisplay = document.getElementById('success');
 
         function updateBalance() {
-            balanceDisplay.textContent = `L$ ${balance.toFixed(2)}`;
+            balanceDisplay.textContent = `L$ ${users[currentUser].balance.toFixed(2)}`;
         }
 
         function sendMoney() {
             const recipientKey = document.getElementById('recipientKey').value.trim();
-            const amountInput = document.getElementById('sendAmount');
-            const amount = parseFloat(amountInput.value);
+            const sendAmountInput = document.getElementById('sendAmount');
+            const sendAmount = parseFloat(sendAmountInput.value);
 
             if (!recipientKey) {
                 errorDisplay.textContent = 'Por favor, insira uma chave válida.';
                 return;
             }
 
-            if (isNaN(amount) || amount <= 0) {
+            if (isNaN(sendAmount) || sendAmount <= 0) {
                 errorDisplay.textContent = 'Por favor, insira um valor válido.';
                 return;
             }
 
-            if (amount > balance) {
+            if (sendAmount > users[currentUser].balance) {
                 errorDisplay.textContent = 'Saldo insuficiente para enviar este valor.';
                 return;
             }
 
-            // Simula a transação P2P
-            p2pNetwork[recipientKey] = (p2pNetwork[recipientKey] || 0) + amount;
-            balance -= amount;
-            updateBalance();
-            amountInput.value = '';
-            errorDisplay.textContent = `Você enviou L$ ${amount.toFixed(2)} para a chave "${recipientKey}" com sucesso!`;
-        }
-
-        function receiveMoney() {
-            const receiveKey = document.getElementById('receiveKey').value.trim();
-
-            if (!receiveKey) {
-                errorDisplay.textContent = 'Por favor, insira sua chave válida.';
-                return;
-            }
-
-            if (p2pNetwork.hasOwnProperty(receiveKey)) {
-                const amount = p2pNetwork[receiveKey];
-                balance += amount;
-                delete p2pNetwork[receiveKey]; // Remove o valor após o recebimento
+            // Verifica se a chave pertence ao usuário 2
+            if (recipientKey === users.user2.key) {
+                users[currentUser].balance -= sendAmount; // Deduz do remetente
+                users.user2.balance += sendAmount;       // Adiciona ao destinatário
                 updateBalance();
-                errorDisplay.textContent = `Você recebeu L$ ${amount.toFixed(2)} com sucesso!`;
+                sendAmountInput.value = '';
+                errorDisplay.textContent = '';
+                successDisplay.textContent = `Você enviou L$ ${sendAmount.toFixed(2)} para o usuário 2 com sucesso!`;
             } else {
-                errorDisplay.textContent = 'Nenhuma transação encontrada para esta chave.';
+                errorDisplay.textContent = 'Chave de destinatário inválida.';
             }
         }
 
@@ -147,4 +133,3 @@
     </script>
 </body>
 </html>
-```
