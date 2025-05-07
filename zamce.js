@@ -32,28 +32,25 @@
         });
     }
 
-    // 3. Esconder o IP do usuário (usando proxy ou anonimizador)
+    // 3. Esconder IP do usuário
     function hideUserIP() {
         console.log("Tentando ocultar o IP do usuário...");
-        // Simulação — em produção, usaria um serviço de proxy anônimo
         fetch("https://api.ipify.org?format=json")
             .then(res => res.json())
             .then(data => {
                 console.warn("Seu IP real é:", data.ip);
-                console.info("Use um proxy ou VPN integrado para ocultar.");
+                console.info("Use proxy anônimo ou serviço integrado.");
             });
     }
 
-    // 4. Detectar rede fraca e mudar para outra conexão (Wi-Fi → Dados móveis)
+    // 4. Detectar rede fraca e mudar para outra conexão
     function checkNetworkStrengthAndSwitch() {
         if ('connection' in navigator && 'effectiveType' in navigator.connection) {
             const connection = navigator.connection.effectiveType;
             console.log("Tipo de conexão atual:", connection);
 
             if (connection === "2g" || connection === "slow-2g") {
-                console.warn("Conexão muito lenta detectada!");
                 alert("Rede fraca detectada. Mude para dados móveis.");
-                // Aqui você pode chamar código nativo (Java/Kotlin) para alternar a rede
             }
         } else {
             console.warn("API de rede não disponível neste dispositivo.");
@@ -64,7 +61,6 @@
     function saveEntireSiteToCache() {
         const allResources = [];
 
-        // Intercepta requisições e armazena no cache
         const oldFetch = window.fetch;
         window.fetch = function (...args) {
             return oldFetch(...args).then(response => {
@@ -82,7 +78,7 @@
         });
     }
 
-    // 6. Acessar páginas offline (fallback para google.com)
+    // 6. Páginas offline - fallback para google.com
     function loadOfflineFallback(site = "https://www.google.com") {
         const cached = localStorage.getItem(site);
         if (cached) {
@@ -94,7 +90,7 @@
         }
     }
 
-    // 7. Agilidade máxima nos downloads (divisão paralela)
+    // 7. Agilidade máxima nos downloads
     async function downloadWithMaxSpeed(url, parts = 4) {
         const response = await fetch(url, { method: "HEAD" });
         const contentLength = parseInt(response.headers.get("Content-Length"));
@@ -133,6 +129,48 @@
         URL.revokeObjectURL(a.href);
     }
 
+    // 8. Suporte ao formato .lxsv (vídeo personalizado)
+    function handleLxsvVideo(url) {
+        if (url.endsWith(".lxsv")) {
+            const videoContainer = document.createElement("div");
+            const videoPlayer = document.createElement("video");
+            videoPlayer.controls = true;
+            videoPlayer.src = url;
+            videoPlayer.style.width = "100%";
+            videoPlayer.style.maxWidth = "600px";
+            videoPlayer.style.margin = "20px auto";
+
+            videoContainer.appendChild(videoPlayer);
+            document.body.appendChild(videoContainer);
+
+            console.log("Formato .lxsv detectado. Player iniciado.");
+        }
+    }
+
+    // 9. Suporte à rede PASN
+    function checkForPasnNetwork() {
+        // Simulação — você pode usar API nativa Android para isso
+        const isPasn = false; // Exemplo: detectado por código nativo
+        if (isPasn) {
+            console.log("Conectado à rede PASN.");
+            document.body.style.border = "2px solid cyan";
+        } else {
+            console.log("Rede normal detectada.");
+        }
+    }
+
+    // 10. Modo leve para redes lentas (ex: 4G ruim)
+    function enableLightModeForSlowNetwork() {
+        if ('connection' in navigator && 'effectiveType' in navigator.connection) {
+            const type = navigator.connection.effectiveType;
+            if (type === "2g" || type === "slow-2g") {
+                console.warn("Modo leve ativado para rede lenta.");
+                document.querySelectorAll("img").forEach(img => img.remove());
+                document.querySelectorAll("iframe").forEach(iframe => iframe.remove());
+            }
+        }
+    }
+
     // Executar todas as funções ao carregar a página
     window.addEventListener("load", () => {
         enableDarkMode();
@@ -141,10 +179,20 @@
         checkNetworkStrengthAndSwitch();
         saveEntireSiteToCache();
 
-        // Carrega Google se estiver offline
         if (!navigator.onLine) {
             loadOfflineFallback("https://www.google.com");
         }
+
+        checkForPasnNetwork();
+        enableLightModeForSlowNetwork();
+
+        // Detectar vídeos lxsv
+        const videos = document.querySelectorAll("video, source");
+        videos.forEach(v => {
+            if (v.src.endsWith(".lxsv")) {
+                handleLxsvVideo(v.src);
+            }
+        });
     });
 
     // Exportando algumas funções para uso externo
@@ -155,7 +203,10 @@
         checkNetworkStrengthAndSwitch,
         saveEntireSiteToCache,
         loadOfflineFallback,
-        downloadWithMaxSpeed
+        downloadWithMaxSpeed,
+        handleLxsvVideo,
+        checkForPasnNetwork,
+        enableLightModeForSlowNetwork
     };
 
 })();
