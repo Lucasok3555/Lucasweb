@@ -1,6 +1,8 @@
 (function () {
     'use strict';
 
+    const CHUNK_SIZE = 10 * 1024; // 10 KB por parte
+
     // 1. Forçar modo escuro e impedir mudança para modo claro
     function enableDarkMode() {
         const style = document.createElement('style');
@@ -16,12 +18,8 @@
         `;
         document.head.appendChild(style);
 
-        // Impede alteração via prefers-color-scheme
         window.matchMedia('(prefers-color-scheme: light)').addListener(e => {
-            if (e.matches) {
-                console.warn("Modo claro detectado, mas bloqueado.");
-                enableDarkMode();
-            }
+            if (e.matches) enableDarkMode();
         });
     }
 
@@ -46,22 +44,15 @@
             .then(res => res.json())
             .then(data => {
                 console.warn("Seu IP real é:", data.ip);
-                console.info("Use proxy anônimo ou serviço integrado.");
             });
     }
 
     // 4. Simula ativação automática da rede PASN se site NÃO for HTTPS
     function autoEnablePasnIfInsecure() {
         if (window.location.protocol !== "https:") {
-            console.warn("Site inseguro detectado. Ativando rede PASN...");
-
-            // Aqui você pode chamar uma função nativa no Android (Java/Kotlin)
-            // Exemplo: Android.usePasnNetwork();
-
+            console.warn("Site inseguro detectado. Ativando rede segura PASN...");
             alert("Conexão insegura. Ativando rede segura PASN...");
             document.body.style.border = "2px solid cyan";
-        } else {
-            console.log("Conexão segura (HTTPS). Rede PASN não ativada.");
         }
     }
 
@@ -82,93 +73,58 @@
         }
     }
 
-    // 6. Dividir upload/download em partes pequenas
-    async function splitTransfer(url, type = "download", parts = 4) {
-        if (type === "download") {
-            await downloadWithMaxSpeed(url, parts);
-        } else if (type === "upload") {
-            await uploadInChunks(url, parts);
-        }
-    }
-
-    async function downloadWithMaxSpeed(url, parts = 4) {
-        const response = await fetch(url, { method: "HEAD" });
-        const contentLength = parseInt(response.headers.get("Content-Length"));
-        const partSize = Math.ceil(contentLength / parts);
-
-        let buffers = [];
-        let promises = [];
-
-        for (let i = 0; i < parts; i++) {
-            const start = i * partSize;
-            const end = Math.min(start + partSize - 1, contentLength - 1);
-
-            promises.push(
-                fetch(url, {
-                    headers: {
-                        Range: `bytes=${start}-${end}`
-                    }
-                }).then(res => res.arrayBuffer())
-            );
-        }
-
-        const arrayBuffers = await Promise.all(promises);
-        buffers = new Uint8Array(contentLength);
+    // 6. Dividir requisições em pequenos pedaços (chunked)
+    async function fetchInChunks(url, mimeType = null) {
         let offset = 0;
+        let allChunks = [];
 
-        arrayBuffers.forEach(buffer => {
-            buffers.set(new Uint8Array(buffer), offset);
-            offset += buffer.byteLength;
-        });
+        while (true) {
+            const end = offset + CHUNK_SIZE - 1;
 
-        const blob = new Blob([buffers.buffer]);
-        saveToCache(url, blob);
-        triggerDownload(blob, url.split("/").pop() || "download");
-    }
-
-    function triggerDownload(blob, filename) {
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(a.href);
-    }
-
-    async function uploadInChunks(url, parts = 4) {
-        const fileInput = document.createElement("input");
-        fileInput.type = "file";
-        fileInput.click();
-
-        fileInput.addEventListener("change", async () => {
-            const file = fileInput.files[0];
-            const chunkSize = Math.ceil(file.size / parts);
-            let offset = 0;
-
-            for (let i = 0; i < parts; i++) {
-                const chunk = file.slice(offset, offset + chunkSize);
-                const formData = new FormData();
-                formData.append("file", chunk, `${file.name}.part${i}`);
-
-                await fetch(url, {
-                    method: "POST",
-                    body: formData
-                });
-
-                offset += chunkSize;
-            }
-
-            console.log("Upload concluído em partes.");
-        });
-    }
-
-    // 7. Salvar vídeos e áudios no cache ("caixa")
-    function saveToCache(name, content) {
-        if (content instanceof Blob) {
-            content.arrayBuffer().then(buffer => {
-                localStorage.setItem(name, btoa(String.fromCharCode.apply(null, new Uint8Array(buffer))));
+            const response = await fetch(url, {
+                headers: {
+                    Range: `bytes=${offset}-${end}`
+                }
             });
+
+            if (!response.ok && response.status !== 206 && response.status !== 200) break;
+
+            const chunk = await response.arrayBuffer();
+            allChunks.push(new Uint8Array(chunk));
+
+            if (chunk.byteLength < CHUNK_SIZE) break;
+
+            offset += chunk.byteLength;
+        }
+
+        const fullData = concatenateArrays(allChunks);
+        saveToCache(url, fullData, mimeType);
+
+        return fullData;
+    }
+
+    function concatenateArrays(arrays) {
+        let totalLength = arrays.reduce((acc, arr) => acc + arr.length, 0);
+        let result = new Uint8Array(totalLength);
+        let offset = 0;
+        arrays.forEach(arr => {
+            result.set(arr, offset);
+            offset += arr.length;
+        });
+        return result;
+    }
+
+    // 7. Salvar qualquer tipo de arquivo no cache ("caixa")
+    function saveToCache(name, data, mimeType = null) {
+        if (mimeType?.startsWith("image/")) {
+            const blob = new Blob([data], { type: mimeType });
+            localStorage.setItem(name, URL.createObjectURL(blob));
+        } else if (mimeType === "text/plain" || mimeType === "text/html") {
+            const decoder = new TextDecoder("utf-8");
+            const text = decoder.decode(data);
+            localStorage.setItem(name, text);
         } else {
-            localStorage.setItem(name, content);
+            localStorage.setItem(name, btoa(String.fromCharCode.apply(null, data)));
         }
     }
 
@@ -190,7 +146,7 @@
         videos.forEach(video => {
             video.addEventListener("play", () => {
                 console.log("Vídeo iniciado:", video.currentSrc);
-                splitTransfer(video.currentSrc, "download");
+                fetchInChunks(video.currentSrc, "video/mp4");
             });
         });
 
@@ -198,9 +154,36 @@
         audios.forEach(audio => {
             audio.addEventListener("play", () => {
                 console.log("Áudio iniciado:", audio.currentSrc);
-                splitTransfer(audio.currentSrc, "download");
+                fetchInChunks(audio.currentSrc, "audio/mpeg");
             });
         });
+
+        const images = document.querySelectorAll("img");
+        images.forEach(img => {
+            img.addEventListener("load", () => {
+                console.log("Imagem carregada:", img.src);
+                fetchInChunks(img.src, "image/jpeg");
+            });
+        });
+    }
+
+    // 10. Trabalhar com texto como pacotes de letras
+    function splitTextIntoPackages(text, size = 100) {
+        let packages = [];
+        for (let i = 0; i < text.length; i += size) {
+            packages.push(text.slice(i, i + size));
+        }
+        return packages;
+    }
+
+    function injectTextFromPackages(packages) {
+        const container = document.createElement("div");
+        container.style.whiteSpace = "pre-wrap";
+        container.style.margin = "20px";
+        packages.forEach(pkg => {
+            container.innerHTML += pkg;
+        });
+        document.body.appendChild(container);
     }
 
     // Executar todas as funções ao carregar a página
@@ -211,6 +194,14 @@
         hideUserIP();
         autoTranslatePage("pt");
         handleMediaDownloads();
+
+        // Exemplo: dividir texto em pacotes de letras
+        fetch(window.location.href)
+            .then(res => res.text())
+            .then(text => {
+                const packages = splitTextIntoPackages(text, 100); // 100 caracteres por pacote
+                injectTextFromPackages(packages);
+            });
     });
 
     // Exportando algumas funções para uso externo
@@ -220,10 +211,12 @@
         hideUserIP,
         autoEnablePasnIfInsecure,
         autoTranslatePage,
-        splitTransfer,
+        fetchInChunks,
         saveToCache,
         loadOfflineFallback,
-        handleMediaDownloads
+        handleMediaDownloads,
+        splitTextIntoPackages,
+        injectTextFromPackages
     };
 
 })();
