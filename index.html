@@ -1,49 +1,181 @@
-<!doctype html>
-<html PASN lang="en">
-  <head>
-    <meta charset="utf-8">
-    <script async src="https://lucas75677.github.io/PASN/PASN.js"></script>
-    <title>Web</title>
-    <link rel="canonical" href="https://lucas75677.github.io/PASN/PASN.js">
-    <meta name="viewport" content="width=device-width">
-    <script type="application/ld+json">
-      {
-        "@context": "http://schema.org",
-        "@type": "NewsArticle",
-        "headline": "Open-source framework for publishing content",
-        "datePublished": "2015-10-07T12:02:41Z",
-        "image": [
-          "https://lucas75677.github.io/PASN/PASN.js"
-        ]
-      }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnonSocial - P2P Network</title>
+    <meta name="description" content="Anonymous P2P social network with local storage">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#4F46E5",
+                        dark: "#1E293B",
+                        light: "#F8FAFC"
+                    }
+                }
+            }
+        }
     </script>
-    <style PASN-boilerplate>body{-webkit-animation:-PASN-start 8s steps(1,end) 0s 1 normal both;-moz-animation:-PASN-start 8s steps(1,end) 0s 1 normal both;-ms-animation:-PASN-start 8s steps(1,end) 0s 1 normal both;animation:-PASN-start 8s steps(1,end) 0s 1 normal both}@-webkit-keyframes -PASN-start{from{visibility:hidden}to{visibility:visible}}@-moz-keyframes -PASN-start{from{visibility:hidden}to{visibility:visible}}@-ms-keyframes -PASN-start{from{visibility:hidden}to{visibility:visible}}@-o-keyframes -PASN-start{from{visibility:hidden}to{visibility:visible}}@keyframes -PASN-start{from{visibility:hidden}to{visibility:visible}}</style><noscript><style amp-boilerplate>body{-webkit-animation:none;-moz-animation:none;-ms-animation:none;animation:none}</style></noscript>
-  </head>
-  <body>
-    <h1></h1>
-  </body>
-</html>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-white shadow-sm">
+        <nav class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-primary">AnonSocial</h1>
+            <div class="flex items-center space-x-4">
+                <button id="newPostBtn" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition">
+                    <i class="fas fa-plus mr-2"></i>New Post
+                </button>
+            </div>
+        </nav>
+    </header>
 
-  <script>
-    function connectToSiteB() {
-      fetch('https://lucasok3555.github.io/Lucasweb/apicloud.js ', {
-        method: 'GET',
-        credentials: 'include' // Importante para incluir cookies nas requisições
-      })
-      .then(response => response.json())
-      .then(data => {
-        console.log('Resposta do Site B:', data);
-      })
-      .catch(err => {
-        console.error('Erro ao conectar com Site B:', err);
-      });
-    }
-  </script>
+    <main class="container mx-auto px-4 py-8">
+        <!-- Post Creation Modal -->
+        <div id="postModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Create Anonymous Post</h2>
+                    <button id="closeModal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <textarea id="postContent" class="w-full h-32 p-3 border rounded-lg mb-4" placeholder="What's on your mind?"></textarea>
+                <button id="submitPost" class="w-full bg-primary text-white py-2 rounded-lg hover:bg-opacity-90 transition">
+                    Post Anonymously
+                </button>
+            </div>
+        </div>
+
+        <!-- Feed Section -->
+        <section class="max-w-2xl mx-auto">
+            <h2 class="text-xl font-semibold mb-6 text-dark">Your Feed</h2>
+            
+            <div id="feedContainer" class="space-y-6">
+                <!-- Posts will be dynamically inserted here -->
+                <div class="text-center py-10 text-gray-500" id="emptyFeed">
+                    <i class="fas fa-comment-slash text-4xl mb-3"></i>
+                    <p>No posts yet. Create your first anonymous post!</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-white border-t mt-12 py-6">
+        <div class="container mx-auto px-4 text-center text-gray-500">
+            <p>All posts are stored locally in your browser. No tracking. No servers.</p>
+        </div>
+    </footer>
+    
+    <script>
+        // DOM Elements
+        const newPostBtn = document.getElementById('newPostBtn');
+        const postModal = document.getElementById('postModal');
+        const closeModal = document.getElementById('closeModal');
+        const submitPost = document.getElementById('submitPost');
+        const postContent = document.getElementById('postContent');
+        const feedContainer = document.getElementById('feedContainer');
+        const emptyFeed = document.getElementById('emptyFeed');
+
+        // Initialize posts array from localStorage or create empty array
+        let posts = JSON.parse(localStorage.getItem('anonPosts')) || [];
+
+        // Modal handlers
+        newPostBtn.addEventListener('click', () => {
+            postModal.classList.remove('hidden');
+            postContent.focus();
+        });
+
+        closeModal.addEventListener('click', () => {
+            postModal.classList.add('hidden');
+            postContent.value = '';
+        });
+
+        // Submit new post
+        submitPost.addEventListener('click', () => {
+            const content = postContent.value.trim();
+            if (content) {
+                const newPost = {
+                    id: Date.now(),
+                    content: content,
+                    timestamp: new Date().toISOString(),
+                    likes: 0
+                };
+                
+                posts.unshift(newPost);
+                localStorage.setItem('anonPosts', JSON.stringify(posts));
+                
+                renderPosts();
+                postModal.classList.add('hidden');
+                postContent.value = '';
+            }
+        });
+
+        // Render all posts
+        function renderPosts() {
+            if (posts.length === 0) {
+                emptyFeed.classList.remove('hidden');
+                feedContainer.innerHTML = '';
+                feedContainer.appendChild(emptyFeed);
+                return;
+            }
+            
+            emptyFeed.classList.add('hidden');
+            feedContainer.innerHTML = '';
+            
+            posts.forEach(post => {
+                const postElement = document.createElement('div');
+                postElement.className = 'bg-white rounded-lg shadow p-6';
+                postElement.innerHTML = `
+                    <div class="flex items-start space-x-3">
+                        <div class="bg-gray-200 rounded-full w-10 h-10 flex items-center justify-center">
+                            <i class="fas fa-user-secret text-gray-500"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 text-sm text-gray-500 mb-2">
+                                <span>Anonymous</span>
+                                <span>•</span>
+                                <span>${new Date(post.timestamp).toLocaleString()}</span>
+                            </div>
+                            <p class="text-gray-800 mb-4">${post.content}</p>
+                            <div class="flex items-center space-x-4 text-gray-500">
+                                <button class="like-btn flex items-center space-x-1 hover:text-primary" data-id="${post.id}">
+                                    <i class="far fa-heart"></i>
+                                    <span>${post.likes}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                feedContainer.appendChild(postElement);
+            });
+
+            // Add event listeners to like buttons
+            document.querySelectorAll('.like-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const postId = parseInt(this.getAttribute('data-id'));
+                    const postIndex = posts.findIndex(p => p.id === postId);
+                    if (postIndex !== -1) {
+                        posts[postIndex].likes += 1;
+                        localStorage.setItem('anonPosts', JSON.stringify(posts));
+                        renderPosts();
+                    }
+                });
+            });
+        }
+
+        // Initial render
+        renderPosts();
+
+        // Close modal when clicking outside
+        postModal.addEventListener('click', (e) => {
+            if (e.target === postModal) {
+                postModal.classList.add('hidden');
+            }
+        });
+    </script>
 </body>
 </html>
-
-<h1 style="text-align: center;">Lucas web</h1>
-<p><a href="/Lucasweb/links.html">link</a></p>
-<p style="text-align: center;">Lucas web 2025</p>
-<p>&nbsp;</p>
-
