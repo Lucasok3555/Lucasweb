@@ -24,6 +24,24 @@
   </body>
 </html>
 
+  <script>
+    function connectToSiteB() {
+      fetch('https://lucasok3555.github.io/Lucasweb/apicloud.js ', {
+        method: 'GET',
+        credentials: 'include' // Importante para incluir cookies nas requisições
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Resposta do Site B:', data);
+      })
+      .catch(err => {
+        console.error('Erro ao conectar com Site B:', err);
+      });
+    }
+  </script>
+</body>
+</html>
+
 </html>
 <script async src="https://cse.google.com/cse.js?cx=c4e858ecc3a3145ca">
 </script>
