@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>E-mail Temporário</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      color: #333;
+    }
+    .email-box {
+      margin: 20px auto;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      max-width: 400px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    input[type="text"] {
+      width: 80%;
+      padding: 10px;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 10px;
+      border: none;
+      background-color: #007BFF;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .success {
+      background: #d4edda;
+      color: #155724;
+    }
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>E-mail Temporário</h1>
+
+  <div class="email-box">
+    <input type="text" id="emailInput" placeholder="Digite ou gere um e-mail" />
+    <br />
+    <button onclick="validateEmail()">Validar E-mail</button>
+    <button onclick="generateTempEmail()">Gerar E-mail Temporário</button>
+
+    <div id="result" class="result"></div>
+  </div>
+
+  <script>
+    const token = '19526|kBOz3QB9EIAHu876UNowhmdGRswokoSt';
+
+    function validateEmail() {
+      const email = document.getElementById('emailInput').value.trim();
+      const resultDiv = document.getElementById('result');
+
+      if (!email.includes('@')) {
+        resultDiv.className = 'result error';
+        resultDiv.innerText = 'Por favor, insira um e-mail válido.';
+        return;
+      }
+
+      fetch(`https://api.invertexto.com/v1/email-validator/ ${encodeURIComponent(email)}?token=${token}`)
+        .then(response => response.json())
+        .then(data => {
+          console.log(data); // Debug
+          if (data.status === 'valid') {
+            resultDiv.className = 'result success';
+            resultDiv.innerHTML = `
+              ✅ E-mail válido!<br/>
+              <strong>Email:</strong> ${data.email}<br/>
+              <strong>Formato:</strong> ${data.format_valid ? '✅' : '❌'}<br/>
+              <strong>Domínio:</strong> ${data.domain_valid ? '✅' : '❌'}<br/>
+              <strong>Servidor:</strong> ${data.smtp_check ? '✅' : '❌'}
+            `;
+          } else {
+            resultDiv.className = 'result error';
+            resultDiv.innerText = `❌ E-mail inválido: ${data.message}`;
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          resultDiv.className = 'result error';
+          resultDiv.innerText = 'Erro ao validar o e-mail.';
+        });
+    }
+
+    function generateTempEmail() {
+      const domains = ['maildrop.cc', 'temp-mail.org', 'trashmail.net'];
+      const randomUser = Math.random().toString(36).substring(2, 10);
+      const domain = domains[Math.floor(Math.random() * domains.length)];
+      const tempEmail = `${randomUser}@${domain}`;
+      document.getElementById('emailInput').value = tempEmail;
+      document.getElementById('result').innerText = '';
+    }
+  </script>
+
+</body>
+</html>
