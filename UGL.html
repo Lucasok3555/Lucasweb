@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnonSocial - P2P Network</title>
+    <meta name="description" content="Anonymous P2P social network with shared feed">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        .peer-id-container {
+            background-color: rgba(0,0,0,0.1);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-family: monospace;
+        }
+        .peer-id {
+            user-select: all;
+        }
+        .copy-btn {
+            cursor: pointer;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-white shadow-sm">
+        <nav class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-indigo-600">AnonSocial</h1>
+            <div class="flex items-center space-x-4">
+                <div class="peer-id-container flex items-center">
+                    <span>Your ID: </span>
+                    <span id="peerId" class="peer-id ml-1"></span>
+                    <i id="copyPeerId" class="copy-btn fas fa-copy text-gray-500 hover:text-indigo-600"></i>
+                </div>
+                <button id="connectPeerBtn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
+                    <i class="fas fa-link mr-2"></i>Connect
+                </button>
+                <button id="newPostBtn" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition">
+                    <i class="fas fa-plus mr-2"></i>New Post
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+        <!-- Connection Modal -->
+        <div id="connectModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Connect to Peer</h2>
+                    <button id="closeConnectModal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <input id="peerIdInput" class="w-full p-3 border rounded-lg mb-4" placeholder="Enter peer ID">
+                <button id="submitConnect" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-opacity-90 transition">
+                    Connect
+                </button>
+            </div>
+        </div>
+
+        <!-- Post Creation Modal -->
+        <div id="postModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Create Anonymous Post</h2>
+                    <button id="closeModal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <textarea id="postContent" class="w-full h-32 p-3 border rounded-lg mb-4" placeholder="What's on your mind?"></textarea>
+                <button id="submitPost" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-opacity-90 transition">
+                    Post Anonymously
+                </button>
+            </div>
+        </div>
+
+        <!-- Feed Section -->
+        <section class="max-w-2xl mx-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold text-gray-800">Shared Feed</h2>
+                <div class="flex items-center space-x-2">
+                    <span id="connectionStatus" class="text-sm text-gray-500">Not connected</span>
+                    <div id="connectionIndicator" class="w-3 h-3 rounded-full bg-gray-400"></div>
+                </div>
+            </div>
+            
+            <div id="feedContainer" class="space-y-6">
+                <!-- Posts will be dynamically inserted here -->
+                <div class="text-center py-10 text-gray-500" id="emptyFeed">
+                    <i class="fas fa-comment-slash text-4xl mb-3"></i>
+                    <p>No posts yet. Create your first anonymous post!</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-white border-t mt-12 py-6">
+        <div class="container mx-auto px-4 text-center text-gray-500">
+            <p>All posts are shared directly between peers. No servers. No tracking.</p>
+        </div>
+    </footer>
+    
+    <script>
+        // DOM Elements
+        const newPostBtn = document.getElementById('newPostBtn');
+        const postModal = document.getElementById('postModal');
+        const closeModal = document.getElementById('closeModal');
+        const submitPost = document.getElementById('submitPost');
+        const postContent = document.getElementById('postContent');
+        const feedContainer = document.getElementById('feedContainer');
+        const emptyFeed = document.getElementById('emptyFeed');
+        const peerIdElement = document.getElementById('peerId');
+        const copyPeerId = document.getElementById('copyPeerId');
+        const connectPeerBtn = document.getElementById('connectPeerBtn');
+        const connectModal = document.getElementById('connectModal');
+        const closeConnectModal = document.getElementById('closeConnectModal');
+        const peerIdInput = document.getElementById('peerIdInput');
+        const submitConnect = document.getElementById('submitConnect');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const connectionIndicator = document.getElementById('connectionIndicator');
+
+        // PeerJS variables
+        let peer;
+        let peerId;
+        let conn;
+        let connections = [];
+        
+        // Initialize posts array from localStorage or create empty array
+        let posts = JSON.parse(localStorage.getItem('anonPosts')) || [];
+
+        // Initialize PeerJS connection
+        function initializePeer() {
+            peer = new Peer();
+            
+            peer.on('open', (id) => {
+                peerId = id;
+                peerIdElement.textContent = id;
+                updateConnectionStatus('Ready to connect', 'bg-yellow-400');
+            });
+            
+            peer.on('connection', (connection) => {
+                connection.on('open', () => {
+                    connections.push(connection);
+                    updateConnectionStatus(`Connected to ${connection.peer.substring(0, 8)}...`, 'bg-green-400');
+                    
+                    // Send our existing posts to the new connection
+                    if (posts.length > 0) {
+                        connection.send({
+                            type: 'initial_sync',
+                            posts: posts
+                        });
+                    }
+                });
+                
+                connection.on('data', handleIncomingData);
+                
+                connection.on('close', () => {
+                    connections = connections.filter(c => c.peer !== connection.peer);
+                    if (connections.length === 0) {
+                        updateConnectionStatus('Not connected', 'bg-gray-400');
+                    }
+                });
+            });
+            
+            peer.on('error', (err) => {
+                console.error('PeerJS error:', err);
+                updateConnectionStatus('Connection error', 'bg-red-400');
+            });
+        }
+
+        // Handle incoming data from connections
+        function handleIncomingData(data) {
+            if (data.type === 'new_post') {
+                // Add new post to our feed
+                addPost(data.post);
+                
+                // Broadcast to all other connections
+                broadcastPost(data.post);
+            } else if (data.type === 'initial_sync') {
+                // Add all received posts to our feed
+                data.posts.forEach(post => {
+                    if (!posts.some(p => p.id === post.id)) {
+                        addPost(post);
+                    }
+                });
+            }
+        }
+
+        // Connect to another peer
+        function connectToPeer(peerId) {
+            if (!peer) return;
+            
+            conn = peer.connect(peerId);
+            
+            conn.on('open', () => {
+                connections.push(conn);
+                updateConnectionStatus(`Connected to ${peerId.substring(0, 8)}...`, 'bg-green-400');
+                
+                // Request initial sync
+                if (posts.length > 0) {
+                    conn.send({
+                        type: 'initial_sync',
+                        posts: posts
+                    });
+                }
+            });
+            
+            conn.on('data', handleIncomingData);
+            
+            conn.on('close', () => {
+                connections = connections.filter(c => c.peer !== conn.peer);
+                if (connections.length === 0) {
+                    updateConnectionStatus('Not connected', 'bg-gray-400');
+                }
+            });
+        }
+
+        // Broadcast a post to all connected peers
+        function broadcastPost(post) {
+            connections.forEach(connection => {
+                connection.send({
+                    type: 'new_post',
+                    post: post
+                });
+            });
+        }
+
+        // Add a post to our local storage and feed
+        function addPost(post) {
+            // Check if post already exists
+            if (posts.some(p => p.id === post.id)) return;
+            
+            posts.unshift(post);
+            localStorage.setItem('anonPosts', JSON.stringify(posts));
+            renderPosts();
+        }
+
+        // Update connection status UI
+        function updateConnectionStatus(text, indicatorClass) {
+            connectionStatus.textContent = text;
+            connectionIndicator.className = 'w-3 h-3 rounded-full ' + indicatorClass;
+        }
+
+        // Modal handlers
+        newPostBtn.addEventListener('click', () => {
+            postModal.classList.remove('hidden');
+            postContent.focus();
+        });
+
+        closeModal.addEventListener('click', () => {
+            postModal.classList.add('hidden');
+            postContent.value = '';
+        });
+
+        connectPeerBtn.addEventListener('click', () => {
+            connectModal.classList.remove('hidden');
+            peerIdInput.focus();
+        });
+
+        closeConnectModal.addEventListener('click', () => {
+            connectModal.classList.add('hidden');
+            peerIdInput.value = '';
+        });
+
+        // Copy peer ID to clipboard
+        copyPeerId.addEventListener('click', () => {
+            navigator.clipboard.writeText(peerId).then(() => {
+                const originalIcon = copyPeerId.className;
+                copyPeerId.className = 'copy-btn fas fa-check text-green-500';
+                setTimeout(() => {
+                    copyPeerId.className = originalIcon;
+                }, 2000);
+            });
+        });
+
+        // Submit new post
+        submitPost.addEventListener('click', () => {
+            const content = postContent.value.trim();
+            if (content) {
+                const newPost = {
+                    id: Date.now(),
+                    content: content,
+                    timestamp: new Date().toISOString(),
+                    likes: 0
+                };
+                
+                // Add to our local feed
+                addPost(newPost);
+                
+                // Broadcast to all connections
+                broadcastPost(newPost);
+                
+                postModal.classList.add('hidden');
+                postContent.value = '';
+            }
+        });
+
+        // Submit peer connection
+        submitConnect.addEventListener('click', () => {
+            const peerId = peerIdInput.value.trim();
+            if (peerId) {
+                connectToPeer(peerId);
+                connectModal.classList.add('hidden');
+                peerIdInput.value = '';
+            }
+        });
+
+        // Render all posts
+        function renderPosts() {
+            if (posts.length === 0) {
+                emptyFeed.classList.remove('hidden');
+                feedContainer.innerHTML = '';
+                feedContainer.appendChild(emptyFeed);
+                return;
+            }
+            
+            emptyFeed.classList.add('hidden');
+            feedContainer.innerHTML = '';
+            
+            posts.forEach(post => {
+                const postElement = document.createElement('div');
+                postElement.className = 'bg-white rounded-lg shadow p-6';
+                postElement.innerHTML = `
+                    <div class="flex items-start space-x-3">
+                        <div class="bg-gray-200 rounded-full w-10 h-10 flex items-center justify-center">
+                            <i class="fas fa-user-secret text-gray-500"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 text-sm text-gray-500 mb-2">
+                                <span>Anonymous</span>
+                                <span>•</span>
+                                <span>${new Date(post.timestamp).toLocaleString()}</span>
+                            </div>
+                            <p class="text-gray-800 mb-4">${post.content}</p>
+                            <div class="flex items-center space-x-4 text-gray-500">
+                                <button class="like-btn flex items-center space-x-1 hover:text-indigo-600" data-id="${post.id}">
+                                    <i class="far fa-heart"></i>
+                                    <span>${post.likes}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                feedContainer.appendChild(postElement);
+            });
+
+            // Add event listeners to like buttons
+            document.querySelectorAll('.like-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const postId = parseInt(this.getAttribute('data-id'));
+                    const postIndex = posts.findIndex(p => p.id === postId);
+                    if (postIndex !== -1) {
+                        posts[postIndex].likes += 1;
+                        localStorage.setItem('anonPosts', JSON.stringify(posts));
+                        renderPosts();
+                    }
+                });
+            });
+        }
+
+        // Close modals when clicking outside
+        postModal.addEventListener('click', (e) => {
+            if (e.target === postModal) {
+                postModal.classList.add('hidden');
+            }
+        });
+
+        connectModal.addEventListener('click', (e) => {
+            if (e.target === connectModal) {
+                connectModal.classList.add('hidden');
+            }
+        });
+
+        // Initialize the app
+        initializePeer();
+        renderPosts();
+    </script>
+</body>
+</html>
