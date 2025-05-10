@@ -1,240 +1,77 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mini Sites - Rede de Páginas</title>
+  <title>Mini Sites - Rede P2P</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-      background: #f4f4f4;
-    }
-    header {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-    .container {
+      margin: 20px auto;
       max-width: 600px;
-      margin: auto;
-      background: white;
+      background: #f9f9f9;
       padding: 20px;
       border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    input[type="text"] {
-      width: calc(100% - 22px);
+    input, textarea, button {
+      width: 100%;
       padding: 10px;
       margin-top: 10px;
-      margin-bottom: 20px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
+      box-sizing: border-box;
     }
     button {
-      padding: 6px 12px;
-      border: none;
-      background-color: #007bff;
+      background: #007bff;
       color: white;
-      border-radius: 4px;
+      border: none;
       cursor: pointer;
-      margin-right: 5px;
-      margin-bottom: 5px;
-      font-size: 14px;
     }
     button:hover {
-      background-color: #0056b3;
+      background: #0056b3;
     }
-    .site-list {
-      margin-top: 20px;
-    }
-    .site-card {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px;
-      border-bottom: 1px solid #ddd;
-    }
-    .site-card:last-child {
-      border-bottom: none;
-    }
-    .site-info {
-      flex: 1;
-    }
-    .site-link {
-      color: #007bff;
-      cursor: pointer;
-      text-decoration: underline;
-    }
-    .editor {
-      display: none;
-      margin-top: 20px;
-    }
-    .editor.active {
-      display: block;
-    }
-    textarea {
+    iframe {
       width: 100%;
-      height: 200px;
-      padding: 10px;
-      font-family: monospace;
-      font-size: 14px;
+      height: 300px;
       border: 1px solid #ccc;
-      border-radius: 4px;
-      resize: vertical;
-    }
-    .acesso-site {
-      margin-bottom: 30px;
-    }
-    .header-site-view {
-      display: none;
-      margin-bottom: 20px;
-      text-align: center;
-    }
-    .header-site-view h2 {
-      margin: 0;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
 
-<header>
-  <h1>Bem-vindo à Rede de Mini Sites</h1>
-</header>
+<h2>Criar Mini Site</h2>
+<input type="text" id="siteName" placeholder="Nome do site">
+<textarea id="siteContent" placeholder="HTML/CSS/JS do seu site..."></textarea>
+<button onclick="enviarSite()">Enviar para outro usuário</button>
 
-<div class="container">
-
-  <!-- Busca por ID no topo -->
-  <div class="acesso-site">
-    <h2>Procurar um Site pelo ID</h2>
-    <input type="text" id="siteIdInput" placeholder="Digite o ID do site" />
-    <button onclick="acessarSite()">Acessar</button>
-  </div>
-
-  <!-- Exibição do site acessado -->
-  <div class="header-site-view" id="headerSiteView">
-    <h2 id="headerSiteName"></h2>
-    <p><strong>ID:</strong> <span id="headerSiteID"></span></p>
-  </div>
-
-  <h2>Criar seu Mini Site</h2>
-  <input type="text" id="siteNameInput" placeholder="Digite o nome do seu site" />
-  <button onclick="criarSite()">Criar Site</button>
-
-  <div class="site-list" id="siteList"></div>
-
-  <div class="editor" id="codeEditor">
-    <h3>Edite o conteúdo do seu site (HTML/CSS/JS)</h3>
-    <textarea id="htmlContent" placeholder="Insira aqui o código HTML, CSS ou JS do seu site..."></textarea>
-    <br/>
-    <button onclick="salvarConteudo()">Salvar Conteúdo</button>
-    <button onclick="editarNovamente()">Editar Novamente</button>
-  </div>
-
-  <div class="editor" id="visualizadorSite">
-    <h3>Visualização do Seu Site</h3>
-    <iframe id="iframeSite" style="width: 100%; height: 300px; border: 1px solid #ccc;"></iframe>
-  </div>
-</div>
+<h2>Receber Mini Site</h2>
+<div id="receivedSite" style="margin-top: 10px;"></div>
+<iframe id="previewFrame"></iframe>
 
 <script>
-  const sites = {};
+  const canal = new BroadcastChannel('mini-site-channel');
 
-  function criarSite() {
-    const nome = document.getElementById('siteNameInput').value.trim();
-    if (!nome) return alert("Por favor, insira um nome para o site.");
-    const id = Math.random().toString(36).substr(2, 9);
-    sites[id] = { nome: nome, conteudo: '' };
-    atualizarListaSites();
-    alert(`Seu site foi criado! ID: ${id}. Use esse ID para acessar.`);
-    abrirEditor(id);
+  // Enviar site via canal
+  function enviarSite() {
+    const nome = document.getElementById('siteName').value.trim();
+    const conteudo = document.getElementById('siteContent').value;
+
+    if (!nome || !conteudo) return alert("Preencha todos os campos.");
+
+    const site = { nome, conteudo };
+    canal.postMessage(site);
+    document.getElementById('previewFrame').srcdoc = conteudo;
+    alert("Site enviado!");
   }
 
-  function acessarSite() {
-    const id = document.getElementById('siteIdInput').value.trim();
-    if (!sites[id]) return alert("ID inválido ou site não encontrado.");
-    mostrarCabecalhoSite(id);
-    abrirVisualizador(id);
-  }
-
-  function mostrarCabecalhoSite(id) {
-    const cabecalho = document.getElementById('headerSiteView');
-    const nomeEl = document.getElementById('headerSiteName');
-    const idEl = document.getElementById('headerSiteID');
-    nomeEl.textContent = sites[id].nome;
-    idEl.textContent = id;
-    cabecalho.style.display = 'block';
-  }
-
-  function atualizarListaSites() {
-    const lista = document.getElementById('siteList');
-    lista.innerHTML = '';
-    for (const id in sites) {
-      const item = document.createElement('div');
-      item.className = 'site-card';
-      item.innerHTML = `
-        <div class="site-info">
-          <span class="site-link" onclick="abrirVisualizador('${id}')">${sites[id].nome}</span>
-          <p style="margin: 0;"><small>ID: <strong>${id}</strong></small></p>
-        </div>
-        <button onclick="abrirEditor('${id}')">Editar</button>
-      `;
-      lista.appendChild(item);
-    }
-  }
-
-  function abrirEditor(id) {
-    document.getElementById('codeEditor').classList.add('active');
-    document.getElementById('htmlContent').value = sites[id].conteudo || '<h1>Bem-vindo ao meu mini site!</h1>';
-    document.getElementById('visualizadorSite').classList.remove('active');
-    document.getElementById('iframeSite').srcdoc = '';
-    mostrarCabecalhoSite(id);
-  }
-
-  function salvarConteudo() {
-    const ids = Object.keys(sites);
-    if (ids.length === 0) return alert("Erro interno.");
-    const id = ids[0]; // Melhor seria rastrear qual ID está sendo editada, mas simplificando por agora
-    const conteudo = document.getElementById('htmlContent').value;
-    sites[id].conteudo = conteudo;
-
-    // Salva no cookie
-    document.cookie = `miniSiteData=${encodeURIComponent(JSON.stringify(sites))}; path=/`;
-
-    alert("Conteúdo salvo com sucesso!");
-    document.getElementById('iframeSite').srcdoc = conteudo;
-  }
-
-  function editarNovamente() {
-    const id = Object.keys(sites)[0];
-    if (!id) return alert("Erro interno.");
-    abrirEditor(id);
-  }
-
-  function abrirVisualizador(id) {
-    const conteudo = sites[id]?.conteudo || '';
-    document.getElementById('iframeSite').srcdoc = conteudo;
-    document.getElementById('visualizadorSite').classList.add('active');
-    document.getElementById('codeEditor').classList.remove('active');
-    mostrarCabecalhoSite(id);
-  }
-
-  // Carregar dados dos cookies ao iniciar
-  window.onload = () => {
-    const cookie = document.cookie.split('; ').find(row => row.startsWith('miniSiteData='));
-    if (cookie) {
-      try {
-        const data = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
-        for (const id in data) {
-          sites[id] = data[id];
-        }
-        atualizarListaSites();
-      } catch (e) {
-        console.error("Erro ao carregar dados do cookie:", e);
-      }
-    }
+  // Receber site
+  canal.onmessage = function(e) {
+    const site = e.data;
+    document.getElementById('receivedSite').innerHTML = `<strong>Recebido:</strong> ${site.nome}`;
+    document.getElementById('previewFrame').srcdoc = site.conteudo;
   };
+
+  // Mensagem inicial
+  canal.postMessage({ tipo: 'hello', msg: 'Canal P2P está ativo.' });
 </script>
 
 </body>
