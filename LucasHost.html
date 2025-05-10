@@ -7,71 +7,297 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 20px auto;
+      margin: 0;
+      padding: 20px;
+      background: #f4f4f4;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .container {
       max-width: 600px;
-      background: #f9f9f9;
+      margin: auto;
+      background: white;
       padding: 20px;
       border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    input, textarea, button {
-      width: 100%;
+    input[type="text"] {
+      width: calc(100% - 22px);
       padding: 10px;
       margin-top: 10px;
-      box-sizing: border-box;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
     }
     button {
-      background: #007bff;
-      color: white;
+      padding: 6px 12px;
       border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 4px;
       cursor: pointer;
+      margin-right: 5px;
+      margin-bottom: 5px;
+      font-size: 14px;
     }
     button:hover {
-      background: #0056b3;
+      background-color: #0056b3;
     }
-    iframe {
+    .site-list {
+      margin-top: 20px;
+    }
+    .site-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    .site-card:last-child {
+      border-bottom: none;
+    }
+    .site-info {
+      flex: 1;
+    }
+    .site-link {
+      color: #007bff;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    .editor {
+      display: none;
+      margin-top: 20px;
+    }
+    .editor.active {
+      display: block;
+    }
+    textarea {
       width: 100%;
-      height: 300px;
+      height: 200px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 14px;
       border: 1px solid #ccc;
-      margin-top: 10px;
+      border-radius: 4px;
+      resize: vertical;
+    }
+    .acesso-site {
+      margin-bottom: 30px;
+    }
+    .header-site-view {
+      display: none;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .header-site-view h2 {
+      margin: 0;
+    }
+    .p2p-section {
+      margin-top: 30px;
+      padding: 15px;
+      background: #eef;
+      border-radius: 8px;
     }
   </style>
 </head>
 <body>
 
-<h2>Criar Mini Site</h2>
-<input type="text" id="siteName" placeholder="Nome do site">
-<textarea id="siteContent" placeholder="HTML/CSS/JS do seu site..."></textarea>
-<button onclick="enviarSite()">Enviar para outro usuário</button>
+<header>
+  <h1>Bem-vindo à Rede de Mini Sites (P2P)</h1>
+</header>
 
-<h2>Receber Mini Site</h2>
-<div id="receivedSite" style="margin-top: 10px;"></div>
-<iframe id="previewFrame"></iframe>
+<div class="container">
 
+  <!-- Busca por ID no topo -->
+  <div class="acesso-site">
+    <h2>Procurar um Site pelo ID</h2>
+    <input type="text" id="siteIdInput" placeholder="Digite o ID do site" />
+    <button onclick="acessarSite()">Acessar</button>
+  </div>
+
+  <!-- Exibição do site acessado -->
+  <div class="header-site-view" id="headerSiteView">
+    <h2 id="headerSiteName"></h2>
+    <p><strong>ID:</strong> <span id="headerSiteID"></span></p>
+  </div>
+
+  <h2>Criar seu Mini Site</h2>
+  <input type="text" id="siteNameInput" placeholder="Digite o nome do seu site" />
+  <button onclick="criarSite()">Criar Site</button>
+
+  <div class="site-list" id="siteList"></div>
+
+  <div class="editor" id="codeEditor">
+    <h3>Edite o conteúdo do seu site (HTML/CSS/JS)</h3>
+    <textarea id="htmlContent" placeholder="Insira aqui o código HTML, CSS ou JS do seu site..."></textarea>
+    <br/>
+    <button onclick="salvarConteudo()">Salvar Conteúdo</button>
+    <button onclick="editarNovamente()">Editar Novamente</button>
+  </div>
+
+  <div class="editor" id="visualizadorSite">
+    <h3>Visualização do Seu Site</h3>
+    <iframe id="iframeSite" style="width: 100%; height: 300px; border: 1px solid #ccc;"></iframe>
+  </div>
+
+  <!-- SEÇÃO P2P -->
+  <div class="p2p-section">
+    <h3>Compartilhar via P2P (WebRTC)</h3>
+    <input type="text" id="remoteIdInput" placeholder="ID do destinatário" />
+    <button onclick="conectarDestinatario()">Conectar</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs @1.4.7/dist/peerjs.min.js"></script>
 <script>
-  const canal = new BroadcastChannel('mini-site-channel');
+  let sites = {};
+  const STORAGE_KEY = 'miniSitesData';
 
-  // Enviar site via canal
-  function enviarSite() {
-    const nome = document.getElementById('siteName').value.trim();
-    const conteudo = document.getElementById('siteContent').value;
+  // --- PEERJS ---
+  const peer = new Peer(undefined, {
+    host: 'peerjs.com',
+    port: 443,
+    secure: true
+  });
 
-    if (!nome || !conteudo) return alert("Preencha todos os campos.");
+  peer.on('open', (id) => {
+    alert("Seu ID P2P é: " + id);
+  });
 
-    const site = { nome, conteudo };
-    canal.postMessage(site);
-    document.getElementById('previewFrame').srcdoc = conteudo;
-    alert("Site enviado!");
+  peer.on('connection', (conn) => {
+    conn.on('data', (data) => {
+      if (data.tipo === 'site') {
+        sites[data.id] = data.site;
+        salvarDados();
+        atualizarListaSites();
+        mostrarCabecalhoSite(data.id);
+        abrirVisualizador(data.id);
+      }
+    });
+  });
+
+  function conectarDestinatario() {
+    const remoteId = document.getElementById('remoteIdInput').value.trim();
+    const conn = peer.connect(remoteId);
+
+    conn.on('open', () => {
+      const id = Object.keys(sites)[0];
+      if (!id) return alert("Nenhum site disponível para enviar.");
+      const payload = {
+        tipo: 'site',
+        id: id,
+        site: sites[id]
+      };
+      conn.send(payload);
+      alert("Site enviado via P2P!");
+    });
+
+    conn.on('error', (err) => {
+      console.error("Erro de conexão:", err);
+      alert("Erro ao conectar.");
+    });
   }
 
-  // Receber site
-  canal.onmessage = function(e) {
-    const site = e.data;
-    document.getElementById('receivedSite').innerHTML = `<strong>Recebido:</strong> ${site.nome}`;
-    document.getElementById('previewFrame').srcdoc = site.conteudo;
-  };
+  // --- FUNCIONALIDADES ANTIGAS ---
 
-  // Mensagem inicial
-  canal.postMessage({ tipo: 'hello', msg: 'Canal P2P está ativo.' });
+  function carregarDados() {
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (data) {
+      try {
+        sites = JSON.parse(data);
+      } catch (e) {
+        console.error("Erro ao carregar dados locais:", e);
+      }
+    }
+    atualizarListaSites();
+  }
+
+  function salvarDados() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sites));
+  }
+
+  function criarSite() {
+    const nome = document.getElementById('siteNameInput').value.trim();
+    if (!nome) return alert("Por favor, insira um nome para o site.");
+    const id = Math.random().toString(36).substr(2, 9);
+    sites[id] = { nome: nome, conteudo: '' };
+    salvarDados();
+    atualizarListaSites();
+    alert(`Seu site foi criado! ID: ${id}. Use esse ID para acessar.`);
+    abrirEditor(id);
+  }
+
+  function acessarSite() {
+    const id = document.getElementById('siteIdInput').value.trim();
+    if (!sites[id]) return alert("ID inválido ou site não encontrado.");
+    mostrarCabecalhoSite(id);
+    abrirVisualizador(id);
+  }
+
+  function mostrarCabecalhoSite(id) {
+    const cabecalho = document.getElementById('headerSiteView');
+    const nomeEl = document.getElementById('headerSiteName');
+    const idEl = document.getElementById('headerSiteID');
+    nomeEl.textContent = sites[id]?.nome || 'Site';
+    idEl.textContent = id;
+    cabecalho.style.display = 'block';
+  }
+
+  function atualizarListaSites() {
+    const lista = document.getElementById('siteList');
+    lista.innerHTML = '';
+    for (const id in sites) {
+      const item = document.createElement('div');
+      item.className = 'site-card';
+      item.innerHTML = `
+        <div class="site-info">
+          <span class="site-link" onclick="abrirVisualizador('${id}')">${sites[id].nome}</span>
+          <p style="margin: 0;"><small>ID: <strong>${id}</strong></small></p>
+        </div>
+        <button onclick="abrirEditor('${id}')">Editar</button>
+      `;
+      lista.appendChild(item);
+    }
+  }
+
+  function abrirEditor(id) {
+    document.getElementById('codeEditor').classList.add('active');
+    document.getElementById('htmlContent').value = sites[id].conteudo || '<h1>Bem-vindo ao meu mini site!</h1>';
+    document.getElementById('visualizadorSite').classList.remove('active');
+    document.getElementById('iframeSite').srcdoc = '';
+    mostrarCabecalhoSite(id);
+  }
+
+  function salvarConteudo() {
+    const ids = Object.keys(sites);
+    if (ids.length === 0) return alert("Nenhum site disponível para salvar.");
+    const id = ids[0]; // Isso pode ser melhorado
+    const conteudo = document.getElementById('htmlContent').value;
+    sites[id].conteudo = conteudo;
+    salvarDados();
+    alert("Conteúdo salvo com sucesso!");
+    document.getElementById('iframeSite').srcdoc = conteudo;
+  }
+
+  function editarNovamente() {
+    const id = Object.keys(sites)[0];
+    if (!id) return alert("Erro interno.");
+    abrirEditor(id);
+  }
+
+  function abrirVisualizador(id) {
+    const conteudo = sites[id]?.conteudo || '';
+    document.getElementById('iframeSite').srcdoc = conteudo;
+    document.getElementById('visualizadorSite').classList.add('active');
+    document.getElementById('codeEditor').classList.remove('active');
+    mostrarCabecalhoSite(id);
+  }
+
+  window.onload = () => {
+    carregarDados();
+  };
 </script>
 
 </body>
