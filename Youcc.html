@@ -1,191 +1,195 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Feed de Vídeos - YouTube</title>
-    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rede P2P de Vídeos</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f4f4f4;
+    }
 
-        /* Estilo do vídeo principal */
-        #main-video {
-            text-align: center;
-            margin-top: 20px;
-        }
+    header {
+      background: #333;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
 
-        #main-video video {
-            max-width: 100%;
-            height: auto;
-        }
+    #uploadBtn {
+      margin-top: 10px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
 
-        /* Estilo das informações do vídeo */
-        #video-info {
-            margin: 20px;
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
+    main {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 20px;
+    }
 
-        #video-info h2 {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
+    .video-card {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 10px;
+      width: 300px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      cursor: pointer;
+    }
 
-        #video-info p {
-            font-size: 16px;
-            line-height: 1.5;
-            color: #333;
-        }
-
-        /* Estilo do feed de vídeos */
-        #video-feed {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .video-item {
-            width: 300px;
-            margin: 10px;
-            cursor: pointer;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            overflow: hidden;
-            background-color: #fff;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-
-        .video-item img {
-            width: 100%;
-            height: auto;
-            object-fit: cover; /* Garante que a imagem cubra o espaço sem distorção */
-        }
-
-        .video-item h3 {
-            font-size: 16px;
-            margin: 10px;
-            text-align: center;
-            word-wrap: break-word; /* Quebra palavras longas */
-        }
-
-        .video-item p {
-            font-size: 14px;
-            color: #666;
-            text-align: center;
-        }
-    </style>
+    .video-card img {
+      width: 100%;
+      height: 170px;
+      object-fit: cover;
+    }
+  </style>
 </head>
 <body>
-    <!-- Vídeo Principal -->
-    <div id="main-video">
-        <div class="plyr__video-embed" id="player">
-            <iframe src="" allowfullscreen allowtransparency allow="autoplay"></iframe>
-        </div>
-        <div id="video-info">
-            <h2 id="video-title">Carregando...</h2>
-            <p id="video-views">Visualizações: Carregando...</p>
-            <p id="video-description">Descrição: Carregando...</p>
-        </div>
-    </div>
+  <header>
+    <h1>Rede P2P de Vídeos</h1>
+    <button id="uploadBtn">Upload de Vídeo</button>
+  </header>
 
-    <!-- Feed de Vídeos -->
-    <div id="video-feed"></div>
+  <main id="feed"></main>
 
-    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
-    <script>
-        // Chave da API do YouTube
-        const YOUTUBE_API_KEY = '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';
-        const CHANNEL_ID = 'UC-lHJZR3Gqxm24_Vd_AJ5YQ'; // ID do canal @lucastves
+  <!-- Input oculto -->
+  <input type="file" id="fileInput" accept="video/*" hidden />
 
-        // Variáveis globais
-        let videosList = [];
+  <!-- SimplePeer CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/simple-peer @9/index.js"></script>
 
-        // Função para carregar os vídeos do canal
-        async function loadVideos() {
-            try {
-                // Busca a playlist "Uploads" do canal
-                const response = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${CHANNEL_ID}&key=${YOUTUBE_API_KEY}`);
-                const data = await response.json();
-                const uploadsPlaylistId = data.items[0].contentDetails.relatedPlaylists.uploads;
+  <script>
+    const feed = document.getElementById("feed");
+    const fileInput = document.getElementById("fileInput");
+    const uploadBtn = document.getElementById("uploadBtn");
 
-                // Busca os vídeos da playlist "Uploads"
-                const videosResponse = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=10&key=${YOUTUBE_API_KEY}`);
-                const videosData = await videosResponse.json();
-                videosList = videosData.items;
+    let videos = [];
 
-                // Exibe o primeiro vídeo como principal
-                if (videosList.length > 0) {
-                    displayMainVideo(videosList[0]);
-                }
+    // ID único do cliente
+    const clientId = "user_" + Math.random().toString(36).substr(2, 9);
 
-                // Exibe todos os vídeos no feed
-                displayVideoFeed(videosList);
-            } catch (error) {
-                console.error('Erro ao carregar vídeos:', error);
-                alert('Não foi possível carregar os vídeos. Tente novamente mais tarde.');
-            }
+    // Inicializa
+    init();
+
+    function init() {
+      loadLocalVideos();
+      setupUpload();
+      simulateNetworkDiscovery();
+    }
+
+    function setupUpload() {
+      uploadBtn.onclick = () => fileInput.click();
+
+      fileInput.onchange = async () => {
+        const file = fileInput.files[0];
+        if (file && file.type.startsWith("video/")) {
+          const url = URL.createObjectURL(file);
+          const videoData = {
+            id: Date.now(),
+            url,
+            thumbnail: await generateThumbnail(url),
+            uploader: clientId,
+            timestamp: Date.now()
+          };
+          videos.push(videoData);
+          saveLocalVideos();
+          broadcastVideo(videoData);
+          renderFeed();
         }
+      };
+    }
 
-        // Função para exibir o vídeo principal
-        function displayMainVideo(video) {
-            const player = document.getElementById('player').querySelector('iframe');
-            const videoTitle = document.getElementById('video-title');
-            const videoViews = document.getElementById('video-views');
-            const videoDescription = document.getElementById('video-description');
+    async function generateThumbnail(url) {
+      return new Promise(resolve => {
+        const video = document.createElement("video");
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
 
-            const videoId = video.snippet.resourceId.videoId;
-            const title = video.snippet.title;
-            const description = video.snippet.description;
+        video.src = url;
+        video.crossOrigin = "anonymous";
+        video.currentTime = 1;
 
-            // Define o vídeo no player
-            player.src = `https://www.youtube.com/embed/${videoId}?origin=https://plyr.io&amp;iv_load_policy=3&amp;modestbranding=1&amp;playsinline=1&amp;showinfo=0&amp;rel=0&amp;enablejsapi=1`;
+        video.onloadeddata = () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL());
+        };
 
-            // Define as informações do vídeo
-            videoTitle.textContent = title;
-            videoViews.textContent = 'Visualizações: Carregando...'; // As visualizações precisam de uma chamada separada
-            videoDescription.textContent = description || 'Sem descrição disponível.';
-        }
+        setTimeout(() => resolve("https://via.placeholder.com/300x170?text=Capa "), 2000);
+      });
+    }
 
-        // Função para exibir o feed de vídeos
-        function displayVideoFeed(videos) {
-            const videoFeed = document.getElementById('video-feed');
-            videoFeed.innerHTML = ''; // Limpa o feed antes de adicionar novos vídeos
+    function renderFeed() {
+      feed.innerHTML = "";
+      [...videos].sort((a, b) => b.id - a.id).forEach(video => {
+        const card = document.createElement("div");
+        card.className = "video-card";
+        card.innerHTML = `
+          <img src="${video.thumbnail}" alt="Miniatura" />
+          <p>Vídeo (${new Date(video.id).toLocaleString()})</p>
+        `;
+        card.onclick = () => openVideoModal(video.url);
+        feed.appendChild(card);
+      });
+    }
 
-            videos.forEach(video => {
-                const videoItem = document.createElement('div');
-                videoItem.classList.add('video-item');
+    function openVideoModal(url) {
+      const win = window.open("", "_blank");
+      win.document.write(`
+        <video controls autoplay style="width:100%;height:auto;">
+          <source src="${url}" type="video/mp4">
+          Seu navegador não suporta vídeo.
+        </video>
+      `);
+    }
 
-                const videoId = video.snippet.resourceId.videoId;
-                const title = video.snippet.title;
-                const thumbnail = video.snippet.thumbnails.medium.url;
+    function simulateNetworkDiscovery() {
+      setInterval(() => {
+        fetchRandomRemoteVideo();
+      }, 5000);
+    }
 
-                // Cria a estrutura do vídeo
-                videoItem.innerHTML = `
-                    <img src="${thumbnail}" alt="${title}">
-                    <h3>${title}</h3>
-                    <p>Visualizações: Carregando...</p>
-                `;
+    function fetchRandomRemoteVideo() {
+      const randomUrl = [
+        "https://www.w3schools.com/html/mov_bbb.mp4 ",
+        "https://www.w3schools.com/html/movie.mp4 "
+      ][Math.floor(Math.random() * 2)];
 
-                // Adiciona o evento de clique para reproduzir o vídeo
-                videoItem.addEventListener('click', () => displayMainVideo(video));
+      const remoteVideo = {
+        id: Date.now(),
+        url: randomUrl,
+        thumbnail: "https://via.placeholder.com/300x170?text=Remoto ",
+        uploader: "remote_user",
+        timestamp: Date.now()
+      };
 
-                videoFeed.appendChild(videoItem);
-            });
-        }
+      if (!videos.some(v => v.id === remoteVideo.id)) {
+        videos.push(remoteVideo);
+        renderFeed();
+      }
+    }
 
-        // Inicializa o Plyr
-        const player = new Plyr('#player');
+    function broadcastVideo(video) {
+      console.log(`Broadcasting vídeo ${video.id} para outros pares...`);
+    }
 
-        // Carrega os vídeos quando a página é carregada
-        document.addEventListener('DOMContentLoaded', loadVideos);
-    </script>
+    function saveLocalVideos() {
+      localStorage.setItem("p2p_videos", JSON.stringify(videos));
+    }
+
+    function loadLocalVideos() {
+      const stored = localStorage.getItem("p2p_videos");
+      if (stored) {
+        videos = JSON.parse(stored);
+        renderFeed();
+      }
+    }
+  </script>
 </body>
 </html>
