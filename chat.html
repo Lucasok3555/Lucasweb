@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GaloConnect - Mensagens P2P</title>
+    <title>GaloConnect - Chat P2P</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -128,6 +128,10 @@
             letter-spacing: 2px;
             font-weight: bold;
         }
+        
+        .group-avatar {
+            background: linear-gradient(135deg, #4c51bf 0%, #667eea 100%);
+        }
     </style>
 </head>
 <body class="min-h-screen bg-gray-100">
@@ -162,19 +166,19 @@
             <aside class="w-1/4 bg-white border-r border-gray-200 hidden md:block dark:bg-gray-800 dark:border-gray-700">
                 <div class="p-4 border-b border-gray-200 dark:border-gray-700">
                     <div class="flex justify-between items-center">
-                        <h2 class="font-semibold text-lg dark:text-white">Contatos</h2>
+                        <h2 class="font-semibold text-lg dark:text-white">Conversas</h2>
                         <button id="new-chat-btn" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>
                     <div class="mt-2 relative">
-                        <input type="text" placeholder="Buscar contatos..." class="w-full p-2 pl-8 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <input type="text" placeholder="Buscar conversas..." class="w-full p-2 pl-8 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                         <i class="fas fa-search absolute left-2 top-3 text-gray-400"></i>
                     </div>
                 </div>
                 <div class="overflow-y-auto h-full">
                     <div class="contact-list">
-                        <!-- Contacts will be added here dynamically -->
+                        <!-- Chats will be added here dynamically -->
                     </div>
                 </div>
             </aside>
@@ -185,14 +189,14 @@
                 <div class="bg-white p-4 border-b border-gray-200 flex items-center justify-between dark:bg-gray-800 dark:border-gray-700">
                     <div class="flex items-center space-x-3">
                         <div class="relative">
-                            <div class="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-white font-bold">
+                            <div id="chat-avatar" class="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-white font-bold">
                                 <span>GC</span>
                             </div>
-                            <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
+                            <span id="chat-status" class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
                         </div>
                         <div>
-                            <h3 class="font-semibold dark:text-white">Galo Comunidade</h3>
-                            <p class="text-xs text-gray-500 dark:text-gray-300">Online</p>
+                            <h3 id="chat-name" class="font-semibold dark:text-white">GaloConnect</h3>
+                            <p id="chat-info" class="text-xs text-gray-500 dark:text-gray-300">Selecione uma conversa</p>
                         </div>
                     </div>
                     <div class="flex space-x-2">
@@ -202,6 +206,9 @@
                         <button id="video-call-btn" class="p-2 rounded-full hover:bg-gray-100 text-blue-500 dark:hover:bg-gray-700">
                             <i class="fas fa-video"></i>
                         </button>
+                        <button id="group-info-btn" class="p-2 rounded-full hover:bg-gray-100 text-blue-500 dark:hover:bg-gray-700 hidden">
+                            <i class="fas fa-users"></i>
+                        </button>
                     </div>
                 </div>
 
@@ -210,7 +217,7 @@
                     <div class="flex flex-col space-y-2">
                         <!-- Messages will be added here dynamically -->
                         <div class="text-center text-sm text-gray-500 py-4 dark:text-gray-300">
-                            <p>Bem-vindo ao GaloConnect! Todas as mensagens começam com seu ID único.</p>
+                            <p>Bem-vindo ao GaloConnect! Selecione uma conversa ou inicie uma nova.</p>
                         </div>
                     </div>
                 </div>
@@ -235,6 +242,132 @@
             </section>
         </main>
 
+        <!-- New Chat Modal -->
+        <div id="new-chat-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-md dark:bg-gray-800">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold dark:text-white">Nova Conversa</h3>
+                        <button id="close-new-chat-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="flex flex-col space-y-4">
+                        <button id="new-private-chat-btn" class="px-4 py-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 flex items-center space-x-3 dark:bg-gray-700 dark:text-blue-300 dark:hover:bg-gray-600">
+                            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 dark:bg-blue-900 dark:text-blue-300">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="text-left">
+                                <p class="font-medium">Conversa Privada</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Converse com um contato específico</p>
+                            </div>
+                        </button>
+                        <button id="new-group-chat-btn" class="px-4 py-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 flex items-center space-x-3 dark:bg-gray-700 dark:text-purple-300 dark:hover:bg-gray-600">
+                            <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-500 dark:bg-purple-900 dark:text-purple-300">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="text-left">
+                                <p class="font-medium">Novo Grupo</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">Crie um grupo com vários contatos</p>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Connect ID Modal -->
+        <div id="connect-id-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-md dark:bg-gray-800">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold dark:text-white">Conectar por ID</h3>
+                        <button id="close-connect-id-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="flex flex-col space-y-4 py-4">
+                        <div>
+                            <label for="contact-id-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ID do Contato:</label>
+                            <input type="text" id="contact-id-input" placeholder="Ex: GC-ABCDEF" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-center font-mono dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        </div>
+                        <div>
+                            <label for="contact-name-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome do Contato (opcional):</label>
+                            <input type="text" id="contact-name-input" placeholder="Ex: João Silva" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        </div>
+                    </div>
+                    <div class="flex justify-center pt-4">
+                        <button id="connect-id-btn" class="px-6 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600">
+                            Conectar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Group Modal -->
+        <div id="new-group-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-md dark:bg-gray-800">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold dark:text-white">Criar Novo Grupo</h3>
+                        <button id="close-new-group-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="flex flex-col space-y-4 py-4">
+                        <div>
+                            <label for="group-name-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome do Grupo:</label>
+                            <input type="text" id="group-name-input" placeholder="Ex: Família" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Selecione os participantes:</label>
+                            <div id="group-contacts-list" class="max-h-60 overflow-y-auto border border-gray-300 rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600">
+                                <!-- Contacts will be added here -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-center pt-4">
+                        <button id="create-group-btn" class="px-6 py-2 bg-purple-500 text-white rounded-full hover:bg-purple-600">
+                            Criar Grupo
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Group Info Modal -->
+        <div id="group-info-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-md dark:bg-gray-800">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 id="group-info-title" class="text-xl font-semibold dark:text-white">Informações do Grupo</h3>
+                        <button id="close-group-info-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="flex flex-col items-center py-4">
+                        <div id="group-info-avatar" class="w-24 h-24 rounded-full group-avatar flex items-center justify-center text-white text-4xl font-bold mb-4">
+                            <span>GC</span>
+                        </div>
+                        <h4 id="group-info-name" class="text-lg font-medium dark:text-white">Nome do Grupo</h4>
+                        <p id="group-info-members" class="text-sm text-gray-500 dark:text-gray-300">X participantes</p>
+                    </div>
+                    <div class="border-t border-gray-200 pt-4 dark:border-gray-700">
+                        <h4 class="font-medium mb-2 dark:text-white">Participantes:</h4>
+                        <div id="group-members-list" class="max-h-60 overflow-y-auto">
+                            <!-- Members will be added here -->
+                        </div>
+                    </div>
+                    <div class="flex justify-center pt-6">
+                        <button id="leave-group-btn" class="px-6 py-2 bg-red-500 text-white rounded-full hover:bg-red-600">
+                            Sair do Grupo
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Call Modal -->
         <div id="call-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
             <div class="bg-white rounded-lg shadow-xl w-full max-w-md dark:bg-gray-800">
@@ -249,7 +382,7 @@
                         <div class="w-24 h-24 rounded-full bg-blue-100 flex items-center justify-center mb-4 call-animation dark:bg-blue-900">
                             <i class="fas fa-user text-blue-500 text-4xl dark:text-blue-300"></i>
                         </div>
-                        <p class="text-lg font-medium dark:text-white">Chamando <span id="call-recipient" class="dark:text-white">Galo Comunidade</span>...</p>
+                        <p class="text-lg font-medium dark:text-white">Chamando <span id="call-recipient" class="dark:text-white">Contato</span>...</p>
                         <p class="text-gray-500 mt-2 dark:text-gray-300" id="call-status">Estabelecendo conexão P2P</p>
                     </div>
                     <div class="flex justify-center space-x-4 pt-4">
@@ -404,6 +537,7 @@
             const endCallBtn = document.getElementById('end-call-btn');
             const callTypeTitle = document.getElementById('call-type-title');
             const callStatus = document.getElementById('call-status');
+            const callRecipient = document.getElementById('call-recipient');
             const userIDModal = document.getElementById('user-id-modal');
             const closeIDModal = document.getElementById('close-id-modal');
             const confirmIDBtn = document.getElementById('confirm-id-btn');
@@ -428,6 +562,34 @@
             const profilePicUpload = document.getElementById('profile-pic-upload');
             const profilePicPreview = document.getElementById('profile-pic-preview');
             const uploadPicBtn = document.getElementById('upload-pic-btn');
+            const newChatBtn = document.getElementById('new-chat-btn');
+            const newChatModal = document.getElementById('new-chat-modal');
+            const closeNewChatModal = document.getElementById('close-new-chat-modal');
+            const newPrivateChatBtn = document.getElementById('new-private-chat-btn');
+            const newGroupChatBtn = document.getElementById('new-group-chat-btn');
+            const connectIdModal = document.getElementById('connect-id-modal');
+            const closeConnectIdModal = document.getElementById('close-connect-id-modal');
+            const connectIdBtn = document.getElementById('connect-id-btn');
+            const contactIdInput = document.getElementById('contact-id-input');
+            const contactNameInput = document.getElementById('contact-name-input');
+            const newGroupModal = document.getElementById('new-group-modal');
+            const closeNewGroupModal = document.getElementById('close-new-group-modal');
+            const groupNameInput = document.getElementById('group-name-input');
+            const groupContactsList = document.getElementById('group-contacts-list');
+            const createGroupBtn = document.getElementById('create-group-btn');
+            const groupInfoBtn = document.getElementById('group-info-btn');
+            const groupInfoModal = document.getElementById('group-info-modal');
+            const closeGroupInfoModal = document.getElementById('close-group-info-modal');
+            const groupInfoTitle = document.getElementById('group-info-title');
+            const groupInfoAvatar = document.getElementById('group-info-avatar');
+            const groupInfoName = document.getElementById('group-info-name');
+            const groupInfoMembers = document.getElementById('group-info-members');
+            const groupMembersList = document.getElementById('group-members-list');
+            const leaveGroupBtn = document.getElementById('leave-group-btn');
+            const chatAvatar = document.getElementById('chat-avatar');
+            const chatName = document.getElementById('chat-name');
+            const chatInfo = document.getElementById('chat-info');
+            const chatStatus = document.getElementById('chat-status');
             
             // Sample contacts
             const contacts = [
@@ -437,31 +599,102 @@
                 { id: 'GC-FARMER', name: 'Fazendeiro', status: 'offline', lastMessage: 'Alimentação às 7h', time: 'Segunda' }
             ];
             
-            // Populate contacts
+            // Sample groups
+            const groups = [];
+            
+            // Current chat
+            let currentChat = null;
+            
+            // Populate chats
             const contactList = document.querySelector('.contact-list');
-            contacts.forEach(contact => {
-                const contactElement = document.createElement('div');
-                contactElement.className = `p-3 flex items-center space-x-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer dark:border-gray-700 dark:hover:bg-gray-700 ${contact.status === 'online' ? 'bg-blue-50 dark:bg-blue-900' : ''}`;
-                contactElement.innerHTML = `
-                    <div class="relative">
-                        <div class="w-10 h-10 rounded-full ${contact.status === 'online' ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'} flex items-center justify-center text-white font-bold">
-                            <span>${contact.id.substr(3, 2)}</span>
+            
+            function renderChats() {
+                contactList.innerHTML = '';
+                
+                // Add contacts
+                contacts.forEach(contact => {
+                    const contactElement = document.createElement('div');
+                    contactElement.className = `p-3 flex items-center space-x-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer dark:border-gray-700 dark:hover:bg-gray-700 ${contact.status === 'online' ? 'bg-blue-50 dark:bg-blue-900' : ''}`;
+                    contactElement.innerHTML = `
+                        <div class="relative">
+                            <div class="w-10 h-10 rounded-full ${contact.status === 'online' ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'} flex items-center justify-center text-white font-bold">
+                                <span>${contact.id.substr(3, 2)}</span>
+                            </div>
+                            <span class="absolute bottom-0 right-0 w-2 h-2 ${contact.status === 'online' ? 'bg-green-500' : 'bg-gray-400 dark:bg-gray-500'} rounded-full border border-white dark:border-gray-700"></span>
                         </div>
-                        <span class="absolute bottom-0 right-0 w-2 h-2 ${contact.status === 'online' ? 'bg-green-500' : 'bg-gray-400 dark:bg-gray-500'} rounded-full border border-white dark:border-gray-700"></span>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-medium truncate dark:text-white">${contact.name}</p>
+                            <p class="text-xs text-gray-500 truncate dark:text-gray-300">${contact.lastMessage}</p>
+                        </div>
+                        <div class="text-xs text-gray-400 dark:text-gray-300">${contact.time}</div>
+                    `;
+                    
+                    contactElement.addEventListener('click', () => {
+                        currentChat = { type: 'contact', id: contact.id, name: contact.name, status: contact.status };
+                        loadChat(currentChat);
+                    });
+                    
+                    contactList.appendChild(contactElement);
+                });
+                
+                // Add groups
+                groups.forEach(group => {
+                    const groupElement = document.createElement('div');
+                    groupElement.className = `p-3 flex items-center space-x-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer dark:border-gray-700 dark:hover:bg-gray-700`;
+                    groupElement.innerHTML = `
+                        <div class="relative">
+                            <div class="w-10 h-10 rounded-full group-avatar flex items-center justify-center text-white font-bold">
+                                <span>GC</span>
+                            </div>
+                            <span class="absolute bottom-0 right-0 w-2 h-2 bg-green-500 rounded-full border border-white dark:border-gray-700"></span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-medium truncate dark:text-white">${group.name}</p>
+                            <p class="text-xs text-gray-500 truncate dark:text-gray-300">${group.members.length} participantes</p>
+                        </div>
+                        <div class="text-xs text-gray-400 dark:text-gray-300">${group.time}</div>
+                    `;
+                    
+                    groupElement.addEventListener('click', () => {
+                        currentChat = { type: 'group', id: group.id, name: group.name, members: group.members };
+                        loadChat(currentChat);
+                    });
+                    
+                    contactList.appendChild(groupElement);
+                });
+            }
+            
+            // Load chat function
+            function loadChat(chat) {
+                messagesContainer.querySelector('.flex-col').innerHTML = `
+                    <div class="text-center text-sm text-gray-500 py-4 dark:text-gray-300">
+                        <p>Conversa iniciada com ${chat.name}</p>
                     </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="font-medium truncate dark:text-white">${contact.name}</p>
-                        <p class="text-xs text-gray-500 truncate dark:text-gray-300">${contact.lastMessage}</p>
-                    </div>
-                    <div class="text-xs text-gray-400 dark:text-gray-300">${contact.time}</div>
                 `;
-                contactList.appendChild(contactElement);
-            });
+                
+                chatName.textContent = chat.name;
+                
+                if (chat.type === 'contact') {
+                    chatInfo.textContent = chat.status === 'online' ? 'Online' : 'Offline';
+                    chatStatus.className = `absolute bottom-0 right-0 w-3 h-3 ${chat.status === 'online' ? 'bg-green-500' : 'bg-gray-400 dark:bg-gray-500'} rounded-full border-2 border-white dark:border-gray-700`;
+                    chatAvatar.className = 'w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-white font-bold';
+                    chatAvatar.innerHTML = `<span>${chat.id.substr(3, 2)}</span>`;
+                    groupInfoBtn.classList.add('hidden');
+                } else {
+                    chatInfo.textContent = `${chat.members.length} participantes`;
+                    chatStatus.className = 'absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-700';
+                    chatAvatar.className = 'w-10 h-10 rounded-full group-avatar flex items-center justify-center text-white font-bold';
+                    chatAvatar.innerHTML = `<span>GC</span>`;
+                    groupInfoBtn.classList.remove('hidden');
+                }
+                
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
             
             // Send message function
             function sendMessage() {
                 const message = messageInput.value.trim();
-                if (message) {
+                if (message && currentChat) {
                     // Add message to chat
                     const messageElement = document.createElement('div');
                     messageElement.className = 'flex justify-end';
@@ -482,21 +715,33 @@
                     
                     // Simulate reply after 1-3 seconds
                     setTimeout(() => {
-                        const replies = [
-                            "Cocoricó! Mensagem recebida!",
-                            "Piu piu! Entendido!",
-                            "Ótima contribuição!",
-                            "Vou repassar para o galinheiro!",
-                            "Alguém traz milho pra comemorar!"
-                        ];
-                        const randomReply = replies[Math.floor(Math.random() * replies.length)];
+                        let replyText = "";
+                        
+                        if (currentChat.type === 'contact') {
+                            const replies = [
+                                "Cocoricó! Mensagem recebida!",
+                                "Piu piu! Entendido!",
+                                "Ótima contribuição!",
+                                "Vou repassar para o galinheiro!",
+                                "Alguém traz milho pra comemorar!"
+                            ];
+                            replyText = replies[Math.floor(Math.random() * replies.length)];
+                        } else {
+                            const groupReplies = [
+                                `${currentChat.name}: Mensagem recebida!`,
+                                `O grupo ${currentChat.name} agradece!`,
+                                `Mensagem registrada no grupo!`,
+                                `Todos em ${currentChat.name} viram sua mensagem!`
+                            ];
+                            replyText = groupReplies[Math.floor(Math.random() * groupReplies.length)];
+                        }
                         
                         const replyElement = document.createElement('div');
                         replyElement.className = 'flex justify-start';
                         replyElement.innerHTML = `
                             <div class="message-bubble bg-gray-200 text-gray-800 received dark:bg-gray-500 dark:text-white">
-                                <p class="text-xs font-bold mb-1">Galo Comunidade</p>
-                                <p>${randomReply}</p>
+                                <p class="text-xs font-bold mb-1">${currentChat.name}</p>
+                                <p>${replyText}</p>
                                 <p class="text-xs text-gray-500 text-right mt-1 dark:text-gray-300">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                             </div>
                         `;
@@ -508,7 +753,7 @@
             
             // Send file function
             function sendFile(file) {
-                if (file) {
+                if (file && currentChat) {
                     // Add file message to chat
                     const fileSize = (file.size / 1024).toFixed(2) + ' KB';
                     const fileIcon = getFileIcon(file.type);
@@ -535,20 +780,32 @@
                     
                     // Simulate reply after 1-3 seconds
                     setTimeout(() => {
-                        const replies = [
-                            "Arquivo recebido! Cocoricó!",
-                            "Piu piu! Obrigado pelo arquivo!",
-                            "Vou analisar esse documento!",
-                            "Arquivo salvo no galinheiro!"
-                        ];
-                        const randomReply = replies[Math.floor(Math.random() * replies.length)];
+                        let replyText = "";
+                        
+                        if (currentChat.type === 'contact') {
+                            const replies = [
+                                "Arquivo recebido! Cocoricó!",
+                                "Piu piu! Obrigado pelo arquivo!",
+                                "Vou analisar esse documento!",
+                                "Arquivo salvo no galinheiro!"
+                            ];
+                            replyText = replies[Math.floor(Math.random() * replies.length)];
+                        } else {
+                            const groupReplies = [
+                                `Arquivo recebido pelo grupo ${currentChat.name}!`,
+                                `Todos em ${currentChat.name} podem ver seu arquivo!`,
+                                `Arquivo compartilhado com sucesso!`,
+                                `Documento salvo para o grupo!`
+                            ];
+                            replyText = groupReplies[Math.floor(Math.random() * groupReplies.length)];
+                        }
                         
                         const replyElement = document.createElement('div');
                         replyElement.className = 'flex justify-start';
                         replyElement.innerHTML = `
                             <div class="message-bubble bg-gray-200 text-gray-800 received dark:bg-gray-500 dark:text-white">
-                                <p class="text-xs font-bold mb-1">Galo Comunidade</p>
-                                <p>${randomReply}</p>
+                                <p class="text-xs font-bold mb-1">${currentChat.name}</p>
+                                <p>${replyText}</p>
                                 <p class="text-xs text-gray-500 text-right mt-1 dark:text-gray-300">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                             </div>
                         `;
@@ -573,7 +830,7 @@
             
             // Send audio message function
             function sendAudioMessage(audioBlob) {
-                if (audioBlob) {
+                if (audioBlob && currentChat) {
                     const audioUrl = URL.createObjectURL(audioBlob);
                     
                     // Add audio message to chat
@@ -598,20 +855,32 @@
                     
                     // Simulate reply after 1-3 seconds
                     setTimeout(() => {
-                        const replies = [
-                            "Mensagem de áudio recebida! Cocoricó!",
-                            "Piu piu! Vou ouvir com atenção!",
-                            "Ótima mensagem vocal!",
-                            "Gravado no galinheiro!"
-                        ];
-                        const randomReply = replies[Math.floor(Math.random() * replies.length)];
+                        let replyText = "";
+                        
+                        if (currentChat.type === 'contact') {
+                            const replies = [
+                                "Mensagem de áudio recebida! Cocoricó!",
+                                "Piu piu! Vou ouvir com atenção!",
+                                "Ótima mensagem vocal!",
+                                "Gravado no galinheiro!"
+                            ];
+                            replyText = replies[Math.floor(Math.random() * replies.length)];
+                        } else {
+                            const groupReplies = [
+                                `Áudio recebido pelo grupo ${currentChat.name}!`,
+                                `Todos em ${currentChat.name} podem ouvir sua mensagem!`,
+                                `Mensagem de voz compartilhada com sucesso!`,
+                                `Áudio salvo para o grupo!`
+                            ];
+                            replyText = groupReplies[Math.floor(Math.random() * groupReplies.length)];
+                        }
                         
                         const replyElement = document.createElement('div');
                         replyElement.className = 'flex justify-start';
                         replyElement.innerHTML = `
                             <div class="message-bubble bg-gray-200 text-gray-800 received dark:bg-gray-500 dark:text-white">
-                                <p class="text-xs font-bold mb-1">Galo Comunidade</p>
-                                <p>${randomReply}</p>
+                                <p class="text-xs font-bold mb-1">${currentChat.name}</p>
+                                <p>${replyText}</p>
                                 <p class="text-xs text-gray-500 text-right mt-1 dark:text-gray-300">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                             </div>
                         `;
@@ -623,7 +892,13 @@
             
             // Call functions
             function startCall(isVideo) {
+                if (!currentChat) {
+                    alert('Selecione um contato primeiro!');
+                    return;
+                }
+                
                 callTypeTitle.textContent = isVideo ? 'Chamada de Vídeo' : 'Chamada de Voz';
+                callRecipient.textContent = currentChat.name;
                 callModal.classList.remove('hidden');
                 
                 // Simulate call progress
@@ -672,6 +947,11 @@
             let seconds = 0;
             
             function startRecording() {
+                if (!currentChat) {
+                    alert('Selecione um contato primeiro!');
+                    return;
+                }
+                
                 audioChunks = [];
                 seconds = 0;
                 updateTimer();
@@ -733,6 +1013,156 @@
                 recordingTimer.textContent = `${minutes}:${remainingSeconds}`;
             }
             
+            // Connect by ID function
+            function connectById() {
+                const contactId = contactIdInput.value.trim().toUpperCase();
+                const contactName = contactNameInput.value.trim() || `Contato ${contactId}`;
+                
+                if (!contactId) {
+                    alert('Por favor, insira um ID válido');
+                    return;
+                }
+                
+                if (contactId === userId) {
+                    alert('Você não pode se conectar consigo mesmo!');
+                    return;
+                }
+                
+                // Check if contact already exists
+                const existingContact = contacts.find(c => c.id === contactId);
+                if (existingContact) {
+                    alert('Você já possui este contato em sua lista!');
+                    return;
+                }
+                
+                // Add new contact
+                const newContact = {
+                    id: contactId,
+                    name: contactName,
+                    status: 'online',
+                    lastMessage: 'Nova conexão',
+                    time: 'Agora'
+                };
+                
+                contacts.push(newContact);
+                renderChats();
+                
+                // Close modal
+                connectIdModal.classList.add('hidden');
+                contactIdInput.value = '';
+                contactNameInput.value = '';
+                
+                // Select the new contact
+                currentChat = { type: 'contact', id: newContact.id, name: newContact.name, status: newContact.status };
+                loadChat(currentChat);
+            }
+            
+            // Create new group function
+            function createNewGroup() {
+                const groupName = groupNameInput.value.trim();
+                const selectedContacts = Array.from(groupContactsList.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+                
+                if (!groupName) {
+                    alert('Por favor, insira um nome para o grupo');
+                    return;
+                }
+                
+                if (selectedContacts.length < 1) {
+                    alert('Selecione pelo menos um participante para o grupo');
+                    return;
+                }
+                
+                // Create new group
+                const groupId = 'GC-GRP' + Math.random().toString(36).substr(2, 4).toUpperCase();
+                const newGroup = {
+                    id: groupId,
+                    name: groupName,
+                    members: selectedContacts,
+                    time: 'Agora'
+                };
+                
+                groups.push(newGroup);
+                renderChats();
+                
+                // Close modal
+                newGroupModal.classList.add('hidden');
+                groupNameInput.value = '';
+                
+                // Clear checkboxes
+                groupContactsList.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+                
+                // Select the new group
+                currentChat = { type: 'group', id: newGroup.id, name: newGroup.name, members: newGroup.members };
+                loadChat(currentChat);
+            }
+            
+            // Show group info
+            function showGroupInfo() {
+                if (!currentChat || currentChat.type !== 'group') return;
+                
+                const group = groups.find(g => g.id === currentChat.id);
+                if (!group) return;
+                
+                groupInfoName.textContent = group.name;
+                groupInfoAvatar.innerHTML = `<span>${group.name.substr(0, 2)}</span>`;
+                groupInfoMembers.textContent = `${group.members.length} participantes`;
+                
+                // Populate members list
+                groupMembersList.innerHTML = '';
+                group.members.forEach(memberId => {
+                    const member = contacts.find(c => c.id === memberId) || { id: memberId, name: memberId, status: 'offline' };
+                    
+                    const memberElement = document.createElement('div');
+                    memberElement.className = 'flex items-center p-2 hover:bg-gray-100 rounded-lg dark:hover:bg-gray-700';
+                    memberElement.innerHTML = `
+                        <div class="relative mr-3">
+                            <div class="w-8 h-8 rounded-full ${member.status === 'online' ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'} flex items-center justify-center text-white text-xs font-bold">
+                                <span>${member.id.substr(3, 2)}</span>
+                            </div>
+                            <span class="absolute bottom-0 right-0 w-2 h-2 ${member.status === 'online' ? 'bg-green-500' : 'bg-gray-400 dark:bg-gray-500'} rounded-full border border-white dark:border-gray-700"></span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium truncate dark:text-white">${member.name}</p>
+                            <p class="text-xs text-gray-500 truncate dark:text-gray-300">${member.status === 'online' ? 'Online' : 'Offline'}</p>
+                        </div>
+                    `;
+                    
+                    groupMembersList.appendChild(memberElement);
+                });
+                
+                groupInfoModal.classList.remove('hidden');
+            }
+            
+            // Leave group function
+            function leaveGroup() {
+                if (!currentChat || currentChat.type !== 'group') return;
+                
+                if (confirm(`Tem certeza que deseja sair do grupo ${currentChat.name}?`)) {
+                    const groupIndex = groups.findIndex(g => g.id === currentChat.id);
+                    if (groupIndex !== -1) {
+                        groups.splice(groupIndex, 1);
+                        renderChats();
+                        
+                        // Clear current chat
+                        currentChat = null;
+                        chatName.textContent = 'GaloConnect';
+                        chatInfo.textContent = 'Selecione uma conversa';
+                        chatStatus.className = 'absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-700';
+                        chatAvatar.className = 'w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-white font-bold';
+                        chatAvatar.innerHTML = '<span>GC</span>';
+                        groupInfoBtn.classList.add('hidden');
+                        
+                        messagesContainer.querySelector('.flex-col').innerHTML = `
+                            <div class="text-center text-sm text-gray-500 py-4 dark:text-gray-300">
+                                <p>Bem-vindo ao GaloConnect! Selecione uma conversa ou inicie uma nova.</p>
+                            </div>
+                        `;
+                    }
+                    
+                    groupInfoModal.classList.add('hidden');
+                }
+            }
+            
             // Event listeners
             sendBtn.addEventListener('click', sendMessage);
             messageInput.addEventListener('keypress', function(e) {
@@ -756,6 +1186,10 @@
             
             // File attachment
             attachBtn.addEventListener('click', function() {
+                if (!currentChat) {
+                    alert('Selecione uma conversa primeiro!');
+                    return;
+                }
                 fileModal.classList.remove('hidden');
                 filePreview.classList.add('hidden');
                 fileUpload.value = '';
@@ -814,6 +1248,71 @@
                 }
             });
             
+            // New chat modal
+            newChatBtn.addEventListener('click', function() {
+                newChatModal.classList.remove('hidden');
+            });
+            
+            closeNewChatModal.addEventListener('click', function() {
+                newChatModal.classList.add('hidden');
+            });
+            
+            newPrivateChatBtn.addEventListener('click', function() {
+                newChatModal.classList.add('hidden');
+                connectIdModal.classList.remove('hidden');
+            });
+            
+            newGroupChatBtn.addEventListener('click', function() {
+                newChatModal.classList.add('hidden');
+                
+                // Populate group contacts list
+                groupContactsList.innerHTML = '';
+                contacts.forEach(contact => {
+                    const contactElement = document.createElement('label');
+                    contactElement.className = 'flex items-center p-2 hover:bg-gray-100 rounded-lg dark:hover:bg-gray-700';
+                    contactElement.innerHTML = `
+                        <input type="checkbox" value="${contact.id}" class="mr-3 rounded text-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600">
+                        <div class="relative mr-3">
+                            <div class="w-8 h-8 rounded-full ${contact.status === 'online' ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'} flex items-center justify-center text-white text-xs font-bold">
+                                <span>${contact.id.substr(3, 2)}</span>
+                            </div>
+                            <span class="absolute bottom-0 right-0 w-2 h-2 ${contact.status === 'online' ? 'bg-green-500' : 'bg-gray-400 dark:bg-gray-500'} rounded-full border border-white dark:border-gray-700"></span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium truncate dark:text-white">${contact.name}</p>
+                            <p class="text-xs text-gray-500 truncate dark:text-gray-300">${contact.id}</p>
+                        </div>
+                    `;
+                    
+                    groupContactsList.appendChild(contactElement);
+                });
+                
+                newGroupModal.classList.remove('hidden');
+            });
+            
+            // Connect by ID modal
+            closeConnectIdModal.addEventListener('click', function() {
+                connectIdModal.classList.add('hidden');
+            });
+            
+            connectIdBtn.addEventListener('click', connectById);
+            
+            // New group modal
+            closeNewGroupModal.addEventListener('click', function() {
+                newGroupModal.classList.add('hidden');
+            });
+            
+            createGroupBtn.addEventListener('click', createNewGroup);
+            
+            // Group info
+            groupInfoBtn.addEventListener('click', showGroupInfo);
+            
+            closeGroupInfoModal.addEventListener('click', function() {
+                groupInfoModal.classList.add('hidden');
+            });
+            
+            leaveGroupBtn.addEventListener('click', leaveGroup);
+            
             // Close modals when clicking outside
             window.addEventListener('click', function(event) {
                 if (event.target === callModal) {
@@ -825,10 +1324,25 @@
                 if (event.target === audioModal) {
                     cancelRecording();
                 }
+                if (event.target === newChatModal) {
+                    newChatModal.classList.add('hidden');
+                }
+                if (event.target === connectIdModal) {
+                    connectIdModal.classList.add('hidden');
+                }
+                if (event.target === newGroupModal) {
+                    newGroupModal.classList.add('hidden');
+                }
+                if (event.target === groupInfoModal) {
+                    groupInfoModal.classList.add('hidden');
+                }
                 if (event.target === userIDModal) {
                     // Don't close when clicking outside, force user to confirm ID
                 }
             });
+            
+            // Initial render
+            renderChats();
             
             // Initial scroll to bottom
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
