@@ -1,0 +1,202 @@
+html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mini Sites - Rede de Páginas</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f4f4f4;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input[type="text"] {
+      width: calc(100% - 22px);
+      padding: 10px;
+      margin-top: 10px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .site-list {
+      margin-top: 30px;
+    }
+    .site-card {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    .site-card:last-child {
+      border-bottom: none;
+    }
+    .site-link {
+      color: #007bff;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    .editor {
+      display: none;
+      margin-top: 20px;
+    }
+    .editor.active {
+      display: block;
+    }
+    textarea {
+      width: 100%;
+      height: 200px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      resize: vertical;
+    }
+    .acesso-site {
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Bem-vindo à Rede de Mini Sites</h1>
+</header>
+
+<div class="container">
+  <h2>Criar seu Mini Site</h2>
+  <input type="text" id="siteNameInput" placeholder="Digite o nome do seu site" />
+  <button onclick="criarSite()">Criar Site</button>
+
+  <div class="acesso-site">
+    <h2>Acessar um Site Externo</h2>
+    <input type="text" id="siteIdInput" placeholder="Digite o ID do site" />
+    <button onclick="acessarSite()">Acessar</button>
+  </div>
+
+  <div class="site-list" id="siteList"></div>
+
+  <div class="editor" id="codeEditor">
+    <h3>Edite o conteúdo do seu site (HTML/CSS/JS)</h3>
+    <textarea id="htmlContent" placeholder="Insira aqui o código HTML, CSS ou JS do seu site..."></textarea>
+    <br/>
+    <button onclick="salvarConteudo()">Salvar Conteúdo</button>
+    <button onclick="editarNovamente()">Editar Novamente</button>
+  </div>
+
+  <div class="editor" id="visualizadorSite">
+    <h3>Visualização do Seu Site</h3>
+    <iframe id="iframeSite" style="width: 100%; height: 300px; border: 1px solid #ccc;"></iframe>
+  </div>
+</div>
+
+<script>
+  const sites = {};
+
+  function criarSite() {
+    const nome = document.getElementById('siteNameInput').value.trim();
+    if (!nome) return alert("Por favor, insira um nome para o site.");
+    const id = Math.random().toString(36).substr(2, 9);
+    sites[id] = { nome: nome, conteudo: '' };
+    atualizarListaSites();
+    alert(`Seu site foi criado! ID: ${id}. Use esse ID para acessar.`);
+    abrirEditor(id);
+  }
+
+  function acessarSite() {
+    const id = document.getElementById('siteIdInput').value.trim();
+    if (!sites[id]) return alert("ID inválido ou site não encontrado.");
+    abrirVisualizador(id);
+  }
+
+  function atualizarListaSites() {
+    const lista = document.getElementById('siteList');
+    lista.innerHTML = '';
+    for (const id in sites) {
+      const item = document.createElement('div');
+      item.className = 'site-card';
+      item.innerHTML = `
+        <span class="site-link" onclick="abrirVisualizador('${id}')">${sites[id].nome}</span>
+        (ID: <strong>${id}</strong>)
+      `;
+      lista.appendChild(item);
+    }
+  }
+
+  function abrirEditor(id) {
+    document.getElementById('codeEditor').classList.add('active');
+    document.getElementById('htmlContent').value = sites[id].conteudo || '<h1>Bem-vindo ao meu mini site!</h1>';
+    document.getElementById('visualizadorSite').classList.remove('active');
+    document.getElementById('iframeSite').srcdoc = '';
+  }
+
+  function salvarConteudo() {
+    const ids = Object.keys(sites);
+    if (ids.length === 0) return alert("Erro interno.");
+    const id = ids[0]; // Melhor seria rastrear qual ID está sendo editada, mas simplificando por agora
+    const conteudo = document.getElementById('htmlContent').value;
+    sites[id].conteudo = conteudo;
+
+    // Salva no cookie
+    document.cookie = `miniSiteData=${encodeURIComponent(JSON.stringify(sites))}; path=/`;
+
+    alert("Conteúdo salvo com sucesso!");
+    document.getElementById('iframeSite').srcdoc = conteudo;
+  }
+
+  function editarNovamente() {
+    const id = Object.keys(sites)[0];
+    if (!id) return alert("Erro interno.");
+    abrirEditor(id);
+  }
+
+  function abrirVisualizador(id) {
+    const conteudo = sites[id]?.conteudo || '';
+    document.getElementById('iframeSite').srcdoc = conteudo;
+    document.getElementById('visualizadorSite').classList.add('active');
+    document.getElementById('codeEditor').classList.remove('active');
+  }
+
+  // Carregar dados dos cookies ao iniciar
+  window.onload = () => {
+    const cookie = document.cookie.split('; ').find(row => row.startsWith('miniSiteData='));
+    if (cookie) {
+      try {
+        const data = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
+        for (const id in data) {
+          sites[id] = data[id];
+        }
+        atualizarListaSites();
+      } catch (e) {
+        console.error("Erro ao carregar dados do cookie:", e);
+      }
+    }
+  };
+</script>
+
+</body>
+</html>
