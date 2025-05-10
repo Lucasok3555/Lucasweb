@@ -1,4 +1,4 @@
-html
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -33,26 +33,34 @@ html
       border-radius: 4px;
     }
     button {
-      padding: 10px 20px;
+      padding: 6px 12px;
       border: none;
       background-color: #007bff;
       color: white;
       border-radius: 4px;
       cursor: pointer;
-      margin-right: 10px;
+      margin-right: 5px;
+      margin-bottom: 5px;
+      font-size: 14px;
     }
     button:hover {
       background-color: #0056b3;
     }
     .site-list {
-      margin-top: 30px;
+      margin-top: 20px;
     }
     .site-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       padding: 10px;
       border-bottom: 1px solid #ddd;
     }
     .site-card:last-child {
       border-bottom: none;
+    }
+    .site-info {
+      flex: 1;
     }
     .site-link {
       color: #007bff;
@@ -77,7 +85,15 @@ html
       resize: vertical;
     }
     .acesso-site {
-      margin-top: 30px;
+      margin-bottom: 30px;
+    }
+    .header-site-view {
+      display: none;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .header-site-view h2 {
+      margin: 0;
     }
   </style>
 </head>
@@ -88,15 +104,23 @@ html
 </header>
 
 <div class="container">
-  <h2>Criar seu Mini Site</h2>
-  <input type="text" id="siteNameInput" placeholder="Digite o nome do seu site" />
-  <button onclick="criarSite()">Criar Site</button>
 
+  <!-- Busca por ID no topo -->
   <div class="acesso-site">
-    <h2>Acessar um Site Externo</h2>
+    <h2>Procurar um Site pelo ID</h2>
     <input type="text" id="siteIdInput" placeholder="Digite o ID do site" />
     <button onclick="acessarSite()">Acessar</button>
   </div>
+
+  <!-- Exibição do site acessado -->
+  <div class="header-site-view" id="headerSiteView">
+    <h2 id="headerSiteName"></h2>
+    <p><strong>ID:</strong> <span id="headerSiteID"></span></p>
+  </div>
+
+  <h2>Criar seu Mini Site</h2>
+  <input type="text" id="siteNameInput" placeholder="Digite o nome do seu site" />
+  <button onclick="criarSite()">Criar Site</button>
 
   <div class="site-list" id="siteList"></div>
 
@@ -130,7 +154,17 @@ html
   function acessarSite() {
     const id = document.getElementById('siteIdInput').value.trim();
     if (!sites[id]) return alert("ID inválido ou site não encontrado.");
+    mostrarCabecalhoSite(id);
     abrirVisualizador(id);
+  }
+
+  function mostrarCabecalhoSite(id) {
+    const cabecalho = document.getElementById('headerSiteView');
+    const nomeEl = document.getElementById('headerSiteName');
+    const idEl = document.getElementById('headerSiteID');
+    nomeEl.textContent = sites[id].nome;
+    idEl.textContent = id;
+    cabecalho.style.display = 'block';
   }
 
   function atualizarListaSites() {
@@ -140,8 +174,11 @@ html
       const item = document.createElement('div');
       item.className = 'site-card';
       item.innerHTML = `
-        <span class="site-link" onclick="abrirVisualizador('${id}')">${sites[id].nome}</span>
-        (ID: <strong>${id}</strong>)
+        <div class="site-info">
+          <span class="site-link" onclick="abrirVisualizador('${id}')">${sites[id].nome}</span>
+          <p style="margin: 0;"><small>ID: <strong>${id}</strong></small></p>
+        </div>
+        <button onclick="abrirEditor('${id}')">Editar</button>
       `;
       lista.appendChild(item);
     }
@@ -152,6 +189,7 @@ html
     document.getElementById('htmlContent').value = sites[id].conteudo || '<h1>Bem-vindo ao meu mini site!</h1>';
     document.getElementById('visualizadorSite').classList.remove('active');
     document.getElementById('iframeSite').srcdoc = '';
+    mostrarCabecalhoSite(id);
   }
 
   function salvarConteudo() {
@@ -179,6 +217,7 @@ html
     document.getElementById('iframeSite').srcdoc = conteudo;
     document.getElementById('visualizadorSite').classList.add('active');
     document.getElementById('codeEditor').classList.remove('active');
+    mostrarCabecalhoSite(id);
   }
 
   // Carregar dados dos cookies ao iniciar
