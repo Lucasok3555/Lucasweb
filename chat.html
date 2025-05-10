@@ -1,517 +1,155 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GaloConnect - Chat P2P</title>
+    <title>GaloChat - Mensagens P2P</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
-        
-        body {
-            font-family: 'Poppins', sans-serif;
-            transition: background-color 0.3s;
+        .message-animation {
+            animation: fadeIn 0.3s ease-in-out;
         }
-        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
         .dark-mode {
             background-color: #1a202c;
-            color: #f7fafc;
+            color: #e2e8f0;
         }
-        
-        .dark-mode .dark-bg {
-            background-color: #2d3748;
+        .light-mode {
+            background-color: #f7fafc;
+            color: #2d3748;
         }
-        
-        .dark-mode .dark-border {
-            border-color: #4a5568;
+        .chat-container {
+            height: calc(100vh - 120px);
         }
-        
-        .dark-mode .dark-text {
-            color: #f7fafc;
-        }
-        
-        .dark-mode .dark-input {
-            background-color: #4a5568;
-            color: #f7fafc;
-            border-color: #4a5568;
-        }
-        
-        .rooster-bg {
-            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
-        }
-        
-        .message-bubble {
-            position: relative;
-            border-radius: 1rem;
-            padding: 0.75rem 1rem;
-            max-width: 70%;
-            margin-bottom: 0.5rem;
-            word-wrap: break-word;
-        }
-        
-        .message-bubble:after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            width: 0;
-            height: 0;
-            border: 10px solid transparent;
-        }
-        
-        .received:after {
-            left: -10px;
-            border-right-color: #e5e7eb;
-            border-left: 0;
-        }
-        
-        .dark-mode .received:after {
-            border-right-color: #4a5568;
-        }
-        
-        .sent:after {
-            right: -10px;
-            border-left-color: #3b82f6;
-            border-right: 0;
-        }
-        
-        .call-animation {
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0% {
-                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+        @media (max-width: 640px) {
+            .chat-container {
+                height: calc(100vh - 100px);
             }
-            70% {
-                box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
-            }
-            100% {
-                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
-            }
-        }
-        
-        .rooster-icon {
-            animation: crow 3s infinite;
-            transform-origin: 50% 50%;
-        }
-        
-        @keyframes crow {
-            0%, 100% {
-                transform: rotate(0deg);
-            }
-            25% {
-                transform: rotate(5deg);
-            }
-            75% {
-                transform: rotate(-5deg);
-            }
-        }
-        
-        .recording {
-            animation: recording 1.5s infinite;
-        }
-        
-        @keyframes recording {
-            0% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.5;
-            }
-            100% {
-                opacity: 1;
-            }
-        }
-        
-        #user-id-input {
-            letter-spacing: 2px;
-            font-weight: bold;
-        }
-        
-        .group-avatar {
-            background: linear-gradient(135deg, #4c51bf 0%, #667eea 100%);
         }
     </style>
 </head>
-<body class="min-h-screen bg-gray-100">
+<body class="light-mode transition-colors duration-200">
     <div class="flex flex-col h-screen">
         <!-- Header -->
-        <header class="rooster-bg text-white p-4 shadow-md">
-            <div class="container mx-auto flex justify-between items-center">
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-crow text-2xl rooster-icon"></i>
-                    <h1 class="text-xl font-bold">GaloConnect</h1>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <button id="dark-mode-toggle" class="text-white">
-                        <i class="fas fa-moon"></i>
-                    </button>
-                    <div class="relative">
-                        <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
-                            <span id="user-id-display">ID</span>
-                        </div>
-                        <span class="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
-                    </div>
-                    <button id="settings-btn" class="text-white">
-                        <i class="fas fa-cog"></i>
-                    </button>
-                </div>
+        <header class="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center">
+            <div class="flex items-center">
+                <i class="fas fa-crow text-2xl mr-2"></i>
+                <h1 class="text-xl font-bold">GaloChat</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button id="themeToggle" class="p-2 rounded-full hover:bg-blue-700">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button id="userMenu" class="p-2 rounded-full hover:bg-blue-700">
+                    <i class="fas fa-user"></i>
+                </button>
             </div>
         </header>
 
         <!-- Main Content -->
-        <main class="flex-1 overflow-hidden container mx-auto flex">
+        <div class="flex flex-1 overflow-hidden">
             <!-- Sidebar -->
-            <aside class="w-1/4 bg-white border-r border-gray-200 hidden md:block dark:bg-gray-800 dark:border-gray-700">
+            <div class="w-64 bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
                 <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-                    <div class="flex justify-between items-center">
-                        <h2 class="font-semibold text-lg dark:text-white">Conversas</h2>
-                        <button id="new-chat-btn" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300">
-                            <i class="fas fa-plus"></i>
-                        </button>
+                    <button id="newChatBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-plus mr-2"></i> Nova Conversa
+                    </button>
+                </div>
+                
+                <div class="flex-1 overflow-y-auto">
+                    <div class="p-4">
+                        <h2 class="font-semibold text-gray-700 dark:text-gray-300 mb-2">Conversas</h2>
+                        <ul id="chatList" class="space-y-2">
+                            <!-- Chats will be added here dynamically -->
+                        </ul>
                     </div>
-                    <div class="mt-2 relative">
-                        <input type="text" placeholder="Buscar conversas..." class="w-full p-2 pl-8 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                        <i class="fas fa-search absolute left-2 top-3 text-gray-400"></i>
+                    
+                    <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+                        <h2 class="font-semibold text-gray-700 dark:text-gray-300 mb-2">Grupos</h2>
+                        <ul id="groupList" class="space-y-2">
+                            <!-- Groups will be added here dynamically -->
+                        </ul>
                     </div>
                 </div>
-                <div class="overflow-y-auto h-full">
-                    <div class="contact-list">
-                        <!-- Chats will be added here dynamically -->
-                    </div>
-                </div>
-            </aside>
+            </div>
 
             <!-- Chat Area -->
-            <section class="flex-1 flex flex-col dark:bg-gray-700">
+            <div class="flex-1 flex flex-col">
                 <!-- Chat Header -->
-                <div class="bg-white p-4 border-b border-gray-200 flex items-center justify-between dark:bg-gray-800 dark:border-gray-700">
-                    <div class="flex items-center space-x-3">
-                        <div class="relative">
-                            <div id="chat-avatar" class="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-white font-bold">
-                                <span>GC</span>
-                            </div>
-                            <span id="chat-status" class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
+                <div id="chatHeader" class="bg-white dark:bg-gray-700 p-4 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between hidden">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center mr-3">
+                            <i class="fas fa-user text-gray-600 dark:text-gray-300"></i>
                         </div>
                         <div>
-                            <h3 id="chat-name" class="font-semibold dark:text-white">GaloConnect</h3>
-                            <p id="chat-info" class="text-xs text-gray-500 dark:text-gray-300">Selecione uma conversa</p>
+                            <h2 id="currentChatName" class="font-semibold text-gray-800 dark:text-white">Nome do Contato</h2>
+                            <p id="connectionStatus" class="text-xs text-gray-500 dark:text-gray-400">Conectado</p>
                         </div>
                     </div>
                     <div class="flex space-x-2">
-                        <button id="audio-call-btn" class="p-2 rounded-full hover:bg-gray-100 text-blue-500 dark:hover:bg-gray-700">
-                            <i class="fas fa-phone"></i>
+                        <button id="voiceCallBtn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">
+                            <i class="fas fa-phone text-blue-600 dark:text-blue-400"></i>
                         </button>
-                        <button id="video-call-btn" class="p-2 rounded-full hover:bg-gray-100 text-blue-500 dark:hover:bg-gray-700">
-                            <i class="fas fa-video"></i>
-                        </button>
-                        <button id="group-info-btn" class="p-2 rounded-full hover:bg-gray-100 text-blue-500 dark:hover:bg-gray-700 hidden">
-                            <i class="fas fa-users"></i>
+                        <button id="videoCallBtn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">
+                            <i class="fas fa-video text-blue-600 dark:text-blue-400"></i>
                         </button>
                     </div>
                 </div>
 
                 <!-- Messages -->
-                <div id="messages-container" class="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-600">
-                    <div class="flex flex-col space-y-2">
+                <div id="chatContainer" class="chat-container overflow-y-auto p-4 hidden">
+                    <div id="messages" class="space-y-4">
                         <!-- Messages will be added here dynamically -->
-                        <div class="text-center text-sm text-gray-500 py-4 dark:text-gray-300">
-                            <p>Bem-vindo ao GaloConnect! Selecione uma conversa ou inicie uma nova.</p>
-                        </div>
                     </div>
                 </div>
 
-                <!-- Message Input -->
-                <div class="bg-white p-4 border-t border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-                    <div class="flex items-center space-x-2">
-                        <button id="attach-btn" class="p-2 rounded-full hover:bg-gray-100 text-gray-500 dark:hover:bg-gray-700 dark:text-gray-300">
-                            <i class="fas fa-paperclip"></i>
-                        </button>
-                        <div class="flex-1 relative">
-                            <input id="message-input" type="text" placeholder="Digite sua mensagem..." class="w-full p-3 pl-4 pr-12 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                            <button id="send-btn" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-500">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
+                <!-- Connection Panel -->
+                <div id="connectionPanel" class="flex-1 flex flex-col items-center justify-center p-4">
+                    <div class="max-w-md w-full bg-white dark:bg-gray-700 rounded-lg shadow-md p-6">
+                        <h2 class="text-xl font-bold text-center mb-6 text-gray-800 dark:text-white">Conectar com um amigo</h2>
+                        <div class="mb-4">
+                            <label class="block text-gray-700 dark:text-gray-300 mb-2">Seu ID:</label>
+                            <div class="flex items-center">
+                                <input id="myId" type="text" readonly class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-l-md bg-gray-100 dark:bg-gray-800">
+                                <button id="copyIdBtn" class="px-4 py-2 bg-blue-600 text-white rounded-r-md hover:bg-blue-700">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
                         </div>
-                        <button id="mic-btn" class="p-2 rounded-full hover:bg-gray-100 text-gray-500 dark:hover:bg-gray-700 dark:text-gray-300">
-                            <i class="fas fa-microphone"></i>
-                        </button>
-                    </div>
-                </div>
-            </section>
-        </main>
-
-        <!-- New Chat Modal -->
-        <div id="new-chat-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-md dark:bg-gray-800">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-semibold dark:text-white">Nova Conversa</h3>
-                        <button id="close-new-chat-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="flex flex-col space-y-4">
-                        <button id="new-private-chat-btn" class="px-4 py-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 flex items-center space-x-3 dark:bg-gray-700 dark:text-blue-300 dark:hover:bg-gray-600">
-                            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 dark:bg-blue-900 dark:text-blue-300">
-                                <i class="fas fa-user"></i>
-                            </div>
-                            <div class="text-left">
-                                <p class="font-medium">Conversa Privada</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Converse com um contato específico</p>
-                            </div>
-                        </button>
-                        <button id="new-group-chat-btn" class="px-4 py-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 flex items-center space-x-3 dark:bg-gray-700 dark:text-purple-300 dark:hover:bg-gray-600">
-                            <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-500 dark:bg-purple-900 dark:text-purple-300">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <div class="text-left">
-                                <p class="font-medium">Novo Grupo</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Crie um grupo com vários contatos</p>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Connect ID Modal -->
-        <div id="connect-id-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-md dark:bg-gray-800">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-semibold dark:text-white">Conectar por ID</h3>
-                        <button id="close-connect-id-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="flex flex-col space-y-4 py-4">
-                        <div>
-                            <label for="contact-id-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ID do Contato:</label>
-                            <input type="text" id="contact-id-input" placeholder="Ex: GC-ABCDEF" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-center font-mono dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <div class="mb-6">
+                            <label class="block text-gray-700 dark:text-gray-300 mb-2">ID do amigo:</label>
+                            <input id="friendId" type="text" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800" placeholder="Cole o ID aqui">
                         </div>
-                        <div>
-                            <label for="contact-name-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome do Contato (opcional):</label>
-                            <input type="text" id="contact-name-input" placeholder="Ex: João Silva" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                        </div>
-                    </div>
-                    <div class="flex justify-center pt-4">
-                        <button id="connect-id-btn" class="px-6 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600">
+                        <button id="connectBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg">
                             Conectar
                         </button>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- New Group Modal -->
-        <div id="new-group-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-md dark:bg-gray-800">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-semibold dark:text-white">Criar Novo Grupo</h3>
-                        <button id="close-new-group-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="flex flex-col space-y-4 py-4">
-                        <div>
-                            <label for="group-name-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome do Grupo:</label>
-                            <input type="text" id="group-name-input" placeholder="Ex: Família" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <!-- Message Input -->
+                <div id="messageInput" class="bg-white dark:bg-gray-700 p-4 border-t border-gray-200 dark:border-gray-600 hidden">
+                    <div class="flex items-center">
+                        <button id="moreOptionsBtn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 mr-2">
+                            <i class="fas fa-plus text-gray-600 dark:text-gray-300"></i>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Selecione os participantes:</label>
-                            <div id="group-contacts-list" class="max-h-60 overflow-y-auto border border-gray-300 rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600">
-                                <!-- Contacts will be added here -->
-                            </div>
+                        <div id="moreOptionsMenu" class="hidden absolute bottom-16 left-0 bg-white dark:bg-gray-700 shadow-lg rounded-lg p-2 w-48">
+                            <button id="sendFileBtn" class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded">
+                                <i class="fas fa-paperclip mr-2"></i> Enviar arquivo
+                            </button>
+                            <button id="createGroupBtn" class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded">
+                                <i class="fas fa-users mr-2"></i> Criar grupo
+                            </button>
                         </div>
-                    </div>
-                    <div class="flex justify-center pt-4">
-                        <button id="create-group-btn" class="px-6 py-2 bg-purple-500 text-white rounded-full hover:bg-purple-600">
-                            Criar Grupo
+                        <input id="messageText" type="text" placeholder="Digite uma mensagem..." class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button id="recordAudioBtn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 ml-2">
+                            <i class="fas fa-microphone text-gray-600 dark:text-gray-300"></i>
                         </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Group Info Modal -->
-        <div id="group-info-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-md dark:bg-gray-800">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 id="group-info-title" class="text-xl font-semibold dark:text-white">Informações do Grupo</h3>
-                        <button id="close-group-info-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="flex flex-col items-center py-4">
-                        <div id="group-info-avatar" class="w-24 h-24 rounded-full group-avatar flex items-center justify-center text-white text-4xl font-bold mb-4">
-                            <span>GC</span>
-                        </div>
-                        <h4 id="group-info-name" class="text-lg font-medium dark:text-white">Nome do Grupo</h4>
-                        <p id="group-info-members" class="text-sm text-gray-500 dark:text-gray-300">X participantes</p>
-                    </div>
-                    <div class="border-t border-gray-200 pt-4 dark:border-gray-700">
-                        <h4 class="font-medium mb-2 dark:text-white">Participantes:</h4>
-                        <div id="group-members-list" class="max-h-60 overflow-y-auto">
-                            <!-- Members will be added here -->
-                        </div>
-                    </div>
-                    <div class="flex justify-center pt-6">
-                        <button id="leave-group-btn" class="px-6 py-2 bg-red-500 text-white rounded-full hover:bg-red-600">
-                            Sair do Grupo
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Call Modal -->
-        <div id="call-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-md dark:bg-gray-800">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-semibold dark:text-white" id="call-type-title">Chamada de Voz</h3>
-                        <button id="close-call-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="flex flex-col items-center py-6">
-                        <div class="w-24 h-24 rounded-full bg-blue-100 flex items-center justify-center mb-4 call-animation dark:bg-blue-900">
-                            <i class="fas fa-user text-blue-500 text-4xl dark:text-blue-300"></i>
-                        </div>
-                        <p class="text-lg font-medium dark:text-white">Chamando <span id="call-recipient" class="dark:text-white">Contato</span>...</p>
-                        <p class="text-gray-500 mt-2 dark:text-gray-300" id="call-status">Estabelecendo conexão P2P</p>
-                    </div>
-                    <div class="flex justify-center space-x-4 pt-4">
-                        <button id="end-call-btn" class="px-6 py-2 bg-red-500 text-white rounded-full hover:bg-red-600 flex items-center space-x-2">
-                            <i class="fas fa-phone-slash"></i>
-                            <span>Encerrar</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- User ID Modal -->
-        <div id="user-id-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-md dark:bg-gray-800">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-semibold dark:text-white">Seu ID de Usuário</h3>
-                        <button id="close-id-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="flex flex-col items-center py-6">
-                        <div class="w-32 h-32 rounded-full bg-yellow-100 flex items-center justify-center mb-6 dark:bg-yellow-900">
-                            <i class="fas fa-crow text-yellow-500 text-6xl rooster-icon dark:text-yellow-300"></i>
-                        </div>
-                        <p class="text-gray-600 mb-4 text-center dark:text-gray-300">Este é seu identificador único no GaloConnect. Todas suas mensagens começarão com este ID.</p>
-                        
-                        <div class="w-full mb-4">
-                            <label for="user-id-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Seu ID:</label>
-                            <input type="text" id="user-id-input" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-center font-mono text-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" value="GC-XXXXXX" readonly>
-                        </div>
-                        
-                        <div class="w-full">
-                            <label for="profile-pic-upload" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Foto de perfil:</label>
-                            <div class="flex items-center space-x-4">
-                                <div class="relative">
-                                    <img id="profile-pic-preview" src="https://via.placeholder.com/80" class="w-16 h-16 rounded-full object-cover border-2 border-gray-300 dark:border-gray-600">
-                                    <input type="file" id="profile-pic-upload" class="hidden" accept="image/*">
-                                </div>
-                                <button id="upload-pic-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
-                                    <i class="fas fa-camera mr-2"></i> Alterar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex justify-center pt-4">
-                        <button id="confirm-id-btn" class="px-6 py-2 rooster-bg text-white rounded-full hover:bg-yellow-600">
-                            Confirmar ID
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- File Attachment Modal -->
-        <div id="file-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-md dark:bg-gray-800">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-semibold dark:text-white">Enviar Arquivo</h3>
-                        <button id="close-file-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="flex flex-col items-center py-6">
-                        <div class="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center mb-6 dark:bg-gray-700">
-                            <i class="fas fa-file-upload text-4xl text-gray-400 dark:text-gray-300"></i>
-                        </div>
-                        <div class="w-full">
-                            <label for="file-upload" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Selecione o arquivo:</label>
-                            <input type="file" id="file-upload" class="block w-full text-sm text-gray-500
-                                file:mr-4 file:py-2 file:px-4
-                                file:rounded-lg file:border-0
-                                file:text-sm file:font-semibold
-                                file:bg-blue-50 file:text-blue-700
-                                hover:file:bg-blue-100
-                                dark:file:bg-gray-700 dark:file:text-gray-300
-                                dark:hover:file:bg-gray-600">
-                        </div>
-                        <div id="file-preview" class="mt-4 hidden w-full">
-                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pré-visualização:</p>
-                            <div class="flex items-center p-3 bg-gray-100 rounded-lg dark:bg-gray-700">
-                                <i class="fas fa-file text-gray-500 dark:text-gray-300 mr-3"></i>
-                                <div class="flex-1 min-w-0">
-                                    <p id="file-name" class="text-sm font-medium truncate dark:text-white"></p>
-                                    <p id="file-size" class="text-xs text-gray-500 dark:text-gray-300"></p>
-                                </div>
-                                <button id="remove-file-btn" class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex justify-center space-x-4 pt-4">
-                        <button id="cancel-file-btn" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
-                            Cancelar
-                        </button>
-                        <button id="send-file-btn" class="px-6 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600">
-                            Enviar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Audio Recording Modal -->
-        <div id="audio-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-md dark:bg-gray-800">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-semibold dark:text-white">Gravar Mensagem de Áudio</h3>
-                        <button id="close-audio-modal" class="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="flex flex-col items-center py-6">
-                        <div class="w-24 h-24 rounded-full bg-red-100 flex items-center justify-center mb-6 recording dark:bg-red-900">
-                            <i class="fas fa-microphone text-4xl text-red-500 dark:text-red-300"></i>
-                        </div>
-                        <p class="text-lg font-medium dark:text-white" id="recording-status">Gravando...</p>
-                        <p class="text-gray-500 dark:text-gray-300" id="recording-timer">00:00</p>
-                    </div>
-                    <div class="flex justify-center space-x-4 pt-4">
-                        <button id="cancel-audio-btn" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
-                            Cancelar
-                        </button>
-                        <button id="stop-audio-btn" class="px-6 py-2 bg-red-500 text-white rounded-full hover:bg-red-600">
-                            Parar
+                        <button id="sendMessageBtn" class="ml-2 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700">
+                            <i class="fas fa-paper-plane"></i>
                         </button>
                     </div>
                 </div>
@@ -519,834 +157,681 @@
         </div>
     </div>
 
+    <!-- Modals -->
+    <!-- Create Group Modal -->
+    <div id="createGroupModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-gray-700 rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Criar novo grupo</h3>
+            <div class="mb-4">
+                <label class="block text-gray-700 dark:text-gray-300 mb-2">Nome do grupo:</label>
+                <input id="groupName" type="text" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800">
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 dark:text-gray-300 mb-2">Selecione membros:</label>
+                <div id="groupMembersList" class="max-h-40 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-white dark:bg-gray-800">
+                    <!-- Contacts will be added here -->
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button id="cancelGroupBtn" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600">Cancelar</button>
+                <button id="confirmGroupBtn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Criar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Upload Modal -->
+    <div id="fileUploadModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-gray-700 rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Enviar arquivo</h3>
+            <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center mb-4">
+                <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 dark:text-gray-500 mb-2"></i>
+                <p class="text-gray-500 dark:text-gray-400">Arraste e solte arquivos aqui ou</p>
+                <input id="fileInput" type="file" class="hidden">
+                <button id="selectFileBtn" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Selecionar arquivo</button>
+            </div>
+            <div class="flex justify-end">
+                <button id="cancelFileBtn" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Call Modal -->
+    <div id="callModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-gray-700 rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 id="callTitle" class="text-xl font-bold mb-4 text-center text-gray-800 dark:text-white">Chamada em andamento</h3>
+            <div class="flex justify-center mb-6">
+                <div class="w-32 h-32 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                    <i class="fas fa-user text-4xl text-gray-500 dark:text-gray-400"></i>
+                </div>
+            </div>
+            <div class="flex justify-center space-x-4">
+                <button id="endCallBtn" class="p-4 bg-red-600 text-white rounded-full hover:bg-red-700">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
+                <button id="muteCallBtn" class="p-4 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-full hover:bg-gray-300 dark:hover:bg-gray-500">
+                    <i class="fas fa-microphone-slash"></i>
+                </button>
+                <button id="videoToggleBtn" class="p-4 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-full hover:bg-gray-300 dark:hover:bg-gray-500">
+                    <i class="fas fa-video"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Incoming Call Modal -->
+    <div id="incomingCallModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-gray-700 rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4 text-center text-gray-800 dark:text-white">Chamada recebida</h3>
+            <div class="flex justify-center mb-6">
+                <div class="w-32 h-32 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                    <i class="fas fa-user text-4xl text-gray-500 dark:text-gray-400"></i>
+                </div>
+            </div>
+            <p id="callerName" class="text-center text-lg mb-6 text-gray-800 dark:text-white">João está chamando...</p>
+            <div class="flex justify-center space-x-4">
+                <button id="rejectCallBtn" class="px-6 py-3 bg-red-600 text-white rounded-full hover:bg-red-700">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
+                <button id="acceptCallBtn" class="px-6 py-3 bg-green-600 text-white rounded-full hover:bg-green-700">
+                    <i class="fas fa-phone"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Generate random user ID
-            const userId = 'GC-' + Math.random().toString(36).substr(2, 6).toUpperCase();
-            document.getElementById('user-id-input').value = userId;
-            document.getElementById('user-id-display').textContent = userId.substr(3, 3);
+        // Generate random user ID
+        const userId = 'user_' + Math.random().toString(36).substr(2, 9);
+        document.getElementById('myId').value = userId;
+        
+        // Simulated database
+        let contacts = [
+            { id: 'user_abc123', name: 'João Silva', online: true },
+            { id: 'user_def456', name: 'Maria Souza', online: false },
+            { id: 'user_ghi789', name: 'Carlos Oliveira', online: true }
+        ];
+        
+        let groups = [];
+        let currentChat = null;
+        let audioChunks = [];
+        let mediaRecorder;
+        let isRecording = false;
+        let currentCall = null;
+        let isDarkMode = false;
+
+        // DOM Elements
+        const themeToggle = document.getElementById('themeToggle');
+        const newChatBtn = document.getElementById('newChatBtn');
+        const chatList = document.getElementById('chatList');
+        const groupList = document.getElementById('groupList');
+        const chatHeader = document.getElementById('chatHeader');
+        const chatContainer = document.getElementById('chatContainer');
+        const connectionPanel = document.getElementById('connectionPanel');
+        const messageInput = document.getElementById('messageInput');
+        const messages = document.getElementById('messages');
+        const myId = document.getElementById('myId');
+        const copyIdBtn = document.getElementById('copyIdBtn');
+        const friendId = document.getElementById('friendId');
+        const connectBtn = document.getElementById('connectBtn');
+        const moreOptionsBtn = document.getElementById('moreOptionsBtn');
+        const moreOptionsMenu = document.getElementById('moreOptionsMenu');
+        const sendFileBtn = document.getElementById('sendFileBtn');
+        const createGroupBtn = document.getElementById('createGroupBtn');
+        const messageText = document.getElementById('messageText');
+        const recordAudioBtn = document.getElementById('recordAudioBtn');
+        const sendMessageBtn = document.getElementById('sendMessageBtn');
+        const voiceCallBtn = document.getElementById('voiceCallBtn');
+        const videoCallBtn = document.getElementById('videoCallBtn');
+        const createGroupModal = document.getElementById('createGroupModal');
+        const groupName = document.getElementById('groupName');
+        const groupMembersList = document.getElementById('groupMembersList');
+        const cancelGroupBtn = document.getElementById('cancelGroupBtn');
+        const confirmGroupBtn = document.getElementById('confirmGroupBtn');
+        const fileUploadModal = document.getElementById('fileUploadModal');
+        const selectFileBtn = document.getElementById('selectFileBtn');
+        const fileInput = document.getElementById('fileInput');
+        const cancelFileBtn = document.getElementById('cancelFileBtn');
+        const callModal = document.getElementById('callModal');
+        const endCallBtn = document.getElementById('endCallBtn');
+        const muteCallBtn = document.getElementById('muteCallBtn');
+        const videoToggleBtn = document.getElementById('videoToggleBtn');
+        const incomingCallModal = document.getElementById('incomingCallModal');
+        const rejectCallBtn = document.getElementById('rejectCallBtn');
+        const acceptCallBtn = document.getElementById('acceptCallBtn');
+
+        // Initialize the app
+        function init() {
+            renderContacts();
+            setupEventListeners();
+            generateSampleMessages();
+        }
+
+        // Render contacts in the sidebar
+        function renderContacts() {
+            chatList.innerHTML = '';
+            contacts.forEach(contact => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer';
+                li.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center mr-3">
+                        <i class="fas fa-user text-gray-600 dark:text-gray-300"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-800 dark:text-white">${contact.name}</p>
+                        <p class="text-xs ${contact.online ? 'text-green-500' : 'text-gray-500 dark:text-gray-400'}">${contact.online ? 'Online' : 'Offline'}</p>
+                    </div>
+                `;
+                li.addEventListener('click', () => startChat(contact.id, contact.name));
+                chatList.appendChild(li);
+            });
+        }
+
+        // Render groups in the sidebar
+        function renderGroups() {
+            groupList.innerHTML = '';
+            groups.forEach(group => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer';
+                li.innerHTML = `
+                    <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3">
+                        <i class="fas fa-users text-blue-600 dark:text-blue-400"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-800 dark:text-white">${group.name}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">${group.members.length} membros</p>
+                    </div>
+                `;
+                li.addEventListener('click', () => startGroupChat(group.id, group.name));
+                groupList.appendChild(li);
+            });
+        }
+
+        // Start a chat with a contact
+        function startChat(contactId, contactName) {
+            currentChat = { type: 'contact', id: contactId, name: contactName };
+            document.getElementById('currentChatName').textContent = contactName;
+            chatHeader.classList.remove('hidden');
+            chatContainer.classList.remove('hidden');
+            messageInput.classList.remove('hidden');
+            connectionPanel.classList.add('hidden');
             
-            // DOM elements
-            const messageInput = document.getElementById('message-input');
-            const sendBtn = document.getElementById('send-btn');
-            const messagesContainer = document.getElementById('messages-container');
-            const audioCallBtn = document.getElementById('audio-call-btn');
-            const videoCallBtn = document.getElementById('video-call-btn');
-            const callModal = document.getElementById('call-modal');
-            const closeCallModal = document.getElementById('close-call-modal');
-            const endCallBtn = document.getElementById('end-call-btn');
-            const callTypeTitle = document.getElementById('call-type-title');
-            const callStatus = document.getElementById('call-status');
-            const callRecipient = document.getElementById('call-recipient');
-            const userIDModal = document.getElementById('user-id-modal');
-            const closeIDModal = document.getElementById('close-id-modal');
-            const confirmIDBtn = document.getElementById('confirm-id-btn');
-            const darkModeToggle = document.getElementById('dark-mode-toggle');
-            const attachBtn = document.getElementById('attach-btn');
-            const micBtn = document.getElementById('mic-btn');
-            const fileModal = document.getElementById('file-modal');
-            const closeFileModal = document.getElementById('close-file-modal');
-            const cancelFileBtn = document.getElementById('cancel-file-btn');
-            const sendFileBtn = document.getElementById('send-file-btn');
-            const fileUpload = document.getElementById('file-upload');
-            const filePreview = document.getElementById('file-preview');
-            const fileName = document.getElementById('file-name');
-            const fileSize = document.getElementById('file-size');
-            const removeFileBtn = document.getElementById('remove-file-btn');
-            const audioModal = document.getElementById('audio-modal');
-            const closeAudioModal = document.getElementById('close-audio-modal');
-            const cancelAudioBtn = document.getElementById('cancel-audio-btn');
-            const stopAudioBtn = document.getElementById('stop-audio-btn');
-            const recordingStatus = document.getElementById('recording-status');
-            const recordingTimer = document.getElementById('recording-timer');
-            const profilePicUpload = document.getElementById('profile-pic-upload');
-            const profilePicPreview = document.getElementById('profile-pic-preview');
-            const uploadPicBtn = document.getElementById('upload-pic-btn');
-            const newChatBtn = document.getElementById('new-chat-btn');
-            const newChatModal = document.getElementById('new-chat-modal');
-            const closeNewChatModal = document.getElementById('close-new-chat-modal');
-            const newPrivateChatBtn = document.getElementById('new-private-chat-btn');
-            const newGroupChatBtn = document.getElementById('new-group-chat-btn');
-            const connectIdModal = document.getElementById('connect-id-modal');
-            const closeConnectIdModal = document.getElementById('close-connect-id-modal');
-            const connectIdBtn = document.getElementById('connect-id-btn');
-            const contactIdInput = document.getElementById('contact-id-input');
-            const contactNameInput = document.getElementById('contact-name-input');
-            const newGroupModal = document.getElementById('new-group-modal');
-            const closeNewGroupModal = document.getElementById('close-new-group-modal');
-            const groupNameInput = document.getElementById('group-name-input');
-            const groupContactsList = document.getElementById('group-contacts-list');
-            const createGroupBtn = document.getElementById('create-group-btn');
-            const groupInfoBtn = document.getElementById('group-info-btn');
-            const groupInfoModal = document.getElementById('group-info-modal');
-            const closeGroupInfoModal = document.getElementById('close-group-info-modal');
-            const groupInfoTitle = document.getElementById('group-info-title');
-            const groupInfoAvatar = document.getElementById('group-info-avatar');
-            const groupInfoName = document.getElementById('group-info-name');
-            const groupInfoMembers = document.getElementById('group-info-members');
-            const groupMembersList = document.getElementById('group-members-list');
-            const leaveGroupBtn = document.getElementById('leave-group-btn');
-            const chatAvatar = document.getElementById('chat-avatar');
-            const chatName = document.getElementById('chat-name');
-            const chatInfo = document.getElementById('chat-info');
-            const chatStatus = document.getElementById('chat-status');
+            // Clear and load messages for this chat
+            messages.innerHTML = '';
+            loadMessages(contactId);
+        }
+
+        // Start a group chat
+        function startGroupChat(groupId, groupName) {
+            currentChat = { type: 'group', id: groupId, name: groupName };
+            document.getElementById('currentChatName').textContent = groupName;
+            chatHeader.classList.remove('hidden');
+            chatContainer.classList.remove('hidden');
+            messageInput.classList.remove('hidden');
+            connectionPanel.classList.add('hidden');
             
-            // Sample contacts
-            const contacts = [
-                { id: 'GC-ROOST1', name: 'Galo Mestre', status: 'online', lastMessage: 'Cocoricó!', time: '10:30' },
-                { id: 'GC-HEN123', name: 'Galinha Dona', status: 'online', lastMessage: 'Ovos frescos!', time: '09:15' },
-                { id: 'GC-CHICK5', name: 'Pintinho Amarelo', status: 'offline', lastMessage: 'Piupiu!', time: 'Ontem' },
-                { id: 'GC-FARMER', name: 'Fazendeiro', status: 'offline', lastMessage: 'Alimentação às 7h', time: 'Segunda' }
+            // Clear and load messages for this group
+            messages.innerHTML = '';
+            loadGroupMessages(groupId);
+        }
+
+        // Load messages for a contact (simulated)
+        function loadMessages(contactId) {
+            // Simulated messages
+            const sampleMessages = [
+                { sender: contactId, text: 'Oi, tudo bem?', timestamp: new Date(Date.now() - 3600000), type: 'text' },
+                { sender: userId, text: 'Tudo ótimo! E com você?', timestamp: new Date(Date.now() - 1800000), type: 'text' },
+                { sender: contactId, text: 'Também estou bem, obrigado!', timestamp: new Date(Date.now() - 600000), type: 'text' }
             ];
             
-            // Sample groups
-            const groups = [];
+            sampleMessages.forEach(msg => addMessage(msg.sender, msg.text, msg.timestamp, msg.type));
+        }
+
+        // Load messages for a group (simulated)
+        function loadGroupMessages(groupId) {
+            // Simulated group messages
+            const sampleMessages = [
+                { sender: 'user_abc123', text: 'Bem-vindos ao grupo!', timestamp: new Date(Date.now() - 86400000), type: 'text' },
+                { sender: userId, text: 'Obrigado!', timestamp: new Date(Date.now() - 82800000), type: 'text' },
+                { sender: 'user_def456', text: 'Vamos marcar algo?', timestamp: new Date(Date.now() - 79200000), type: 'text' }
+            ];
             
-            // Current chat
-            let currentChat = null;
+            sampleMessages.forEach(msg => addMessage(msg.sender, msg.text, msg.timestamp, msg.type));
+        }
+
+        // Add a message to the chat
+        function addMessage(senderId, text, timestamp, type = 'text') {
+            const isMe = senderId === userId;
+            const senderName = isMe ? 'Você' : contacts.find(c => c.id === senderId)?.name || 'Desconhecido';
             
-            // Populate chats
-            const contactList = document.querySelector('.contact-list');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex ${isMe ? 'justify-end' : 'justify-start'} message-animation`;
             
-            function renderChats() {
-                contactList.innerHTML = '';
-                
-                // Add contacts
-                contacts.forEach(contact => {
-                    const contactElement = document.createElement('div');
-                    contactElement.className = `p-3 flex items-center space-x-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer dark:border-gray-700 dark:hover:bg-gray-700 ${contact.status === 'online' ? 'bg-blue-50 dark:bg-blue-900' : ''}`;
-                    contactElement.innerHTML = `
-                        <div class="relative">
-                            <div class="w-10 h-10 rounded-full ${contact.status === 'online' ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'} flex items-center justify-center text-white font-bold">
-                                <span>${contact.id.substr(3, 2)}</span>
-                            </div>
-                            <span class="absolute bottom-0 right-0 w-2 h-2 ${contact.status === 'online' ? 'bg-green-500' : 'bg-gray-400 dark:bg-gray-500'} rounded-full border border-white dark:border-gray-700"></span>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="font-medium truncate dark:text-white">${contact.name}</p>
-                            <p class="text-xs text-gray-500 truncate dark:text-gray-300">${contact.lastMessage}</p>
-                        </div>
-                        <div class="text-xs text-gray-400 dark:text-gray-300">${contact.time}</div>
-                    `;
-                    
-                    contactElement.addEventListener('click', () => {
-                        currentChat = { type: 'contact', id: contact.id, name: contact.name, status: contact.status };
-                        loadChat(currentChat);
-                    });
-                    
-                    contactList.appendChild(contactElement);
-                });
-                
-                // Add groups
-                groups.forEach(group => {
-                    const groupElement = document.createElement('div');
-                    groupElement.className = `p-3 flex items-center space-x-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer dark:border-gray-700 dark:hover:bg-gray-700`;
-                    groupElement.innerHTML = `
-                        <div class="relative">
-                            <div class="w-10 h-10 rounded-full group-avatar flex items-center justify-center text-white font-bold">
-                                <span>GC</span>
-                            </div>
-                            <span class="absolute bottom-0 right-0 w-2 h-2 bg-green-500 rounded-full border border-white dark:border-gray-700"></span>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="font-medium truncate dark:text-white">${group.name}</p>
-                            <p class="text-xs text-gray-500 truncate dark:text-gray-300">${group.members.length} participantes</p>
-                        </div>
-                        <div class="text-xs text-gray-400 dark:text-gray-300">${group.time}</div>
-                    `;
-                    
-                    groupElement.addEventListener('click', () => {
-                        currentChat = { type: 'group', id: group.id, name: group.name, members: group.members };
-                        loadChat(currentChat);
-                    });
-                    
-                    contactList.appendChild(groupElement);
-                });
-            }
-            
-            // Load chat function
-            function loadChat(chat) {
-                messagesContainer.querySelector('.flex-col').innerHTML = `
-                    <div class="text-center text-sm text-gray-500 py-4 dark:text-gray-300">
-                        <p>Conversa iniciada com ${chat.name}</p>
+            if (type === 'text') {
+                messageDiv.innerHTML = `
+                    <div class="max-w-xs md:max-w-md rounded-lg ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-bl-none'} p-3">
+                        <p class="font-semibold text-xs ${isMe ? 'text-blue-100' : 'text-gray-500 dark:text-gray-300'}">${senderName}</p>
+                        <p class="mt-1">${text}</p>
+                        <p class="text-right text-xs mt-1 ${isMe ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'}">${formatTime(timestamp)}</p>
                     </div>
                 `;
-                
-                chatName.textContent = chat.name;
-                
-                if (chat.type === 'contact') {
-                    chatInfo.textContent = chat.status === 'online' ? 'Online' : 'Offline';
-                    chatStatus.className = `absolute bottom-0 right-0 w-3 h-3 ${chat.status === 'online' ? 'bg-green-500' : 'bg-gray-400 dark:bg-gray-500'} rounded-full border-2 border-white dark:border-gray-700`;
-                    chatAvatar.className = 'w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-white font-bold';
-                    chatAvatar.innerHTML = `<span>${chat.id.substr(3, 2)}</span>`;
-                    groupInfoBtn.classList.add('hidden');
-                } else {
-                    chatInfo.textContent = `${chat.members.length} participantes`;
-                    chatStatus.className = 'absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-700';
-                    chatAvatar.className = 'w-10 h-10 rounded-full group-avatar flex items-center justify-center text-white font-bold';
-                    chatAvatar.innerHTML = `<span>GC</span>`;
-                    groupInfoBtn.classList.remove('hidden');
-                }
-                
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            }
-            
-            // Send message function
-            function sendMessage() {
-                const message = messageInput.value.trim();
-                if (message && currentChat) {
-                    // Add message to chat
-                    const messageElement = document.createElement('div');
-                    messageElement.className = 'flex justify-end';
-                    messageElement.innerHTML = `
-                        <div class="message-bubble bg-blue-500 text-white sent">
-                            <p class="text-xs font-bold mb-1">${userId}</p>
-                            <p>${message}</p>
-                            <p class="text-xs text-blue-100 text-right mt-1">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+            } else if (type === 'audio') {
+                messageDiv.innerHTML = `
+                    <div class="max-w-xs md:max-w-md rounded-lg ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-bl-none'} p-3">
+                        <p class="font-semibold text-xs ${isMe ? 'text-blue-100' : 'text-gray-500 dark:text-gray-300'}">${senderName}</p>
+                        <div class="mt-2 flex items-center">
+                            <button class="audio-play-btn p-2 rounded-full bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <div class="ml-3 flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-2">
+                                <div class="bg-blue-500 dark:bg-blue-400 h-2 rounded-full" style="width: 100%"></div>
+                            </div>
+                            <span class="ml-2 text-xs">0:05</span>
                         </div>
-                    `;
-                    messagesContainer.querySelector('.flex-col').appendChild(messageElement);
-                    
-                    // Clear input
-                    messageInput.value = '';
-                    
-                    // Scroll to bottom
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    
-                    // Simulate reply after 1-3 seconds
-                    setTimeout(() => {
-                        let replyText = "";
-                        
-                        if (currentChat.type === 'contact') {
-                            const replies = [
-                                "Cocoricó! Mensagem recebida!",
-                                "Piu piu! Entendido!",
-                                "Ótima contribuição!",
-                                "Vou repassar para o galinheiro!",
-                                "Alguém traz milho pra comemorar!"
-                            ];
-                            replyText = replies[Math.floor(Math.random() * replies.length)];
-                        } else {
-                            const groupReplies = [
-                                `${currentChat.name}: Mensagem recebida!`,
-                                `O grupo ${currentChat.name} agradece!`,
-                                `Mensagem registrada no grupo!`,
-                                `Todos em ${currentChat.name} viram sua mensagem!`
-                            ];
-                            replyText = groupReplies[Math.floor(Math.random() * groupReplies.length)];
-                        }
-                        
-                        const replyElement = document.createElement('div');
-                        replyElement.className = 'flex justify-start';
-                        replyElement.innerHTML = `
-                            <div class="message-bubble bg-gray-200 text-gray-800 received dark:bg-gray-500 dark:text-white">
-                                <p class="text-xs font-bold mb-1">${currentChat.name}</p>
-                                <p>${replyText}</p>
-                                <p class="text-xs text-gray-500 text-right mt-1 dark:text-gray-300">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                        <p class="text-right text-xs mt-1 ${isMe ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'}">${formatTime(timestamp)}</p>
+                    </div>
+                `;
+            } else if (type === 'file') {
+                messageDiv.innerHTML = `
+                    <div class="max-w-xs md:max-w-md rounded-lg ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-bl-none'} p-3">
+                        <p class="font-semibold text-xs ${isMe ? 'text-blue-100' : 'text-gray-500 dark:text-gray-300'}">${senderName}</p>
+                        <div class="mt-2 flex items-center p-2 bg-white dark:bg-gray-700 bg-opacity-30 rounded">
+                            <i class="fas fa-file-alt text-xl mr-3"></i>
+                            <div class="flex-1">
+                                <p class="text-sm truncate">${text}</p>
+                                <p class="text-xs text-gray-300 dark:text-gray-400">1.2 MB</p>
                             </div>
-                        `;
-                        messagesContainer.querySelector('.flex-col').appendChild(replyElement);
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    }, 1000 + Math.random() * 2000);
-                }
-            }
-            
-            // Send file function
-            function sendFile(file) {
-                if (file && currentChat) {
-                    // Add file message to chat
-                    const fileSize = (file.size / 1024).toFixed(2) + ' KB';
-                    const fileIcon = getFileIcon(file.type);
-                    
-                    const messageElement = document.createElement('div');
-                    messageElement.className = 'flex justify-end';
-                    messageElement.innerHTML = `
-                        <div class="message-bubble bg-blue-500 text-white sent">
-                            <p class="text-xs font-bold mb-1">${userId}</p>
-                            <div class="flex items-center p-2 bg-blue-400 rounded-lg">
-                                <div class="mr-3 text-xl">${fileIcon}</div>
-                                <div>
-                                    <p class="font-medium truncate">${file.name}</p>
-                                    <p class="text-xs">${fileSize}</p>
-                                </div>
-                            </div>
-                            <p class="text-xs text-blue-100 text-right mt-1">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                            <button class="text-blue-400 hover:text-blue-300">
+                                <i class="fas fa-download"></i>
+                            </button>
                         </div>
-                    `;
-                    messagesContainer.querySelector('.flex-col').appendChild(messageElement);
-                    
-                    // Scroll to bottom
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    
-                    // Simulate reply after 1-3 seconds
-                    setTimeout(() => {
-                        let replyText = "";
-                        
-                        if (currentChat.type === 'contact') {
-                            const replies = [
-                                "Arquivo recebido! Cocoricó!",
-                                "Piu piu! Obrigado pelo arquivo!",
-                                "Vou analisar esse documento!",
-                                "Arquivo salvo no galinheiro!"
-                            ];
-                            replyText = replies[Math.floor(Math.random() * replies.length)];
-                        } else {
-                            const groupReplies = [
-                                `Arquivo recebido pelo grupo ${currentChat.name}!`,
-                                `Todos em ${currentChat.name} podem ver seu arquivo!`,
-                                `Arquivo compartilhado com sucesso!`,
-                                `Documento salvo para o grupo!`
-                            ];
-                            replyText = groupReplies[Math.floor(Math.random() * groupReplies.length)];
-                        }
-                        
-                        const replyElement = document.createElement('div');
-                        replyElement.className = 'flex justify-start';
-                        replyElement.innerHTML = `
-                            <div class="message-bubble bg-gray-200 text-gray-800 received dark:bg-gray-500 dark:text-white">
-                                <p class="text-xs font-bold mb-1">${currentChat.name}</p>
-                                <p>${replyText}</p>
-                                <p class="text-xs text-gray-500 text-right mt-1 dark:text-gray-300">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                            </div>
-                        `;
-                        messagesContainer.querySelector('.flex-col').appendChild(replyElement);
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    }, 1000 + Math.random() * 2000);
-                }
+                        <p class="text-right text-xs mt-1 ${isMe ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'}">${formatTime(timestamp)}</p>
+                    </div>
+                `;
             }
             
-            // Get appropriate file icon
-            function getFileIcon(fileType) {
-                if (fileType.includes('image')) return '<i class="fas fa-image"></i>';
-                if (fileType.includes('audio')) return '<i class="fas fa-music"></i>';
-                if (fileType.includes('video')) return '<i class="fas fa-video"></i>';
-                if (fileType.includes('pdf')) return '<i class="fas fa-file-pdf"></i>';
-                if (fileType.includes('word')) return '<i class="fas fa-file-word"></i>';
-                if (fileType.includes('excel')) return '<i class="fas fa-file-excel"></i>';
-                if (fileType.includes('powerpoint')) return '<i class="fas fa-file-powerpoint"></i>';
-                if (fileType.includes('zip')) return '<i class="fas fa-file-archive"></i>';
-                return '<i class="fas fa-file"></i>';
-            }
+            messages.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Format time for messages
+        function formatTime(date) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Send a message
+        function sendMessage() {
+            const text = messageText.value.trim();
+            if (!text || !currentChat) return;
             
-            // Send audio message function
-            function sendAudioMessage(audioBlob) {
-                if (audioBlob && currentChat) {
-                    const audioUrl = URL.createObjectURL(audioBlob);
-                    
-                    // Add audio message to chat
-                    const messageElement = document.createElement('div');
-                    messageElement.className = 'flex justify-end';
-                    messageElement.innerHTML = `
-                        <div class="message-bubble bg-blue-500 text-white sent">
-                            <p class="text-xs font-bold mb-1">${userId}</p>
-                            <div class="flex items-center p-2 bg-blue-400 rounded-lg">
-                                <audio controls class="w-full">
-                                    <source src="${audioUrl}" type="audio/webm">
-                                    Seu navegador não suporta o elemento de áudio.
-                                </audio>
-                            </div>
-                            <p class="text-xs text-blue-100 text-right mt-1">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                        </div>
-                    `;
-                    messagesContainer.querySelector('.flex-col').appendChild(messageElement);
-                    
-                    // Scroll to bottom
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    
-                    // Simulate reply after 1-3 seconds
-                    setTimeout(() => {
-                        let replyText = "";
-                        
-                        if (currentChat.type === 'contact') {
-                            const replies = [
-                                "Mensagem de áudio recebida! Cocoricó!",
-                                "Piu piu! Vou ouvir com atenção!",
-                                "Ótima mensagem vocal!",
-                                "Gravado no galinheiro!"
-                            ];
-                            replyText = replies[Math.floor(Math.random() * replies.length)];
-                        } else {
-                            const groupReplies = [
-                                `Áudio recebido pelo grupo ${currentChat.name}!`,
-                                `Todos em ${currentChat.name} podem ouvir sua mensagem!`,
-                                `Mensagem de voz compartilhada com sucesso!`,
-                                `Áudio salvo para o grupo!`
-                            ];
-                            replyText = groupReplies[Math.floor(Math.random() * groupReplies.length)];
-                        }
-                        
-                        const replyElement = document.createElement('div');
-                        replyElement.className = 'flex justify-start';
-                        replyElement.innerHTML = `
-                            <div class="message-bubble bg-gray-200 text-gray-800 received dark:bg-gray-500 dark:text-white">
-                                <p class="text-xs font-bold mb-1">${currentChat.name}</p>
-                                <p>${replyText}</p>
-                                <p class="text-xs text-gray-500 text-right mt-1 dark:text-gray-300">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                            </div>
-                        `;
-                        messagesContainer.querySelector('.flex-col').appendChild(replyElement);
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    }, 1000 + Math.random() * 2000);
-                }
-            }
+            // Simulate sending message
+            addMessage(userId, text, new Date());
+            messageText.value = '';
             
-            // Call functions
-            function startCall(isVideo) {
-                if (!currentChat) {
-                    alert('Selecione um contato primeiro!');
-                    return;
-                }
+            // Simulate receiving a reply after 1-3 seconds
+            if (currentChat.type === 'contact') {
+                setTimeout(() => {
+                    const replies = ['Ok!', 'Entendi', 'Tudo bem', 'Ótimo!', 'Vamos combinar algo?'];
+                    const randomReply = replies[Math.floor(Math.random() * replies.length)];
+                    addMessage(currentChat.id, randomReply, new Date());
+                }, 1000 + Math.random() * 2000);
+            }
+        }
+
+        // Start recording audio
+        function startRecording() {
+            if (isRecording) return;
+            
+            // In a real app, we would use the Web Audio API
+            isRecording = true;
+            recordAudioBtn.innerHTML = '<i class="fas fa-stop text-red-600"></i>';
+            recordAudioBtn.classList.add('animate-pulse');
+            
+            // Simulate recording for 5 seconds
+            setTimeout(() => {
+                stopRecording();
+            }, 5000);
+        }
+
+        // Stop recording audio
+        function stopRecording() {
+            if (!isRecording) return;
+            
+            isRecording = false;
+            recordAudioBtn.innerHTML = '<i class="fas fa-microphone text-gray-600 dark:text-gray-300"></i>';
+            recordAudioBtn.classList.remove('animate-pulse');
+            
+            // Simulate sending audio message
+            addMessage(userId, 'Mensagem de áudio', new Date(), 'audio');
+            
+            // Simulate receiving a reply after 2-4 seconds
+            if (currentChat.type === 'contact') {
+                setTimeout(() => {
+                    addMessage(currentChat.id, 'Mensagem de áudio', new Date(), 'audio');
+                }, 2000 + Math.random() * 2000);
+            }
+        }
+
+        // Start a call (voice or video)
+        function startCall(isVideo) {
+            if (!currentChat) return;
+            
+            currentCall = {
+                id: 'call_' + Math.random().toString(36).substr(2, 9),
+                with: currentChat.id,
+                isVideo: isVideo,
+                isMuted: false,
+                isVideoOn: isVideo
+            };
+            
+            // Show call UI
+            callModal.classList.remove('hidden');
+            document.getElementById('callTitle').textContent = `Chamando ${currentChat.name}...`;
+            
+            // Simulate call being answered after 3-5 seconds
+            setTimeout(() => {
+                document.getElementById('callTitle').textContent = `Chamada com ${currentChat.name}`;
                 
-                callTypeTitle.textContent = isVideo ? 'Chamada de Vídeo' : 'Chamada de Voz';
-                callRecipient.textContent = currentChat.name;
+                // Simulate receiving a call on the other end
+                if (Math.random() > 0.2) { // 80% chance of answer
+                    setTimeout(() => {
+                        simulateIncomingCall(currentChat.id, currentChat.name, isVideo);
+                    }, 1000);
+                }
+            }, 3000 + Math.random() * 2000);
+        }
+
+        // Simulate an incoming call
+        function simulateIncomingCall(callerId, callerName, isVideo) {
+            incomingCallModal.classList.remove('hidden');
+            document.getElementById('callerName').textContent = `${callerName} está chamando...`;
+            
+            // Auto-reject after 30 seconds if not answered
+            const timeout = setTimeout(() => {
+                if (incomingCallModal.classList.contains('hidden')) return;
+                endIncomingCall();
+            }, 30000);
+            
+            // Setup call answer/reject buttons
+            acceptCallBtn.onclick = () => {
+                clearTimeout(timeout);
+                endIncomingCall();
                 callModal.classList.remove('hidden');
-                
-                // Simulate call progress
-                setTimeout(() => {
-                    callStatus.textContent = 'Conectando...';
-                }, 1500);
-                
-                setTimeout(() => {
-                    callStatus.textContent = 'Conexão P2P estabelecida';
-                }, 3000);
+                document.getElementById('callTitle').textContent = `Chamada com ${callerName}`;
+            };
+            
+            rejectCallBtn.onclick = () => {
+                clearTimeout(timeout);
+                endIncomingCall();
+                // Show call ended notification
+                addSystemMessage(`${callerName} rejeitou sua chamada`);
+            };
+        }
+
+        // End incoming call UI
+        function endIncomingCall() {
+            incomingCallModal.classList.add('hidden');
+        }
+
+        // End current call
+        function endCurrentCall() {
+            if (!currentCall) return;
+            
+            callModal.classList.add('hidden');
+            currentCall = null;
+            
+            // Show call ended notification
+            addSystemMessage('Chamada encerrada');
+        }
+
+        // Add a system message (notifications)
+        function addSystemMessage(text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex justify-center message-animation';
+            messageDiv.innerHTML = `
+                <div class="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs px-3 py-1 rounded-full">
+                    ${text}
+                </div>
+            `;
+            messages.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Create a new group
+        function createNewGroup() {
+            const name = groupName.value.trim();
+            if (!name) return;
+            
+            // Select checked members
+            const checkboxes = groupMembersList.querySelectorAll('input[type="checkbox"]:checked');
+            const members = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (members.length === 0) {
+                alert('Selecione pelo menos um membro para o grupo');
+                return;
             }
             
-            function endCall() {
-                callModal.classList.add('hidden');
-                
-                // Add call log to chat
-                const callLogElement = document.createElement('div');
-                callLogElement.className = 'flex justify-center my-4';
-                callLogElement.innerHTML = `
-                    <div class="bg-gray-100 px-4 py-2 rounded-full text-sm text-gray-600 flex items-center space-x-2 dark:bg-gray-500 dark:text-gray-200">
-                        <i class="fas fa-phone"></i>
-                        <span>Chamada ${callTypeTitle.textContent.toLowerCase()} encerrada - ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                    </div>
+            // Create new group
+            const newGroup = {
+                id: 'group_' + Math.random().toString(36).substr(2, 9),
+                name: name,
+                members: members,
+                admin: userId,
+                inviteLink: `https://galochat.com/join/${Math.random().toString(36).substr(2, 10)}`
+            };
+            
+            groups.push(newGroup);
+            renderGroups();
+            
+            // Close modal
+            createGroupModal.classList.add('hidden');
+            groupName.value = '';
+            
+            // Uncheck all checkboxes
+            groupMembersList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+            });
+            
+            // Show group created notification
+            addSystemMessage(`Grupo "${name}" criado com sucesso!`);
+            
+            // Start chat with the new group
+            startGroupChat(newGroup.id, newGroup.name);
+        }
+
+        // Show create group modal
+        function showCreateGroupModal() {
+            // Populate members list
+            groupMembersList.innerHTML = '';
+            contacts.forEach(contact => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded';
+                div.innerHTML = `
+                    <input type="checkbox" id="member_${contact.id}" value="${contact.id}" class="mr-2">
+                    <label for="member_${contact.id}" class="flex-1 cursor-pointer">${contact.name}</label>
                 `;
-                messagesContainer.querySelector('.flex-col').appendChild(callLogElement);
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            }
+                groupMembersList.appendChild(div);
+            });
             
-            // Dark mode toggle
-            function toggleDarkMode() {
-                document.body.classList.toggle('dark-mode');
-                const icon = darkModeToggle.querySelector('i');
-                if (document.body.classList.contains('dark-mode')) {
-                    icon.classList.remove('fa-moon');
-                    icon.classList.add('fa-sun');
+            createGroupModal.classList.remove('hidden');
+        }
+
+        // Show file upload modal
+        function showFileUploadModal() {
+            fileUploadModal.classList.remove('hidden');
+        }
+
+        // Handle file selection
+        function handleFileSelect() {
+            const file = fileInput.files[0];
+            if (!file) return;
+            
+            // Simulate file upload
+            addMessage(userId, file.name, new Date(), 'file');
+            fileUploadModal.classList.add('hidden');
+            
+            // Simulate receiving a file after 2-4 seconds
+            if (currentChat.type === 'contact') {
+                setTimeout(() => {
+                    addMessage(currentChat.id, 'documento.pdf', new Date(), 'file');
+                }, 2000 + Math.random() * 2000);
+            }
+        }
+
+        // Toggle dark/light mode
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark-mode', isDarkMode);
+            document.body.classList.toggle('light-mode', !isDarkMode);
+            
+            themeToggle.innerHTML = isDarkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        }
+
+        // Generate sample messages for demo
+        function generateSampleMessages() {
+            // Add a sample group
+            groups.push({
+                id: 'group_sample1',
+                name: 'Amigos',
+                members: ['user_abc123', 'user_def456', userId],
+                admin: 'user_abc123',
+                inviteLink: 'https://galochat.com/join/samplegroup1'
+            });
+            renderGroups();
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Theme toggle
+            themeToggle.addEventListener('click', toggleTheme);
+            
+            // New chat button
+            newChatBtn.addEventListener('click', () => {
+                chatHeader.classList.add('hidden');
+                chatContainer.classList.add('hidden');
+                messageInput.classList.add('hidden');
+                connectionPanel.classList.remove('hidden');
+                currentChat = null;
+            });
+            
+            // Copy ID button
+            copyIdBtn.addEventListener('click', () => {
+                myId.select();
+                document.execCommand('copy');
+                addSystemMessage('ID copiado para a área de transferência!');
+            });
+            
+            // Connect button
+            connectBtn.addEventListener('click', () => {
+                const friendIdValue = friendId.value.trim();
+                if (!friendIdValue) return;
+                
+                // Simulate connection
+                const contact = contacts.find(c => c.id === friendIdValue);
+                if (contact) {
+                    startChat(contact.id, contact.name);
                 } else {
-                    icon.classList.remove('fa-sun');
-                    icon.classList.add('fa-moon');
-                }
-            }
-            
-            // Audio recording
-            let mediaRecorder;
-            let audioChunks = [];
-            let recordingInterval;
-            let seconds = 0;
-            
-            function startRecording() {
-                if (!currentChat) {
-                    alert('Selecione um contato primeiro!');
-                    return;
-                }
-                
-                audioChunks = [];
-                seconds = 0;
-                updateTimer();
-                
-                navigator.mediaDevices.getUserMedia({ audio: true })
-                    .then(stream => {
-                        mediaRecorder = new MediaRecorder(stream);
-                        mediaRecorder.start();
-                        
-                        mediaRecorder.ondataavailable = event => {
-                            audioChunks.push(event.data);
-                        };
-                        
-                        recordingInterval = setInterval(() => {
-                            seconds++;
-                            updateTimer();
-                        }, 1000);
-                        
-                        audioModal.classList.remove('hidden');
-                    })
-                    .catch(err => {
-                        console.error('Erro ao acessar microfone:', err);
-                        alert('Não foi possível acessar o microfone. Por favor, verifique as permissões.');
-                    });
-            }
-            
-            function stopRecording() {
-                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                    mediaRecorder.stop();
-                    clearInterval(recordingInterval);
-                    
-                    mediaRecorder.onstop = () => {
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                        sendAudioMessage(audioBlob);
+                    // If contact not found, add to contacts and start chat
+                    const newContact = {
+                        id: friendIdValue,
+                        name: `Usuário ${friendIdValue.substr(5, 3)}`,
+                        online: true
                     };
-                    
-                    // Stop all tracks
-                    mediaRecorder.stream.getTracks().forEach(track => track.stop());
-                    
-                    audioModal.classList.add('hidden');
+                    contacts.push(newContact);
+                    renderContacts();
+                    startChat(newContact.id, newContact.name);
                 }
-            }
+            });
             
-            function cancelRecording() {
-                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                    mediaRecorder.stop();
-                    clearInterval(recordingInterval);
-                    
-                    // Stop all tracks
-                    mediaRecorder.stream.getTracks().forEach(track => track.stop());
-                    
-                    audioModal.classList.add('hidden');
-                }
-            }
+            // More options button
+            moreOptionsBtn.addEventListener('click', () => {
+                moreOptionsMenu.classList.toggle('hidden');
+            });
             
-            function updateTimer() {
-                const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
-                const remainingSeconds = (seconds % 60).toString().padStart(2, '0');
-                recordingTimer.textContent = `${minutes}:${remainingSeconds}`;
-            }
+            // Close more options when clicking elsewhere
+            document.addEventListener('click', (e) => {
+                if (!moreOptionsBtn.contains(e.target) && !moreOptionsMenu.contains(e.target)) {
+                    moreOptionsMenu.classList.add('hidden');
+                }
+            });
             
-            // Connect by ID function
-            function connectById() {
-                const contactId = contactIdInput.value.trim().toUpperCase();
-                const contactName = contactNameInput.value.trim() || `Contato ${contactId}`;
-                
-                if (!contactId) {
-                    alert('Por favor, insira um ID válido');
-                    return;
-                }
-                
-                if (contactId === userId) {
-                    alert('Você não pode se conectar consigo mesmo!');
-                    return;
-                }
-                
-                // Check if contact already exists
-                const existingContact = contacts.find(c => c.id === contactId);
-                if (existingContact) {
-                    alert('Você já possui este contato em sua lista!');
-                    return;
-                }
-                
-                // Add new contact
-                const newContact = {
-                    id: contactId,
-                    name: contactName,
-                    status: 'online',
-                    lastMessage: 'Nova conexão',
-                    time: 'Agora'
-                };
-                
-                contacts.push(newContact);
-                renderChats();
-                
-                // Close modal
-                connectIdModal.classList.add('hidden');
-                contactIdInput.value = '';
-                contactNameInput.value = '';
-                
-                // Select the new contact
-                currentChat = { type: 'contact', id: newContact.id, name: newContact.name, status: newContact.status };
-                loadChat(currentChat);
-            }
+            // Send file button
+            sendFileBtn.addEventListener('click', showFileUploadModal);
             
-            // Create new group function
-            function createNewGroup() {
-                const groupName = groupNameInput.value.trim();
-                const selectedContacts = Array.from(groupContactsList.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
-                
-                if (!groupName) {
-                    alert('Por favor, insira um nome para o grupo');
-                    return;
-                }
-                
-                if (selectedContacts.length < 1) {
-                    alert('Selecione pelo menos um participante para o grupo');
-                    return;
-                }
-                
-                // Create new group
-                const groupId = 'GC-GRP' + Math.random().toString(36).substr(2, 4).toUpperCase();
-                const newGroup = {
-                    id: groupId,
-                    name: groupName,
-                    members: selectedContacts,
-                    time: 'Agora'
-                };
-                
-                groups.push(newGroup);
-                renderChats();
-                
-                // Close modal
-                newGroupModal.classList.add('hidden');
-                groupNameInput.value = '';
-                
-                // Clear checkboxes
-                groupContactsList.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-                
-                // Select the new group
-                currentChat = { type: 'group', id: newGroup.id, name: newGroup.name, members: newGroup.members };
-                loadChat(currentChat);
-            }
+            // Create group button
+            createGroupBtn.addEventListener('click', showCreateGroupModal);
             
-            // Show group info
-            function showGroupInfo() {
-                if (!currentChat || currentChat.type !== 'group') return;
-                
-                const group = groups.find(g => g.id === currentChat.id);
-                if (!group) return;
-                
-                groupInfoName.textContent = group.name;
-                groupInfoAvatar.innerHTML = `<span>${group.name.substr(0, 2)}</span>`;
-                groupInfoMembers.textContent = `${group.members.length} participantes`;
-                
-                // Populate members list
-                groupMembersList.innerHTML = '';
-                group.members.forEach(memberId => {
-                    const member = contacts.find(c => c.id === memberId) || { id: memberId, name: memberId, status: 'offline' };
-                    
-                    const memberElement = document.createElement('div');
-                    memberElement.className = 'flex items-center p-2 hover:bg-gray-100 rounded-lg dark:hover:bg-gray-700';
-                    memberElement.innerHTML = `
-                        <div class="relative mr-3">
-                            <div class="w-8 h-8 rounded-full ${member.status === 'online' ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'} flex items-center justify-center text-white text-xs font-bold">
-                                <span>${member.id.substr(3, 2)}</span>
-                            </div>
-                            <span class="absolute bottom-0 right-0 w-2 h-2 ${member.status === 'online' ? 'bg-green-500' : 'bg-gray-400 dark:bg-gray-500'} rounded-full border border-white dark:border-gray-700"></span>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium truncate dark:text-white">${member.name}</p>
-                            <p class="text-xs text-gray-500 truncate dark:text-gray-300">${member.status === 'online' ? 'Online' : 'Offline'}</p>
-                        </div>
-                    `;
-                    
-                    groupMembersList.appendChild(memberElement);
-                });
-                
-                groupInfoModal.classList.remove('hidden');
-            }
-            
-            // Leave group function
-            function leaveGroup() {
-                if (!currentChat || currentChat.type !== 'group') return;
-                
-                if (confirm(`Tem certeza que deseja sair do grupo ${currentChat.name}?`)) {
-                    const groupIndex = groups.findIndex(g => g.id === currentChat.id);
-                    if (groupIndex !== -1) {
-                        groups.splice(groupIndex, 1);
-                        renderChats();
-                        
-                        // Clear current chat
-                        currentChat = null;
-                        chatName.textContent = 'GaloConnect';
-                        chatInfo.textContent = 'Selecione uma conversa';
-                        chatStatus.className = 'absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-700';
-                        chatAvatar.className = 'w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-white font-bold';
-                        chatAvatar.innerHTML = '<span>GC</span>';
-                        groupInfoBtn.classList.add('hidden');
-                        
-                        messagesContainer.querySelector('.flex-col').innerHTML = `
-                            <div class="text-center text-sm text-gray-500 py-4 dark:text-gray-300">
-                                <p>Bem-vindo ao GaloConnect! Selecione uma conversa ou inicie uma nova.</p>
-                            </div>
-                        `;
-                    }
-                    
-                    groupInfoModal.classList.add('hidden');
-                }
-            }
-            
-            // Event listeners
-            sendBtn.addEventListener('click', sendMessage);
-            messageInput.addEventListener('keypress', function(e) {
+            // Message input events
+            messageText.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     sendMessage();
                 }
             });
             
-            audioCallBtn.addEventListener('click', () => startCall(false));
+            // Send message button
+            sendMessageBtn.addEventListener('click', sendMessage);
+            
+            // Record audio button
+            recordAudioBtn.addEventListener('mousedown', startRecording);
+            recordAudioBtn.addEventListener('mouseup', stopRecording);
+            recordAudioBtn.addEventListener('mouseleave', stopRecording);
+            
+            // Touch events for mobile recording
+            recordAudioBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                startRecording();
+            });
+            
+            recordAudioBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                stopRecording();
+            });
+            
+            // Voice call button
+            voiceCallBtn.addEventListener('click', () => startCall(false));
+            
+            // Video call button
             videoCallBtn.addEventListener('click', () => startCall(true));
-            closeCallModal.addEventListener('click', endCall);
-            endCallBtn.addEventListener('click', endCall);
             
-            // Close user ID modal after confirmation
-            confirmIDBtn.addEventListener('click', function() {
-                userIDModal.classList.add('hidden');
+            // Group modal buttons
+            cancelGroupBtn.addEventListener('click', () => {
+                createGroupModal.classList.add('hidden');
             });
             
-            // Dark mode toggle
-            darkModeToggle.addEventListener('click', toggleDarkMode);
+            confirmGroupBtn.addEventListener('click', createNewGroup);
             
-            // File attachment
-            attachBtn.addEventListener('click', function() {
-                if (!currentChat) {
-                    alert('Selecione uma conversa primeiro!');
-                    return;
-                }
-                fileModal.classList.remove('hidden');
-                filePreview.classList.add('hidden');
-                fileUpload.value = '';
+            // File upload modal buttons
+            selectFileBtn.addEventListener('click', () => {
+                fileInput.click();
             });
             
-            closeFileModal.addEventListener('click', function() {
-                fileModal.classList.add('hidden');
+            fileInput.addEventListener('change', handleFileSelect);
+            
+            cancelFileBtn.addEventListener('click', () => {
+                fileUploadModal.classList.add('hidden');
             });
             
-            cancelFileBtn.addEventListener('click', function() {
-                fileModal.classList.add('hidden');
+            // Call control buttons
+            endCallBtn.addEventListener('click', endCurrentCall);
+            
+            muteCallBtn.addEventListener('click', () => {
+                if (!currentCall) return;
+                currentCall.isMuted = !currentCall.isMuted;
+                muteCallBtn.innerHTML = currentCall.isMuted 
+                    ? '<i class="fas fa-microphone"></i>' 
+                    : '<i class="fas fa-microphone-slash"></i>';
             });
             
-            fileUpload.addEventListener('change', function() {
-                if (this.files && this.files[0]) {
-                    const file = this.files[0];
-                    fileName.textContent = file.name;
-                    fileSize.textContent = (file.size / 1024).toFixed(2) + ' KB';
-                    filePreview.classList.remove('hidden');
-                }
+            videoToggleBtn.addEventListener('click', () => {
+                if (!currentCall || !currentCall.isVideo) return;
+                currentCall.isVideoOn = !currentCall.isVideoOn;
+                videoToggleBtn.innerHTML = currentCall.isVideoOn 
+                    ? '<i class="fas fa-video-slash"></i>' 
+                    : '<i class="fas fa-video"></i>';
             });
-            
-            removeFileBtn.addEventListener('click', function() {
-                filePreview.classList.add('hidden');
-                fileUpload.value = '';
-            });
-            
-            sendFileBtn.addEventListener('click', function() {
-                if (fileUpload.files && fileUpload.files[0]) {
-                    sendFile(fileUpload.files[0]);
-                    fileModal.classList.add('hidden');
-                } else {
-                    alert('Por favor, selecione um arquivo primeiro.');
-                }
-            });
-            
-            // Audio recording
-            micBtn.addEventListener('click', startRecording);
-            
-            closeAudioModal.addEventListener('click', cancelRecording);
-            cancelAudioBtn.addEventListener('click', cancelRecording);
-            stopAudioBtn.addEventListener('click', stopRecording);
-            
-            // Profile picture upload
-            uploadPicBtn.addEventListener('click', function() {
-                profilePicUpload.click();
-            });
-            
-            profilePicUpload.addEventListener('change', function() {
-                if (this.files && this.files[0]) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        profilePicPreview.src = e.target.result;
-                    };
-                    reader.readAsDataURL(this.files[0]);
-                }
-            });
-            
-            // New chat modal
-            newChatBtn.addEventListener('click', function() {
-                newChatModal.classList.remove('hidden');
-            });
-            
-            closeNewChatModal.addEventListener('click', function() {
-                newChatModal.classList.add('hidden');
-            });
-            
-            newPrivateChatBtn.addEventListener('click', function() {
-                newChatModal.classList.add('hidden');
-                connectIdModal.classList.remove('hidden');
-            });
-            
-            newGroupChatBtn.addEventListener('click', function() {
-                newChatModal.classList.add('hidden');
-                
-                // Populate group contacts list
-                groupContactsList.innerHTML = '';
-                contacts.forEach(contact => {
-                    const contactElement = document.createElement('label');
-                    contactElement.className = 'flex items-center p-2 hover:bg-gray-100 rounded-lg dark:hover:bg-gray-700';
-                    contactElement.innerHTML = `
-                        <input type="checkbox" value="${contact.id}" class="mr-3 rounded text-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600">
-                        <div class="relative mr-3">
-                            <div class="w-8 h-8 rounded-full ${contact.status === 'online' ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'} flex items-center justify-center text-white text-xs font-bold">
-                                <span>${contact.id.substr(3, 2)}</span>
-                            </div>
-                            <span class="absolute bottom-0 right-0 w-2 h-2 ${contact.status === 'online' ? 'bg-green-500' : 'bg-gray-400 dark:bg-gray-500'} rounded-full border border-white dark:border-gray-700"></span>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium truncate dark:text-white">${contact.name}</p>
-                            <p class="text-xs text-gray-500 truncate dark:text-gray-300">${contact.id}</p>
-                        </div>
-                    `;
-                    
-                    groupContactsList.appendChild(contactElement);
-                });
-                
-                newGroupModal.classList.remove('hidden');
-            });
-            
-            // Connect by ID modal
-            closeConnectIdModal.addEventListener('click', function() {
-                connectIdModal.classList.add('hidden');
-            });
-            
-            connectIdBtn.addEventListener('click', connectById);
-            
-            // New group modal
-            closeNewGroupModal.addEventListener('click', function() {
-                newGroupModal.classList.add('hidden');
-            });
-            
-            createGroupBtn.addEventListener('click', createNewGroup);
-            
-            // Group info
-            groupInfoBtn.addEventListener('click', showGroupInfo);
-            
-            closeGroupInfoModal.addEventListener('click', function() {
-                groupInfoModal.classList.add('hidden');
-            });
-            
-            leaveGroupBtn.addEventListener('click', leaveGroup);
-            
-            // Close modals when clicking outside
-            window.addEventListener('click', function(event) {
-                if (event.target === callModal) {
-                    endCall();
-                }
-                if (event.target === fileModal) {
-                    fileModal.classList.add('hidden');
-                }
-                if (event.target === audioModal) {
-                    cancelRecording();
-                }
-                if (event.target === newChatModal) {
-                    newChatModal.classList.add('hidden');
-                }
-                if (event.target === connectIdModal) {
-                    connectIdModal.classList.add('hidden');
-                }
-                if (event.target === newGroupModal) {
-                    newGroupModal.classList.add('hidden');
-                }
-                if (event.target === groupInfoModal) {
-                    groupInfoModal.classList.add('hidden');
-                }
-                if (event.target === userIDModal) {
-                    // Don't close when clicking outside, force user to confirm ID
-                }
-            });
-            
-            // Initial render
-            renderChats();
-            
-            // Initial scroll to bottom
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        });
+        }
+
+        // Initialize the app
+        init();
     </script>
 </body>
 </html>
