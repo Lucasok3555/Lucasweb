@@ -38,6 +38,101 @@
         .connection-disconnected {
             background-color: #EF4444;
         }
+        .video-thumbnail {
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+            background-color: #000;
+        }
+        .video-thumbnail video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .video-thumbnail::after {
+            content: '\f144';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 40px;
+            opacity: 0.8;
+            text-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        .video-tab {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 40;
+        }
+        .video-feed {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            z-index: 50;
+            overflow-y: auto;
+            display: none;
+        }
+        .video-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #111;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .video-player {
+            width: 100%;
+            display: block;
+        }
+        .close-video-feed {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 51;
+        }
+        .tab-indicator {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #EF4444;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        .recording-indicator {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #EF4444;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            z-index: 100;
+            display: none;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -84,8 +179,31 @@
                     <form id="postForm" class="space-y-4">
                         <div>
                             <label for="postContent" class="block text-sm font-medium text-gray-700 mb-1">Mensagem</label>
-                            <textarea id="postContent" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="O que você está pensando?" required></textarea>
+                            <textarea id="postContent" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="O que você está pensando?"></textarea>
                         </div>
+                        
+                        <div class="flex items-center space-x-4">
+                            <div class="flex-1">
+                                <input type="file" id="imageUpload" accept="image/*" class="hidden">
+                                <label for="imageUpload" class="w-full block text-center bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg cursor-pointer transition">
+                                    <i class="fas fa-image mr-2"></i> Imagem
+                                </label>
+                            </div>
+                            <div class="flex-1">
+                                <button type="button" id="videoRecordBtn" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg transition">
+                                    <i class="fas fa-video mr-2"></i> Vídeo
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="mediaPreview" class="hidden rounded-lg overflow-hidden relative">
+                            <button type="button" id="removeMediaBtn" class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            <img id="imagePreview" class="hidden w-full h-auto">
+                            <video id="videoPreview" class="hidden w-full" controls></video>
+                        </div>
+                        
                         <div class="flex items-center">
                             <input id="anonymousCheck" type="checkbox" class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded" checked>
                             <label for="anonymousCheck" class="ml-2 block text-sm text-gray-700">Postar anonimamente</label>
@@ -138,6 +256,33 @@
         </div>
     </div>
 
+    <!-- Video Tab Button -->
+    <div class="video-tab">
+        <button id="openVideoFeedBtn" class="bg-purple-600 text-white rounded-full p-4 shadow-lg relative hover:bg-purple-700 transition">
+            <i class="fas fa-video text-xl"></i>
+            <span id="videoCount" class="tab-indicator hidden">0</span>
+        </button>
+    </div>
+
+    <!-- Video Feed -->
+    <div id="videoFeed" class="video-feed">
+        <div class="close-video-feed">
+            <i class="fas fa-times"></i>
+        </div>
+        <div id="videoFeedContainer" class="py-20 px-4">
+            <!-- Videos will be inserted here -->
+            <div id="emptyVideoFeed" class="text-center py-20">
+                <i class="fas fa-video-slash text-4xl text-gray-500 mb-3"></i>
+                <p class="text-gray-400">Nenhum vídeo encontrado</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recording Indicator -->
+    <div id="recordingIndicator" class="recording-indicator">
+        <i class="fas fa-circle pulse mr-2"></i> Gravando vídeo...
+    </div>
+
     <!-- Share ID Modal -->
     <div id="shareModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white rounded-xl p-6 w-full max-w-md">
@@ -151,6 +296,21 @@
             </div>
             <div class="mt-4 flex justify-end">
                 <button id="closeShareModal" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Video Recording Modal -->
+    <div id="videoModal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 hidden">
+        <div class="w-full max-w-md">
+            <div class="relative">
+                <video id="videoLivePreview" class="w-full rounded-lg" autoplay muted></video>
+                <button id="stopRecordingBtn" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-red-600 text-white rounded-full p-4 shadow-lg hover:bg-red-700 transition">
+                    <i class="fas fa-stop"></i>
+                </button>
+                <div class="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded">
+                    <span id="recordingTimer">00:10</span>
+                </div>
             </div>
         </div>
     </div>
@@ -179,6 +339,33 @@
             const connectPeerBtn = document.getElementById('connectPeerBtn');
             const connectionStatus = document.getElementById('connectionStatus');
             const peerCount = document.getElementById('peerCount');
+            const imageUpload = document.getElementById('imageUpload');
+            const videoRecordBtn = document.getElementById('videoRecordBtn');
+            const mediaPreview = document.getElementById('mediaPreview');
+            const imagePreview = document.getElementById('imagePreview');
+            const videoPreview = document.getElementById('videoPreview');
+            const removeMediaBtn = document.getElementById('removeMediaBtn');
+            const openVideoFeedBtn = document.getElementById('openVideoFeedBtn');
+            const videoFeed = document.getElementById('videoFeed');
+            const videoFeedContainer = document.getElementById('videoFeedContainer');
+            const emptyVideoFeed = document.getElementById('emptyVideoFeed');
+            const closeVideoFeed = document.querySelector('.close-video-feed');
+            const videoCount = document.getElementById('videoCount');
+            const videoModal = document.getElementById('videoModal');
+            const videoLivePreview = document.getElementById('videoLivePreview');
+            const stopRecordingBtn = document.getElementById('stopRecordingBtn');
+            const recordingTimer = document.getElementById('recordingTimer');
+            const recordingIndicator = document.getElementById('recordingIndicator');
+            
+            // Media variables
+            let mediaFile = null;
+            let mediaType = null; // 'image' or 'video'
+            let mediaUrl = null;
+            let mediaStream = null;
+            let mediaRecorder = null;
+            let recordedChunks = [];
+            let recordingInterval = null;
+            let recordingSeconds = 10;
             
             // PeerJS variables
             let peer;
@@ -214,6 +401,156 @@
                 if (!infoBtn.contains(event.target) && !infoDropdown.contains(event.target)) {
                     infoDropdown.classList.add('hidden');
                 }
+            });
+
+            // Image upload
+            imageUpload.addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    const file = e.target.files[0];
+                    if (file.type.startsWith('image/')) {
+                        // Clear any previous media
+                        clearMedia();
+                        
+                        mediaType = 'image';
+                        mediaFile = file;
+                        mediaUrl = URL.createObjectURL(file);
+                        
+                        imagePreview.src = mediaUrl;
+                        imagePreview.classList.remove('hidden');
+                        mediaPreview.classList.remove('hidden');
+                        
+                        // If there was a video recording, stop it
+                        stopRecording();
+                    } else {
+                        alert('Por favor, selecione um arquivo de imagem válido.');
+                    }
+                }
+            });
+
+            // Video recording
+            videoRecordBtn.addEventListener('click', function() {
+                // Clear any previous media
+                clearMedia();
+                
+                // Request access to camera
+                navigator.mediaDevices.getUserMedia({ 
+                    video: true,
+                    audio: true
+                }).then(function(stream) {
+                    mediaStream = stream;
+                    videoLivePreview.srcObject = stream;
+                    videoModal.classList.remove('hidden');
+                    recordingIndicator.style.display = 'flex';
+                    
+                    // Start recording
+                    recordedChunks = [];
+                    mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: 'video/webm'
+                    });
+                    
+                    mediaRecorder.ondataavailable = function(e) {
+                        if (e.data.size > 0) {
+                            recordedChunks.push(e.data);
+                        }
+                    };
+                    
+                    mediaRecorder.onstop = function() {
+                        const blob = new Blob(recordedChunks, {
+                            type: 'video/webm'
+                        });
+                        
+                        mediaType = 'video';
+                        mediaFile = new File([blob], 'recording.webm', { type: 'video/webm' });
+                        mediaUrl = URL.createObjectURL(blob);
+                        
+                        videoPreview.src = mediaUrl;
+                        videoPreview.classList.remove('hidden');
+                        mediaPreview.classList.remove('hidden');
+                        
+                        // Update video feed count
+                        updateVideoCount();
+                    };
+                    
+                    mediaRecorder.start();
+                    
+                    // Start timer
+                    recordingSeconds = 10;
+                    updateTimerDisplay();
+                    recordingInterval = setInterval(function() {
+                        recordingSeconds--;
+                        updateTimerDisplay();
+                        
+                        if (recordingSeconds <= 0) {
+                            stopRecording();
+                        }
+                    }, 1000);
+                    
+                }).catch(function(err) {
+                    console.error('Erro ao acessar câmera:', err);
+                    alert('Não foi possível acessar a câmera. Por favor, verifique as permissões.');
+                });
+            });
+
+            // Stop recording
+            stopRecordingBtn.addEventListener('click', stopRecording);
+            
+            function stopRecording() {
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                }
+                
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach(track => track.stop());
+                    mediaStream = null;
+                }
+                
+                if (recordingInterval) {
+                    clearInterval(recordingInterval);
+                    recordingInterval = null;
+                }
+                
+                videoModal.classList.add('hidden');
+                recordingIndicator.style.display = 'none';
+            }
+            
+            function updateTimerDisplay() {
+                const minutes = Math.floor(recordingSeconds / 60);
+                const seconds = recordingSeconds % 60;
+                recordingTimer.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            // Remove media
+            removeMediaBtn.addEventListener('click', clearMedia);
+            
+            function clearMedia() {
+                mediaFile = null;
+                mediaType = null;
+                
+                if (mediaUrl) {
+                    URL.revokeObjectURL(mediaUrl);
+                    mediaUrl = null;
+                }
+                
+                imagePreview.classList.add('hidden');
+                videoPreview.classList.add('hidden');
+                mediaPreview.classList.add('hidden');
+                
+                // Stop any ongoing recording
+                stopRecording();
+                
+                // Reset file input
+                imageUpload.value = '';
+            }
+
+            // Open video feed
+            openVideoFeedBtn.addEventListener('click', function() {
+                videoFeed.style.display = 'block';
+                renderVideoFeed();
+            });
+
+            // Close video feed
+            closeVideoFeed.addEventListener('click', function() {
+                videoFeed.style.display = 'none';
             });
 
             // Initialize PeerJS
@@ -298,6 +635,11 @@
                     
                     if (data.type === 'new_post') {
                         addPostToFeed(data.post, false);
+                        
+                        // If it's a video post, update video feed
+                        if (data.post.mediaType === 'video') {
+                            updateVideoCount();
+                        }
                     } else if (data.type === 'initial_posts') {
                         // Merge received posts with our own
                         const existingPosts = JSON.parse(localStorage.getItem('anonSocialPosts')) || [];
@@ -307,6 +649,11 @@
                         if (newPosts.length > 0) {
                             newPosts.forEach(post => {
                                 addPostToFeed(post, false);
+                                
+                                // Count videos
+                                if (post.mediaType === 'video') {
+                                    updateVideoCount();
+                                }
                             });
                             
                             const allPosts = [...existingPosts, ...newPosts];
@@ -373,6 +720,15 @@
                 const posts = JSON.parse(localStorage.getItem('anonSocialPosts')) || [];
                 renderPosts(posts);
                 updatePostCount(posts.length);
+                
+                // Count videos
+                const videoPosts = posts.filter(post => post.mediaType === 'video');
+                if (videoPosts.length > 0) {
+                    videoCount.textContent = videoPosts.length;
+                    videoCount.classList.remove('hidden');
+                } else {
+                    videoCount.classList.add('hidden');
+                }
             }
 
             // Render posts to the feed
@@ -395,6 +751,64 @@
                 });
             }
 
+            // Render video feed
+            function renderVideoFeed() {
+                const posts = JSON.parse(localStorage.getItem('anonSocialPosts')) || [];
+                const videoPosts = posts.filter(post => post.mediaType === 'video');
+                
+                if (videoPosts.length === 0) {
+                    emptyVideoFeed.classList.remove('hidden');
+                    videoFeedContainer.innerHTML = '';
+                    videoFeedContainer.appendChild(emptyVideoFeed);
+                    return;
+                }
+                
+                emptyVideoFeed.classList.add('hidden');
+                videoFeedContainer.innerHTML = '';
+                
+                // Sort by timestamp (newest first)
+                videoPosts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                videoPosts.forEach(post => {
+                    const videoElement = document.createElement('div');
+                    videoElement.className = 'video-container mb-8';
+                    
+                    videoElement.innerHTML = `
+                        <div class="p-4 text-white">
+                            <div class="flex items-center mb-4">
+                                <div class="bg-gray-700 rounded-full w-8 h-8 flex items-center justify-center mr-3">
+                                    <i class="fas fa-user-secret text-gray-300"></i>
+                                </div>
+                                <div>
+                                    <p class="font-medium">${post.anonymous ? 'Anônimo' : (post.peerId === myId ? 'Você' : 'Usuário')}</p>
+                                    <p class="text-xs text-gray-400">${getTimeAgo(post.timestamp)}</p>
+                                </div>
+                            </div>
+                            ${post.content ? `<p class="mb-4">${post.content}</p>` : ''}
+                            <video class="video-player" controls>
+                                <source src="${post.mediaUrl}" type="video/webm">
+                                Seu navegador não suporta o elemento de vídeo.
+                            </video>
+                        </div>
+                    `;
+                    
+                    videoFeedContainer.appendChild(videoElement);
+                });
+            }
+
+            // Update video count
+            function updateVideoCount() {
+                const posts = JSON.parse(localStorage.getItem('anonSocialPosts')) || [];
+                const videoPosts = posts.filter(post => post.mediaType === 'video');
+                
+                if (videoPosts.length > 0) {
+                    videoCount.textContent = videoPosts.length;
+                    videoCount.classList.remove('hidden');
+                } else {
+                    videoCount.classList.add('hidden');
+                }
+            }
+
             // Add a single post to the feed
             function addPostToFeed(post, isLocal) {
                 if (isLocal && document.querySelector(`[data-id="${post.id}"]`)) {
@@ -407,6 +821,21 @@
                 postElement.className = 'post-card bg-white border border-gray-200 rounded-lg p-4 post-enter';
                 postElement.dataset.id = post.id;
                 
+                let mediaHtml = '';
+                if (post.mediaType === 'image') {
+                    mediaHtml = `
+                        <div class="my-3">
+                            <img src="${post.mediaUrl}" class="w-full h-auto rounded-lg">
+                        </div>
+                    `;
+                } else if (post.mediaType === 'video') {
+                    mediaHtml = `
+                        <div class="my-3 video-thumbnail">
+                            <video src="${post.mediaUrl}" class="w-full h-auto" onclick="event.preventDefault(); event.stopPropagation();"></video>
+                        </div>
+                    `;
+                }
+                
                 postElement.innerHTML = `
                     <div class="flex items-start mb-3">
                         <div class="bg-gray-200 rounded-full w-10 h-10 flex items-center justify-center mr-3">
@@ -417,7 +846,8 @@
                             <p class="text-xs text-gray-500">${timeAgo}</p>
                         </div>
                     </div>
-                    <p class="text-gray-800 mb-3">${post.content}</p>
+                    ${post.content ? `<p class="text-gray-800 mb-3">${post.content}</p>` : ''}
+                    ${mediaHtml}
                     ${post.peerId === myId ? `
                     <div class="flex justify-end">
                         <button class="delete-post text-red-500 hover:text-red-700 text-sm" data-id="${post.id}">
@@ -440,6 +870,29 @@
                         const postId = this.getAttribute('data-id');
                         deletePost(postId);
                     });
+                }
+                
+                // Add click event to video thumbnails to open video feed
+                if (post.mediaType === 'video') {
+                    const videoThumbnail = postElement.querySelector('.video-thumbnail');
+                    if (videoThumbnail) {
+                        videoThumbnail.addEventListener('click', function() {
+                            videoFeed.style.display = 'block';
+                            renderVideoFeed();
+                            
+                            // Scroll to this video in the feed
+                            setTimeout(() => {
+                                const videoElements = document.querySelectorAll('.video-container');
+                                const index = Array.from(videoElements).findIndex(el => 
+                                    el.querySelector('source').src === post.mediaUrl
+                                );
+                                
+                                if (index !== -1) {
+                                    videoElements[index].scrollIntoView({ behavior: 'smooth' });
+                                }
+                            }, 100);
+                        });
+                    }
                 }
             }
 
@@ -477,7 +930,12 @@
                 e.preventDefault();
                 
                 const content = postContent.value.trim();
-                if (!content) return;
+                
+                // Require either content or media
+                if (!content && !mediaFile) {
+                    alert('Por favor, adicione um texto ou mídia ao post.');
+                    return;
+                }
                 
                 const newPost = {
                     id: Date.now().toString(),
@@ -486,6 +944,13 @@
                     timestamp: new Date().toISOString(),
                     peerId: myId
                 };
+                
+                // Add media if exists
+                if (mediaFile) {
+                    newPost.mediaType = mediaType;
+                    newPost.mediaUrl = mediaUrl;
+                    newPost.mediaFile = mediaFile.name;
+                }
                 
                 // Get existing posts
                 const posts = JSON.parse(localStorage.getItem('anonSocialPosts')) || [];
@@ -498,8 +963,14 @@
                 addPostToFeed(newPost, true);
                 updatePostCount(posts.length);
                 
+                // Update video count if it's a video
+                if (mediaType === 'video') {
+                    updateVideoCount();
+                }
+                
                 // Clear form
                 postContent.value = '';
+                clearMedia();
                 
                 // Broadcast to all connected peers
                 connections.forEach(conn => {
@@ -515,6 +986,14 @@
             // Delete a post
             function deletePost(postId) {
                 const posts = JSON.parse(localStorage.getItem('anonSocialPosts')) || [];
+                const postIndex = posts.findIndex(post => post.id === postId);
+                
+                if (postIndex === -1) return;
+                
+                // Check if it's a video post
+                const isVideoPost = posts[postIndex].mediaType === 'video';
+                
+                // Remove from storage
                 const updatedPosts = posts.filter(post => post.id !== postId);
                 localStorage.setItem('anonSocialPosts', JSON.stringify(updatedPosts));
                 
@@ -525,6 +1004,11 @@
                 }
                 
                 updatePostCount(updatedPosts.length);
+                
+                // Update video count if it was a video
+                if (isVideoPost) {
+                    updateVideoCount();
+                }
                 
                 if (updatedPosts.length === 0) {
                     emptyFeed.classList.remove('hidden');
