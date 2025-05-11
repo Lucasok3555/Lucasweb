@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Visualização de Vídeo e Imagem (.LXSV e .LXS)</title>
-  <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+  <title>Leitor de Mídia Universal</title>
+  <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css " />
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -27,6 +27,11 @@
       border: 2px solid #ddd;
       border-radius: 10px;
       margin-top: 20px;
+    }
+    audio {
+      margin-top: 20px;
+      width: 100%;
+      max-width: 600px;
     }
     .plyr {
       width: 100%;
@@ -55,38 +60,39 @@
   </style>
 </head>
 <body>
-  <h1>Visualização de Vídeo e Imagem (.LXSV e .LXS)</h1>
+  <h1>Leitor de Mídia Universal (.lxsa, .lxsv, .lxs)</h1>
   <div id="upload-container">
-    <input type="file" id="file-input" accept=".lxsv,.lxs" />
+    <input type="file" id="file-input" accept=".lxsa,.lxsv,.lxs" />
     <br><br>
     <div id="video-container" style="display:none;">
       <video id="video-preview" controls playsinline></video>
     </div>
     <img id="image-preview" src="#" alt="Imagem LXS" style="display:none;" />
+    <audio id="audio-preview" controls style="display:none;"></audio>
     <div id="metadata" style="display:none;">
       <h3>Metadados</h3>
+      <p><strong>Tipo:</strong> <span id="file-type"></span></p>
       <p><strong>Data e Hora:</strong> <span id="datetime"></span></p>
       <p><strong>Tamanho do Arquivo:</strong> <span id="file-size"></span></p>
       <p><strong>ID do Arquivo:</strong> <span id="file-id"></span></p>
-      <p id="security-warning" style="color: red; display: none;">AVISO: Este arquivo não possui um ID válido!</p>
     </div>
     <p id="error-message">Erro ao processar o arquivo. Por favor, tente novamente.</p>
   </div>
 
-  <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
+  <script src="https://cdn.plyr.io/3.7.8/plyr.js "></script>
   <script>
     const fileInput = document.getElementById('file-input');
     const videoPreview = document.getElementById('video-preview');
     const videoContainer = document.getElementById('video-container');
     const imagePreview = document.getElementById('image-preview');
+    const audioPreview = document.getElementById('audio-preview');
     const metadataDiv = document.getElementById('metadata');
+    const fileTypeSpan = document.getElementById('file-type');
     const datetimeSpan = document.getElementById('datetime');
     const fileSizeSpan = document.getElementById('file-size');
     const fileIdSpan = document.getElementById('file-id');
-    const securityWarning = document.getElementById('security-warning');
     const errorMessage = document.getElementById('error-message');
 
-    // Variável para armazenar a instância do Plyr
     let plyrPlayer;
 
     fileInput.addEventListener('change', async (event) => {
@@ -100,64 +106,24 @@
           try {
             const data = JSON.parse(e.target.result);
 
-            // Verificar se o arquivo tem ID
-            if (!data.metadata || !data.metadata.fileId) {
-              securityWarning.style.display = 'block';
+            // Verificar tipo de arquivo
+            if ('audio' in data) {
+              handleAudio(data);
+            } else if ('video' in data) {
+              handleVideo(data);
+            } else if ('image' in data) {
+              handleImage(data);
             } else {
-              securityWarning.style.display = 'none';
+              throw new Error('Formato de arquivo inválido.');
             }
 
-            // Verificar se é vídeo ou imagem
-            if (data.video) {
-              // Tratar como vídeo (.lxsv)
-              const videoData = data.video; // Base64 do vídeo
-              const metadata = data.metadata;
-
-              // Converter base64 para Blob (formato webm)
-              const videoBlob = base64ToBlob(videoData.split(',')[1], 'video/webm');
-              const videoUrl = URL.createObjectURL(videoBlob);
-
-              // Exibir vídeo
-              videoPreview.src = videoUrl;
-              videoContainer.style.display = 'block';
-              imagePreview.style.display = 'none';
-
-              // Inicializar Plyr após o vídeo ser carregado
-              videoPreview.onloadeddata = () => {
-                if (plyrPlayer) {
-                  plyrPlayer.destroy(); // Destruir instância anterior, se existir
-                }
-                plyrPlayer = new Plyr(videoPreview, {
-                  controls: ['play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen'],
-                  autoplay: false,
-                });
-              };
-
-              // Exibir metadados
-              datetimeSpan.textContent = new Date(metadata.datetime).toLocaleString();
-              fileSizeSpan.textContent = metadata.fileSize;
-              fileIdSpan.textContent = metadata.fileId || 'N/A';
-              metadataDiv.style.display = 'block';
-              errorMessage.style.display = 'none';
-            } else if (data.image) {
-              // Tratar como imagem (.lxs)
-              const imageData = data.image;
-              const metadata = data.metadata;
-
-              // Exibir imagem
-              imagePreview.src = imageData;
-              imagePreview.style.display = 'block';
-              videoContainer.style.display = 'none';
-
-              // Exibir metadados
-              datetimeSpan.textContent = new Date(metadata.datetime).toLocaleString();
-              fileSizeSpan.textContent = metadata.fileSize;
-              fileIdSpan.textContent = metadata.fileId || 'N/A';
-              metadataDiv.style.display = 'block';
-              errorMessage.style.display = 'none';
-            } else {
-              throw new Error('Arquivo inválido ou corrompido.');
-            }
+            // Exibir metadados
+            fileTypeSpan.textContent = 'Áudio' in data ? 'Áudio' : 'Vídeo' in data ? 'Vídeo' : 'Imagem';
+            datetimeSpan.textContent = new Date(data.metadata.datetime).toLocaleString();
+            fileSizeSpan.textContent = data.metadata.fileSize;
+            fileIdSpan.textContent = data.metadata.fileId || 'N/A';
+            metadataDiv.style.display = 'block';
+            errorMessage.style.display = 'none';
           } catch (error) {
             console.error(error);
             errorMessage.style.display = 'block';
@@ -175,15 +141,43 @@
       }
     });
 
-    // Função para converter base64 para Blob
-    function base64ToBlob(base64, mimeType) {
-      const byteCharacters = atob(base64);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    function handleAudio(data) {
+      // Ocultar outros elementos
+      videoContainer.style.display = 'none';
+      imagePreview.style.display = 'none';
+      audioPreview.style.display = 'block';
+
+      // Configurar áudio
+      audioPreview.src = data.audio.split(',')[0]; // URL base64
+    }
+
+    function handleVideo(data) {
+      // Ocultar outros elementos
+      audioPreview.style.display = 'none';
+      imagePreview.style.display = 'none';
+      videoContainer.style.display = 'block';
+
+      // Configurar vídeo
+      videoPreview.src = data.video.split(',')[0]; // URL base64
+
+      // Inicializar Plyr
+      if (plyrPlayer) {
+        plyrPlayer.destroy();
       }
-      const byteArray = new Uint8Array(byteNumbers);
-      return new Blob([byteArray], { type: mimeType });
+      plyrPlayer = new Plyr(videoPreview, {
+        controls: ['play', 'progress', 'current-time', 'mute', 'volume', 'fullscreen'],
+        autoplay: false,
+      });
+    }
+
+    function handleImage(data) {
+      // Ocultar outros elementos
+      videoContainer.style.display = 'none';
+      audioPreview.style.display = 'none';
+      imagePreview.style.display = 'block';
+
+      // Configurar imagem
+      imagePreview.src = data.image.split(',')[0]; // URL base64
     }
   </script>
 </body>
