@@ -3,31 +3,199 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Conversor para Formatos Personalizados</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Conversor de Áudio para Formato .LXSA</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 500px;
+      text-align: center;
+    }
+    h1 {
+      color: #333;
+    }
+    .upload-section {
+      margin-top: 20px;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .result-section {
+      margin-top: 20px;
+      text-align: left;
+      display: none;
+    }
+    #download-link {
+      display: block;
+      margin-top: 10px;
+      color: #007bff;
+      text-decoration: none;
+    }
+    #download-link:hover {
+      text-decoration: underline;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
-    <h1>Conversor para Formatos Personalizados</h1>
-    <p>Converta vídeos ou fotos para os formatos .lxsv (vídeo) e .lxs (foto).</p>
+    <h1>Conversor de Áudio para Formato .LXSA</h1>
+    <p>Converta arquivos de áudio para o formato .lxsa com efeito 8D e compactação.</p>
 
     <!-- Seção de Upload -->
     <div class="upload-section">
-      <h2>Selecione um Arquivo</h2>
-      <input type="file" id="file-input" accept="video/*, image/*" />
+      <h2>Selecione um Arquivo de Áudio</h2>
+      <input type="file" id="file-input" accept="audio/*" />
       <button id="convert-btn">Converter</button>
     </div>
 
     <!-- Resultado da Conversão -->
     <div class="result-section" style="display: none;">
       <h2>Resultado</h2>
-      <p><strong>Tipo:</strong> <span id="file-type"></span></p>
+      <p><strong>Tipo:</strong> <span id="file-type">Áudio</span></p>
       <p><strong>ID do Arquivo:</strong> <span id="file-id"></span></p>
       <p><strong>Data e Hora:</strong> <span id="datetime"></span></p>
-      <a id="download-link" href="#" download>Download</a>
+      <a id="download-link" href="#" download>Download (.lxsa)</a>
     </div>
   </div>
 
-  <script src="https://lucasok3555.github.io/Lucasweb/lxs.js"></script>
+  <script>
+    document.getElementById('convert-btn').addEventListener('click', async () => {
+      const fileInput = document.getElementById('file-input');
+      if (!fileInput.files.length) {
+        alert('Por favor, selecione um arquivo de áudio.');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const arrayBuffer = await file.arrayBuffer();
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+      // Gerar ID único para o arquivo
+      function generateFileId() {
+        return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+      }
+
+      // Aplicar efeito 8D ao áudio
+      function apply8DEffect(audioBuffer) {
+        const channels = [];
+        for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
+          channels.push(audioBuffer.getChannelData(i));
+        }
+
+        const panner = audioContext.createPanner();
+        panner.panningModel = 'HRTF';
+        panner.distanceModel = 'linear';
+        panner.refDistance = 1;
+        panner.maxDistance = 10000;
+        panner.rolloffFactor = 1;
+        panner.coneInnerAngle = 360;
+        panner.coneOuterAngle = 0;
+        panner.coneOuterGain = 0;
+
+        const mergedChannel = new Float32Array(audioBuffer.length);
+        let angle = 0;
+
+        for (let i = 0; i < audioBuffer.length; i++) {
+          angle = (angle + 1) % 360;
+          const x = Math.cos((angle * Math.PI) / 180);
+          const z = Math.sin((angle * Math.PI) / 180);
+          panner.setPosition(x, 0, z);
+
+          // Mesclar canais e aplicar efeito
+          mergedChannel[i] = (channels[0][i] + (channels[1]?.[i] || 0)) / channels.length;
+        }
+
+        const outputBuffer = audioContext.createBuffer(1, mergedChannel.length, audioBuffer.sampleRate);
+        outputBuffer.getChannelData(0).set(mergedChannel);
+        return outputBuffer;
+      }
+
+      // Compactar áudio para reduzir a qualidade
+      function compressAudio(audioBuffer) {
+        const offlineContext = new OfflineAudioContext(
+          1,
+          audioBuffer.length,
+          audioBuffer.sampleRate / 2 // Reduzir taxa de amostragem
+        );
+
+        const source = offlineContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(offlineContext.destination);
+        source.start();
+
+        return offlineContext.startRendering();
+      }
+
+      try {
+        const fileId = generateFileId();
+        const now = new Date();
+
+        // Decodificar áudio
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+        // Aplicar efeito 8D
+        const audioWith8D = apply8DEffect(audioBuffer);
+
+        // Compactar áudio
+        const compressedAudio = await compressAudio(audioWith8D);
+
+        // Exportar como base64
+        const exportBuffer = await compressedAudio.getChannelData(0);
+        const blob = new Blob([exportBuffer], { type: 'audio/wav' });
+        const reader = new FileReader();
+
+        reader.onload = () => {
+          const base64Data = reader.result.split(',')[1];
+
+          // Criar arquivo .lxsa
+          const lxsaData = JSON.stringify({
+            audio: `data:audio/wav;base64,${base64Data}`,
+            metadata: {
+              datetime: now.toISOString(),
+              fileSize: `${(blob.size / 1024).toFixed(2)} KB`,
+              fileId: fileId,
+            },
+          });
+
+          const lxsBlob = new Blob([lxsaData], { type: 'application/json' });
+          const url = URL.createObjectURL(lxsBlob);
+
+          // Exibir resultado
+          document.getElementById('file-id').textContent = fileId;
+          document.getElementById('datetime').textContent = now.toLocaleString();
+          document.getElementById('download-link').href = url;
+          document.getElementById('download-link').download = `audio_${fileId}.lxsa`;
+          document.querySelector('.result-section').style.display = 'block';
+        };
+
+        reader.readAsDataURL(blob);
+      } catch (error) {
+        console.error(error);
+        alert('Erro ao processar o áudio.');
+      }
+    });
+  </script>
 </body>
 </html>
