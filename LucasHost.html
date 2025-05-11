@@ -5,121 +5,136 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mini Sites - Rede de Páginas</title>
   <style>
-    :root {
-      --primary: #007bff;
-      --primary-dark: #0056b3;
-      --bg: #f4f4f4;
-      --white: #fff;
-      --card-bg: #fff;
-      --shadow: rgba(0, 0, 0, 0.1);
-    }
-
     body {
+      font-family: Arial, sans-serif;
       margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background-color: var(--bg);
-      color: #333;
-    }
-
-    header {
-      background: var(--primary);
-      color: white;
       padding: 20px;
-      text-align: center;
+      background: #f4f4f4;
     }
-
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
     .container {
       max-width: 600px;
-      margin: 30px auto;
-      background: var(--card-bg);
-      padding: 25px;
-      border-radius: 10px;
-      box-shadow: 0 4px 15px var(--shadow);
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-
-    h2 {
-      margin-top: 0;
-      color: var(--primary);
-    }
-
-    input, textarea {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 16px;
-      box-sizing: border-box;
-      margin-bottom: 15px;
-    }
-
-    button {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 12px 20px;
-      border-radius: 6px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
-
-    button:hover {
-      background: var(--primary-dark);
-    }
-
-    iframe {
-      width: 100%;
-      height: 300px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      margin-top: 10px;
-    }
-
-    .alert {
+    input[type="text"] {
+      width: calc(100% - 22px);
       padding: 10px;
       margin-top: 10px;
-      border-radius: 6px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 6px 12px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 5px;
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .site-list {
+      margin-top: 20px;
+    }
+    .site-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    .site-card:last-child {
+      border-bottom: none;
+    }
+    .site-info {
+      flex: 1;
+    }
+    .site-link {
+      color: #007bff;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    .editor {
       display: none;
-      font-weight: bold;
+      margin-top: 20px;
     }
-
-    .success {
-      background: #d4edda;
-      color: #155724;
+    .editor.active {
+      display: block;
     }
-
-    .error {
-      background: #f8d7da;
-      color: #721c24;
+    textarea {
+      width: 100%;
+      height: 200px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      resize: vertical;
+    }
+    .acesso-site {
+      margin-bottom: 30px;
+    }
+    .header-site-view {
+      display: none;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .header-site-view h2 {
+      margin: 0;
     }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>Mini Sites - Rede de Páginas</h1>
+  <h1>Bem-vindo à Rede de Mini Sites</h1>
 </header>
 
 <div class="container">
 
-  <!-- Criar Site -->
-  <section>
-    <h2>Criar Mini Site</h2>
-    <input type="text" id="siteName" placeholder="Nome do site" />
-    <textarea id="siteContent" rows="6" placeholder="Digite aqui seu conteúdo HTML/CSS/JS"></textarea>
-    <button onclick="salvarSite()">Salvar Site</button>
-    <div id="createAlert" class="alert"></div>
-  </section>
+  <!-- Busca por ID no topo -->
+  <div class="acesso-site">
+    <h2>Procurar um Site pelo ID</h2>
+    <input type="text" id="siteIdInput" placeholder="Digite o ID do site" />
+    <button onclick="acessarSite()">Acessar</button>
+  </div>
 
-  <!-- Acessar Site -->
-  <section style="margin-top: 30px;">
-    <h2>Acessar Mini Site</h2>
-    <input type="text" id="siteId" placeholder="Digite o ID do site" />
-    <button onclick="carregarSite()">Carregar Site</button>
-    <iframe id="preview"></iframe>
-    <div id="loadAlert" class="alert"></div>
-  </section>
+  <!-- Exibição do site acessado -->
+  <div class="header-site-view" id="headerSiteView">
+    <h2 id="headerSiteName"></h2>
+    <p><strong>ID:</strong> <span id="headerSiteID"></span></p>
+  </div>
 
+  <h2>Criar seu Mini Site</h2>
+  <input type="text" id="siteNameInput" placeholder="Digite o nome do seu site" />
+  <button onclick="criarSite()">Criar Site</button>
+
+  <div class="site-list" id="siteList"></div>
+
+  <div class="editor" id="codeEditor">
+    <h3>Edite o conteúdo do seu site (HTML/CSS/JS)</h3>
+    <textarea id="htmlContent" placeholder="Insira aqui o código HTML, CSS ou JS do seu site..."></textarea>
+    <br/>
+    <button onclick="salvarConteudo()">Salvar Conteúdo</button>
+    <button onclick="editarNovamente()">Editar Novamente</button>
+  </div>
+
+  <div class="editor" id="visualizadorSite">
+    <h3>Visualização do Seu Site</h3>
+    <iframe id="iframeSite" style="width: 100%; height: 300px; border: 1px solid #ccc;"></iframe>
+  </div>
 </div>
 
 <!-- Firebase SDK -->
@@ -141,67 +156,91 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
+  let currentSite = {
+    id: '',
+    nome: '',
+    conteudo: ''
+  };
+
   function gerarIdUnico() {
     return Math.random().toString(36).substr(2, 9);
   }
 
-  async function salvarSite() {
-    const nome = document.getElementById("siteName").value.trim();
-    const conteudo = document.getElementById("siteContent").value.trim();
-    const alertEl = document.getElementById("createAlert");
-
-    if (!nome || !conteudo) {
-      mostrarAlerta(alertEl, "Por favor, preencha todos os campos.", "error");
-      return;
-    }
-
+  function criarSite() {
+    const nome = document.getElementById('siteNameInput').value.trim();
+    if (!nome) return alert("Por favor, insira um nome para o site.");
     const id = gerarIdUnico();
-
-    try {
-      await set(ref(db, "sites/" + id), {
-        nome,
-        conteudo,
-        createdAt: Date.now()
-      });
-      mostrarAlerta(alertEl, `Site salvo! ID: ${id}`, "success");
-      document.getElementById("siteName").value = "";
-      document.getElementById("siteContent").value = "";
-    } catch (error) {
-      console.error("Erro ao salvar:", error);
-      mostrarAlerta(alertEl, "Erro ao salvar o site.", "error");
-    }
+    currentSite = {
+      id: id,
+      nome: nome,
+      conteudo: '<h1>Bem-vindo ao meu mini site!</h1>'
+    };
+    alert(`Seu site foi criado! ID: ${id}. Use esse ID para acessar.`);
+    abrirEditor(id);
   }
 
-  async function carregarSite() {
-    const id = document.getElementById("siteId").value.trim();
-    const alertEl = document.getElementById("loadAlert");
-
-    if (!id) {
-      mostrarAlerta(alertEl, "Digite um ID válido.", "error");
-      return;
-    }
-
-    const siteRef = ref(db, "sites/" + id);
-
+  async function acessarSite() {
+    const id = document.getElementById('siteIdInput').value.trim();
     try {
-      const snapshot = await get(siteRef);
+      const snapshot = await get(ref(db, 'sites/' + id));
       if (snapshot.exists()) {
-        const data = snapshot.val();
-        document.getElementById("preview").srcdoc = data.conteudo;
-        alertEl.style.display = "none";
+        currentSite = snapshot.val();
+        mostrarCabecalhoSite(id);
+        abrirVisualizador(currentSite.conteudo);
       } else {
-        mostrarAlerta(alertEl, "Site não encontrado.", "error");
+        alert("Site não encontrado.");
       }
     } catch (error) {
-      console.error("Erro ao carregar:", error);
-      mostrarAlerta(alertEl, "Erro ao carregar o site.", "error");
+      alert("Erro ao buscar site.");
+      console.error(error);
     }
   }
 
-  function mostrarAlerta(el, mensagem, tipo) {
-    el.className = `alert ${tipo}`;
-    el.textContent = mensagem;
-    el.style.display = "block";
+  async function salvarConteudo() {
+    const conteudo = document.getElementById('htmlContent').value;
+    const id = currentSite.id;
+
+    if (!id) return alert("Erro interno: ID não definido.");
+
+    try {
+      await set(ref(db, 'sites/' + id), {
+        ...currentSite,
+        conteudo: conteudo
+      });
+      alert("Conteúdo salvo com sucesso!");
+      document.getElementById('iframeSite').srcdoc = conteudo;
+    } catch (error) {
+      alert("Erro ao salvar no Firebase.");
+      console.error(error);
+    }
+  }
+
+  function editarNovamente() {
+    if (!currentSite.id) return alert("Nenhum site selecionado.");
+    abrirEditor(currentSite.id);
+  }
+
+  function abrirEditor(id) {
+    document.getElementById('codeEditor').classList.add('active');
+    document.getElementById('htmlContent').value = currentSite.conteudo || '<h1>Bem-vindo ao meu mini site!</h1>';
+    document.getElementById('visualizadorSite').classList.remove('active');
+    document.getElementById('iframeSite').srcdoc = '';
+    mostrarCabecalhoSite(id);
+  }
+
+  function abrirVisualizador(conteudo) {
+    document.getElementById('iframeSite').srcdoc = conteudo;
+    document.getElementById('visualizadorSite').classList.add('active');
+    document.getElementById('codeEditor').classList.remove('active');
+  }
+
+  function mostrarCabecalhoSite(id) {
+    const cabecalho = document.getElementById('headerSiteView');
+    const nomeEl = document.getElementById('headerSiteName');
+    const idEl = document.getElementById('headerSiteID');
+    nomeEl.textContent = currentSite.nome;
+    idEl.textContent = id;
+    cabecalho.style.display = 'block';
   }
 </script>
 
