@@ -56,6 +56,22 @@
     #download-link:hover {
       text-decoration: underline;
     }
+    .progress-container {
+      margin-top: 20px;
+      width: 100%;
+      background-color: #ddd;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      width: 0%;
+      height: 20px;
+      background-color: #007bff;
+      text-align: center;
+      line-height: 20px;
+      color: white;
+      transition: width 0.3s ease;
+    }
   </style>
 </head>
 <body>
@@ -68,6 +84,11 @@
       <h2>Selecione um Arquivo</h2>
       <input type="file" id="file-input" accept="video/*, image/*, audio/*" />
       <button id="convert-btn">Converter</button>
+    </div>
+
+    <!-- Barra de Progresso -->
+    <div class="progress-container">
+      <div class="progress-bar" id="progress-bar">0%</div>
     </div>
 
     <!-- Resultado da Conversão -->
@@ -96,21 +117,26 @@
 
       let fileType, fileName, fileData;
 
+      // Resetar barra de progresso
+      const progressBar = document.getElementById('progress-bar');
+      progressBar.style.width = '0%';
+      progressBar.textContent = '0%';
+
       if (file.type.startsWith('video/')) {
         // Tratar como vídeo (.lxsv)
         fileType = 'Vídeo';
         fileName = `video_${fileId}.lxsv`;
-        fileData = await processVideo(file);
+        fileData = await processFile(file, progressBar);
       } else if (file.type.startsWith('image/')) {
         // Tratar como imagem (.lxs)
         fileType = 'Imagem';
         fileName = `foto_${fileId}.lxs`;
-        fileData = await processImage(file);
+        fileData = await processFile(file, progressBar);
       } else if (file.type.startsWith('audio/')) {
         // Tratar como áudio (.lxsa)
         fileType = 'Áudio';
         fileName = `audio_${fileId}.lxsa`;
-        fileData = await processAudio(file);
+        fileData = await processAudio(file, progressBar);
       } else {
         alert('Formato de arquivo não suportado.');
         return;
@@ -152,20 +178,14 @@
       return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
     }
 
-    // Processar vídeo
-    async function processVideo(file) {
-      const base64 = await fileToBase64(file);
-      return { video: base64 };
+    // Processar arquivo genérico (vídeo ou imagem)
+    async function processFile(file, progressBar) {
+      const base64 = await fileToBase64WithProgress(file, progressBar);
+      return file.type.startsWith('video/') ? { video: base64 } : { image: base64 };
     }
 
-    // Processar imagem
-    async function processImage(file) {
-      const base64 = await fileToBase64(file);
-      return { image: base64 };
-    }
-
-    // Processar áudio
-    async function processAudio(file) {
+    // Processar áudio com efeito 8D
+    async function processAudio(file, progressBar) {
       const arrayBuffer = await file.arrayBuffer();
       const audioContext = new AudioContext();
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
@@ -175,7 +195,7 @@
 
       // Exportar o áudio processado como Blob
       const wavBlob = await exportWAV(processedAudioBuffer, audioContext);
-      const base64 = await blobToBase64(wavBlob);
+      const base64 = await blobToBase64WithProgress(wavBlob, progressBar);
 
       return { audio: base64 };
     }
@@ -261,24 +281,50 @@
       }
     }
 
-    // Converter Blob para Base64
-    function blobToBase64(blob) {
+    // Converter File para Base64 com progresso
+    function fileToBase64WithProgress(file, progressBar) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
+        let progress = 0;
+
         reader.onloadend = () => resolve(reader.result.split(',')[1]);
         reader.onerror = reject;
+
+        reader.onprogress = (event) => {
+          if (event.lengthComputable) {
+            progress = (event.loaded / event.total) * 100;
+            updateProgressBar(progressBar, progress);
+          }
+        };
+
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Converter Blob para Base64 com progresso
+    function blobToBase64WithProgress(blob, progressBar) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        let progress = 0;
+
+        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+
+        reader.onprogress = (event) => {
+          if (event.lengthComputable) {
+            progress = (event.loaded / event.total) * 100;
+            updateProgressBar(progressBar, progress);
+          }
+        };
+
         reader.readAsDataURL(blob);
       });
     }
 
-    // Converter File para Base64
-    function fileToBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+    // Atualizar barra de progresso
+    function updateProgressBar(progressBar, progress) {
+      progressBar.style.width = `${progress}%`;
+      progressBar.textContent = `${Math.round(progress)}%`;
     }
   </script>
 </body>
