@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Conversor de Áudio para Formato .LXSA</title>
+  <title>Conversor de Áudio para Formato .lxsa</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -60,142 +60,175 @@
 </head>
 <body>
   <div class="container">
-    <h1>Conversor de Áudio para Formato .LXSA</h1>
-    <p>Converta arquivos de áudio para o formato .lxsa com efeito 8D e compactação.</p>
+    <h1>Conversor de Áudio para Formato .lxsa</h1>
+    <p>Converta arquivos de áudio para o formato personalizado .lxsa.</p>
 
     <!-- Seção de Upload -->
     <div class="upload-section">
       <h2>Selecione um Arquivo de Áudio</h2>
-      <input type="file" id="file-input" accept="audio/*" />
+      <input type="file" id="audio-input" accept="audio/*" />
       <button id="convert-btn">Converter</button>
     </div>
 
     <!-- Resultado da Conversão -->
-    <div class="result-section" style="display: none;">
+    <div class="result-section">
       <h2>Resultado</h2>
-      <p><strong>Tipo:</strong> <span id="file-type">Áudio</span></p>
       <p><strong>ID do Arquivo:</strong> <span id="file-id"></span></p>
       <p><strong>Data e Hora:</strong> <span id="datetime"></span></p>
+      <p><strong>Tamanho Original:</strong> <span id="original-size"></span></p>
+      <p><strong>Tamanho Convertido:</strong> <span id="converted-size"></span></p>
       <a id="download-link" href="#" download>Download (.lxsa)</a>
     </div>
   </div>
 
   <script>
     document.getElementById('convert-btn').addEventListener('click', async () => {
-      const fileInput = document.getElementById('file-input');
-      if (!fileInput.files.length) {
+      const audioInput = document.getElementById('audio-input');
+      if (!audioInput.files.length) {
         alert('Por favor, selecione um arquivo de áudio.');
         return;
       }
 
-      const file = fileInput.files[0];
+      const file = audioInput.files[0];
+      const fileId = generateFileId();
+      const now = new Date();
+
+      // Ler o arquivo de áudio como array buffer
       const arrayBuffer = await file.arrayBuffer();
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const audioContext = new AudioContext();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-      // Gerar ID único para o arquivo
-      function generateFileId() {
-        return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
-      }
+      // Aplicar efeito 8D
+      const processedAudioBuffer = apply8DEffect(audioBuffer, audioContext);
 
-      // Aplicar efeito 8D ao áudio
-      function apply8DEffect(audioBuffer) {
-        const channels = [];
-        for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
-          channels.push(audioBuffer.getChannelData(i));
-        }
+      // Exportar o áudio processado como Blob
+      const wavBlob = await exportWAV(processedAudioBuffer, audioContext);
 
-        const panner = audioContext.createPanner();
-        panner.panningModel = 'HRTF';
-        panner.distanceModel = 'linear';
-        panner.refDistance = 1;
-        panner.maxDistance = 10000;
-        panner.rolloffFactor = 1;
-        panner.coneInnerAngle = 360;
-        panner.coneOuterAngle = 0;
-        panner.coneOuterGain = 0;
+      // Criar metadados
+      const metadata = {
+        datetime: now.toISOString(),
+        fileSize: `${(wavBlob.size / 1024).toFixed(2)} KB`,
+        fileId: fileId,
+      };
 
-        const mergedChannel = new Float32Array(audioBuffer.length);
-        let angle = 0;
+      // Criar arquivo .lxsa
+      const lxsaData = {
+        audio: await blobToBase64(wavBlob),
+        metadata: metadata,
+      };
 
-        for (let i = 0; i < audioBuffer.length; i++) {
-          angle = (angle + 1) % 360;
-          const x = Math.cos((angle * Math.PI) / 180);
-          const z = Math.sin((angle * Math.PI) / 180);
-          panner.setPosition(x, 0, z);
+      const lxsBlob = new Blob([JSON.stringify(lxsaData)], { type: 'application/json' });
+      const url = URL.createObjectURL(lxsBlob);
 
-          // Mesclar canais e aplicar efeito
-          mergedChannel[i] = (channels[0][i] + (channels[1]?.[i] || 0)) / channels.length;
-        }
+      // Exibir resultado
+      document.getElementById('file-id').textContent = fileId;
+      document.getElementById('datetime').textContent = now.toLocaleString();
+      document.getElementById('original-size').textContent = `${(file.size / 1024).toFixed(2)} KB`;
+      document.getElementById('converted-size').textContent = `${(lxsBlob.size / 1024).toFixed(2)} KB`;
 
-        const outputBuffer = audioContext.createBuffer(1, mergedChannel.length, audioBuffer.sampleRate);
-        outputBuffer.getChannelData(0).set(mergedChannel);
-        return outputBuffer;
-      }
+      const downloadLink = document.getElementById('download-link');
+      downloadLink.href = url;
+      downloadLink.download = `audio_${fileId}.lxsa`;
 
-      // Compactar áudio para reduzir a qualidade
-      function compressAudio(audioBuffer) {
-        const offlineContext = new OfflineAudioContext(
-          1,
-          audioBuffer.length,
-          audioBuffer.sampleRate / 2 // Reduzir taxa de amostragem
-        );
-
-        const source = offlineContext.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(offlineContext.destination);
-        source.start();
-
-        return offlineContext.startRendering();
-      }
-
-      try {
-        const fileId = generateFileId();
-        const now = new Date();
-
-        // Decodificar áudio
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-        // Aplicar efeito 8D
-        const audioWith8D = apply8DEffect(audioBuffer);
-
-        // Compactar áudio
-        const compressedAudio = await compressAudio(audioWith8D);
-
-        // Exportar como base64
-        const exportBuffer = await compressedAudio.getChannelData(0);
-        const blob = new Blob([exportBuffer], { type: 'audio/wav' });
-        const reader = new FileReader();
-
-        reader.onload = () => {
-          const base64Data = reader.result.split(',')[1];
-
-          // Criar arquivo .lxsa
-          const lxsaData = JSON.stringify({
-            audio: `data:audio/wav;base64,${base64Data}`,
-            metadata: {
-              datetime: now.toISOString(),
-              fileSize: `${(blob.size / 1024).toFixed(2)} KB`,
-              fileId: fileId,
-            },
-          });
-
-          const lxsBlob = new Blob([lxsaData], { type: 'application/json' });
-          const url = URL.createObjectURL(lxsBlob);
-
-          // Exibir resultado
-          document.getElementById('file-id').textContent = fileId;
-          document.getElementById('datetime').textContent = now.toLocaleString();
-          document.getElementById('download-link').href = url;
-          document.getElementById('download-link').download = `audio_${fileId}.lxsa`;
-          document.querySelector('.result-section').style.display = 'block';
-        };
-
-        reader.readAsDataURL(blob);
-      } catch (error) {
-        console.error(error);
-        alert('Erro ao processar o áudio.');
-      }
+      // Mostrar seção de resultado
+      document.querySelector('.result-section').style.display = 'block';
     });
+
+    // Gerar ID único para o arquivo
+    function generateFileId() {
+      return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+    }
+
+    // Aplicar efeito 8D ao áudio
+    function apply8DEffect(audioBuffer, audioContext) {
+      const channels = audioBuffer.numberOfChannels;
+      const length = audioBuffer.length;
+      const outputBuffer = audioContext.createBuffer(channels, length, audioBuffer.sampleRate);
+
+      for (let channel = 0; channel < channels; channel++) {
+        const inputChannelData = audioBuffer.getChannelData(channel);
+        const outputChannelData = outputBuffer.getChannelData(channel);
+
+        let angle = 0;
+        for (let i = 0; i < length; i++) {
+          angle = (angle + 1) % 360;
+          const pan = Math.sin((angle * Math.PI) / 180); // Calcula o panning
+          outputChannelData[i] = inputChannelData[i] * (1 - Math.abs(pan)); // Ajusta o volume
+        }
+      }
+
+      return outputBuffer;
+    }
+
+    // Exportar áudio processado como WAV Blob
+    async function exportWAV(audioBuffer, audioContext) {
+      const offlineContext = new OfflineAudioContext(
+        audioBuffer.numberOfChannels,
+        audioBuffer.length,
+        audioBuffer.sampleRate
+      );
+
+      const source = offlineContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(offlineContext.destination);
+      source.start();
+
+      const renderedBuffer = await offlineContext.startRendering();
+      const wavBlob = audioBufferToWAV(renderedBuffer);
+      return wavBlob;
+    }
+
+    // Converter AudioBuffer para WAV Blob
+    function audioBufferToWAV(audioBuffer) {
+      const numOfChannels = audioBuffer.numberOfChannels;
+      const length = audioBuffer.length * numOfChannels * 2 + 44;
+      const buffer = new ArrayBuffer(length);
+      const view = new DataView(buffer);
+
+      // Escrever cabeçalho WAV
+      writeString(view, 0, 'RIFF');
+      view.setUint32(4, 36 + audioBuffer.length * numOfChannels * 2, true);
+      writeString(view, 8, 'WAVE');
+      writeString(view, 12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true); // PCM
+      view.setUint16(22, numOfChannels, true);
+      view.setUint32(24, audioBuffer.sampleRate, true);
+      view.setUint32(28, audioBuffer.sampleRate * numOfChannels * 2, true);
+      view.setUint16(32, numOfChannels * 2, true);
+      view.setUint16(34, 16, true);
+      writeString(view, 36, 'data');
+      view.setUint32(40, audioBuffer.length * numOfChannels * 2, true);
+
+      // Escrever dados de áudio
+      let offset = 44;
+      for (let i = 0; i < audioBuffer.length; i++) {
+        for (let channel = 0; channel < numOfChannels; channel++) {
+          const sample = Math.max(-1, Math.min(1, audioBuffer.getChannelData(channel)[i]));
+          view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+          offset += 2;
+        }
+      }
+
+      return new Blob([buffer], { type: 'audio/wav' });
+    }
+
+    // Função auxiliar para escrever strings no DataView
+    function writeString(view, offset, string) {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    }
+
+    // Converter Blob para Base64
+    function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
   </script>
 </body>
 </html>
