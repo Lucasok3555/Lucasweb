@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conversor para Formatos Personalizados</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Conversor para Formatos Personalizados</h1>
+    <p>Converta vídeos ou fotos para os formatos .lxsv (vídeo) e .lxs (foto).</p>
+
+    <!-- Seção de Upload -->
+    <div class="upload-section">
+      <h2>Selecione um Arquivo</h2>
+      <input type="file" id="file-input" accept="video/*, image/*" />
+      <button id="convert-btn">Converter</button>
+    </div>
+
+    <!-- Resultado da Conversão -->
+    <div class="result-section" style="display: none;">
+      <h2>Resultado</h2>
+      <p><strong>Tipo:</strong> <span id="file-type"></span></p>
+      <p><strong>ID do Arquivo:</strong> <span id="file-id"></span></p>
+      <p><strong>Data e Hora:</strong> <span id="datetime"></span></p>
+      <a id="download-link" href="#" download>Download</a>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
