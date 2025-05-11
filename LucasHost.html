@@ -2,228 +2,114 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mini Sites - Rede de Páginas</title>
+  <title>Mini Sites com Firebase</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      margin: 0;
+      font-family: Arial;
       padding: 20px;
-      background: #f4f4f4;
+      background: #f9f9f9;
     }
-    header {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-    .container {
-      max-width: 600px;
-      margin: auto;
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    input[type="text"] {
-      width: calc(100% - 22px);
-      padding: 10px;
-      margin-top: 10px;
-      margin-bottom: 20px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    button {
-      padding: 6px 12px;
-      border: none;
-      background-color: #007bff;
-      color: white;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-right: 5px;
-      margin-bottom: 5px;
-      font-size: 14px;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    .site-list {
-      margin-top: 20px;
-    }
-    .site-card {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px;
-      border-bottom: 1px solid #ddd;
-    }
-    .site-card:last-child {
-      border-bottom: none;
-    }
-    .site-info {
-      flex: 1;
-    }
-    .site-link {
-      color: #007bff;
-      cursor: pointer;
-      text-decoration: underline;
-    }
-    .editor {
-      display: none;
-      margin-top: 20px;
-    }
-    .editor.active {
-      display: block;
-    }
-    textarea {
+    input,
+    textarea,
+    button,
+    iframe {
       width: 100%;
-      height: 200px;
-      padding: 10px;
-      font-family: monospace;
-      font-size: 14px;
+      margin-top: 10px;
+    }
+    iframe {
+      height: 300px;
       border: 1px solid #ccc;
-      border-radius: 4px;
-      resize: vertical;
-    }
-    .acesso-site {
-      margin-bottom: 30px;
-    }
-    .header-site-view {
-      display: none;
-      margin-bottom: 20px;
-      text-align: center;
-    }
-    .header-site-view h2 {
-      margin: 0;
     }
   </style>
 </head>
 <body>
 
-<header>
-  <h1>Bem-vindo à Rede de Mini Sites</h1>
-</header>
+  <h2>Criar Mini Site</h2>
+  <input type="text" id="siteName" placeholder="Nome do site" />
+  <textarea id="siteContent" placeholder="Insira o HTML/CSS/JS do seu site"></textarea><br />
+  <button onclick="salvarSite()">Salvar Site</button>
 
-<div class="container">
+  <h2>Acessar Mini Site</h2>
+  <input type="text" id="siteId" placeholder="Digite o ID do site" />
+  <button onclick="carregarSite()">Carregar Site</button>
 
-  <!-- Busca por ID no topo -->
-  <div class="acesso-site">
-    <h2>Procurar um Site pelo ID</h2>
-    <input type="text" id="siteIdInput" placeholder="Digite o ID do site" />
-    <button onclick="acessarSite()">Acessar</button>
-  </div>
+  <iframe id="preview"></iframe>
 
-  <!-- Exibição do site acessado -->
-  <div class="header-site-view" id="headerSiteView">
-    <h2 id="headerSiteName"></h2>
-    <p><strong>ID:</strong> <span id="headerSiteID"></span></p>
-  </div>
+  <!-- Firebase SDKs -->
+  <script type="module">
+    // Import the functions you need from the SDKs
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js ";
+    import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js ";
 
-  <h2>Criar seu Mini Site</h2>
-  <input type="text" id="siteNameInput" placeholder="Digite o nome do seu site" />
-  <button onclick="criarSite()">Criar Site</button>
-
-  <div class="site-list" id="siteList"></div>
-
-  <div class="editor" id="codeEditor">
-    <h3>Edite o conteúdo do seu site (HTML/CSS/JS)</h3>
-    <textarea id="htmlContent" placeholder="Insira aqui o código HTML, CSS ou JS do seu site..."></textarea>
-    <br/>
-    <button onclick="salvarConteudo()">Salvar Conteúdo</button>
-    <button onclick="editarNovamente()">Editar Novamente</button>
-  </div>
-
-  <div class="editor" id="visualizadorSite">
-    <h3>Visualização do Seu Site</h3>
-    <iframe id="iframeSite" style="width: 100%; height: 300px; border: 1px solid #ccc;"></iframe>
-  </div>
-</div>
-
-<script>
-  const API_URL = 'https://lucasok3555.github.io/Lucasweb '; // Ajuste se necessário
-
-  let currentSite = {
-    id: '',
-    nome: '',
-    conteudo: ''
-  };
-
-  function criarSite() {
-    const nome = document.getElementById('siteNameInput').value.trim();
-    if (!nome) return alert("Por favor, insira um nome para o site.");
-    const id = Math.random().toString(36).substr(2, 9);
-    currentSite = {
-      id: id,
-      nome: nome,
-      conteudo: '<h1>Bem-vindo ao meu mini site!</h1>'
+    // Your Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCPHbBvlltlG-ZK8su2_dKz3jHjeamwwkM",
+      authDomain: "redelucas-3291e.firebaseapp.com",
+      projectId: "redelucas-3291e",
+      storageBucket: "redelucas-3291e.firebasestorage.app",
+      messagingSenderId: "1043104316422",
+      appId: "1:1043104316422:web:39c82d7f86f8a2a83b1787",
+      measurementId: "G-15YEHMJF6M"
     };
-    alert(`Seu site foi criado! ID: ${id}. Use esse ID para acessar.`);
-    abrirEditor(currentSite.id);
-  }
 
-  async function acessarSite() {
-    const id = document.getElementById('siteIdInput').value.trim();
-    try {
-      const res = await fetch(`${API_URL}/api/site/${id}`);
-      if (!res.ok) throw new Error("Site não encontrado");
-      const data = await res.json();
-      currentSite = data;
-      mostrarCabecalhoSite(id);
-      abrirVisualizador(data.conteudo);
-    } catch (e) {
-      alert("Erro ao buscar site.");
-      console.error(e);
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Função para gerar um ID único
+    function gerarIdUnico() {
+      return Math.random().toString(36).substr(2, 9);
     }
-  }
 
-  async function salvarConteudo() {
-    const conteudo = document.getElementById('htmlContent').value;
-    currentSite.conteudo = conteudo;
+    // Função para salvar site
+    async function salvarSite() {
+      const nome = document.getElementById("siteName").value.trim();
+      const conteudo = document.getElementById("siteContent").value.trim();
 
-    try {
-      const res = await fetch(`${API_URL}/api/site/${currentSite.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(currentSite)
-      });
-
-      if (res.ok) {
-        alert("Conteúdo salvo no servidor!");
-        document.getElementById('iframeSite').srcdoc = conteudo;
-      } else {
-        alert("Erro ao salvar no servidor.");
+      if (!nome || !conteudo) {
+        alert("Por favor, preencha todos os campos.");
+        return;
       }
-    } catch (e) {
-      alert("Falha na conexão com o servidor.");
-      console.error(e);
+
+      const id = gerarIdUnico();
+
+      try {
+        await set(ref(db, "sites/" + id), {
+          nome: nome,
+          conteudo: conteudo,
+          createdAt: Date.now()
+        });
+        alert("Site salvo com sucesso! ID: " + id);
+      } catch (error) {
+        console.error("Erro ao salvar:", error);
+        alert("Erro ao salvar o site.");
+      }
     }
-  }
 
-  function editarNovamente() {
-    abrirEditor(currentSite.id);
-  }
+    // Função para carregar site pelo ID
+    async function carregarSite() {
+      const id = document.getElementById("siteId").value.trim();
+      if (!id) {
+        alert("Digite um ID válido.");
+        return;
+      }
 
-  function abrirEditor(id) {
-    document.getElementById('codeEditor').classList.add('active');
-    document.getElementById('htmlContent').value = currentSite.conteudo || '<h1>Bem-vindo ao meu mini site!</h1>';
-    document.getElementById('visualizadorSite').classList.remove('active');
-    document.getElementById('iframeSite').srcdoc = '';
-    mostrarCabecalhoSite(id);
-  }
+      const siteRef = ref(db, "sites/" + id);
 
-  function abrirVisualizador(conteudo) {
-    document.getElementById('iframeSite').srcdoc = conteudo;
-    document.getElementById('visualizadorSite').classList.add('active');
-    document.getElementById('codeEditor').classList.remove('active');
-  }
-
-  function mostrarCabecalhoSite(id) {
-    const cabecalho = document.getElementById('headerSiteView');
-    const nomeEl = document.getElementById('headerSiteName');
-    const idEl = document.getElementById('headerSiteID');
-    nomeEl.textContent = currentSite.nome;
-    idEl.textContent = id;
-    cabecalho.style.display = 'block';
-  }
-</script>
+      try {
+        const snapshot = await get(siteRef);
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          document.getElementById("preview").srcdoc = data.conteudo;
+        } else {
+          alert("Site não encontrado.");
+        }
+      } catch (error) {
+        console.error("Erro ao carregar:", error);
+        alert("Erro ao carregar o site.");
+      }
+    }
+  </script>
 
 </body>
 </html>
