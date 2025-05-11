@@ -1,352 +1,144 @@
+```html
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MiniSite Network</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-analytics.js";
-        import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyCPHbBvlltlG-ZK8su2_dKz3jHjeamwwkM",
-            authDomain: "redelucas-3291e.firebaseapp.com",
-            projectId: "redelucas-3291e",
-            storageBucket: "redelucas-3291e.appspot.com",
-            messagingSenderId: "1043104316422",
-            appId: "1:1043104316422:web:39c82d7f86f8a2a83b1787",
-            measurementId: "G-15YEHMJF6M"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
-        const db = getDatabase();
-
-        document.addEventListener('DOMContentLoaded', () => {
-            // Check if we're viewing a mini-site
-            const urlParams = new URLSearchParams(window.location.search);
-            const siteId = urlParams.get('id');
-            
-            if (siteId) {
-                loadMiniSite(siteId);
-                document.getElementById('main-app').classList.add('hidden');
-                document.getElementById('mini-site-viewer').classList.remove('hidden');
-            } else {
-                loadRecentMiniSites();
-            }
-        });
-
-        async function loadMiniSite(siteId) {
-            try {
-                const snapshot = await get(child(ref(db), `miniSites/${siteId}`));
-                if (snapshot.exists()) {
-                    const siteData = snapshot.val();
-                    document.getElementById('mini-site-title').textContent = siteData.siteName;
-                    document.getElementById('mini-site-content').innerHTML = siteData.content;
-                } else {
-                    document.getElementById('mini-site-content').innerHTML = `
-                        <div class="text-center p-8 bg-red-100 rounded-lg">
-                            <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
-                            <h3 class="text-xl font-bold">Mini Site não encontrado</h3>
-                            <p>O ID fornecido não corresponde a nenhum mini site existente.</p>
-                            <button onclick="window.location.href='index.html'" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                                Voltar para a página inicial
-                            </button>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                console.error("Error loading mini site:", error);
-            }
-        }
-
-        async function loadRecentMiniSites() {
-            try {
-                const snapshot = await get(child(ref(db), 'miniSites'));
-                if (snapshot.exists()) {
-                    const sites = snapshot.val();
-                    const sitesList = document.getElementById('recent-sites');
-                    sitesList.innerHTML = '';
-                    
-                    // Convert to array and sort by timestamp (newest first)
-                    const sitesArray = Object.entries(sites).map(([id, data]) => ({ id, ...data }));
-                    sitesArray.sort((a, b) => b.timestamp - a.timestamp);
-                    
-                    // Display only the 6 most recent
-                    sitesArray.slice(0, 6).forEach(site => {
-                        const siteElement = document.createElement('div');
-                        siteElement.className = 'bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow';
-                        siteElement.innerHTML = `
-                            <h3 class="font-bold text-lg mb-2">${site.siteName}</h3>
-                            <p class="text-gray-600 mb-4">${site.description || 'Sem descrição'}</p>
-                            <a href="?id=${site.id}" class="text-blue-500 hover:text-blue-700 font-medium">
-                                Visitar site <i class="fas fa-arrow-right ml-1"></i>
-                            </a>
-                        `;
-                        sitesList.appendChild(siteElement);
-                    });
-                }
-            } catch (error) {
-                console.error("Error loading recent mini sites:", error);
-            }
-        }
-
-        window.createMiniSite = function() {
-            document.getElementById('main-app').classList.add('hidden');
-            document.getElementById('mini-site-creator').classList.remove('hidden');
-        }
-
-        window.saveMiniSite = function() {
-            const siteName = document.getElementById('site-name').value.trim();
-            const description = document.getElementById('site-description').value.trim();
-            const content = document.getElementById('site-content').value.trim();
-            
-            if (!siteName) {
-                alert('Por favor, insira um nome para o seu mini site');
-                return;
-            }
-            
-            if (!content) {
-                alert('Por favor, insira algum conteúdo para o seu mini site');
-                return;
-            }
-            
-            // Generate a random ID
-            const siteId = 'ms-' + Math.random().toString(36).substring(2, 9);
-            const timestamp = Date.now();
-            
-            set(ref(db, `miniSites/${siteId}`), {
-                siteName,
-                description,
-                content,
-                timestamp,
-                creator: 'Anonymous' // In a real app, you'd use the logged in user
-            })
-            .then(() => {
-                alert('Mini site criado com sucesso!');
-                window.location.href = `?id=${siteId}`;
-            })
-            .catch(error => {
-                console.error("Error saving mini site:", error);
-                alert('Ocorreu um erro ao salvar o mini site. Por favor, tente novamente.');
-            });
-        }
-
-        window.viewMiniSite = function() {
-            const siteId = document.getElementById('site-id-input').value.trim();
-            if (siteId) {
-                window.location.href = `?id=${siteId}`;
-            } else {
-                alert('Por favor, insira um ID válido');
-            }
-        }
-    </script>
-    <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, #6B73FF 0%, #000DFF 100%);
-        }
-        .editor-toolbar {
-            background-color: #f8f9fa;
-            border-radius: 6px 6px 0 0;
-            border: 1px solid #ddd;
-            padding: 5px;
-        }
-        .editor-content {
-            min-height: 200px;
-            border: 1px solid #ddd;
-            border-top: none;
-            border-radius: 0 0 6px 6px;
-            padding: 10px;
-        }
-        .site-card:hover {
-            transform: translateY(-5px);
-            transition: transform 0.3s ease;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mini Sites - Rede de Páginas</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    input, button {
+      padding: 10px;
+      margin: 10px;
+      font-size: 16px;
+    }
+    .site-list {
+      margin-top: 30px;
+    }
+    .site-card {
+      background: white;
+      border-radius: 5px;
+      padding: 15px;
+      margin: 10px auto;
+      width: 300px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .site-card button {
+      margin-top: 10px;
+    }
+  </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <!-- Main App -->
-    <div id="main-app">
-        <!-- Header -->
-        <header class="gradient-bg text-white shadow-lg">
-            <div class="container mx-auto px-4 py-6">
-                <div class="flex justify-between items-center">
-                    <h1 class="text-3xl font-bold">MiniSite Network</h1>
-                    <button onclick="createMiniSite()" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition">
-                        <i class="fas fa-plus mr-2"></i> Criar Mini Site
-                    </button>
-                </div>
-                <p class="mt-2 opacity-90">Crie e compartilhe seus próprios mini sites em segundos!</p>
-            </div>
-        </header>
+<body>
 
-        <!-- Main Content -->
-        <main class="container mx-auto px-4 py-8">
-            <!-- Search Section -->
-            <section class="mb-12 bg-white rounded-xl shadow-md p-6">
-                <h2 class="text-2xl font-bold mb-4">Acessar um Mini Site</h2>
-                <div class="flex flex-col md:flex-row gap-4">
-                    <input 
-                        type="text" 
-                        id="site-id-input" 
-                        placeholder="Cole o ID do mini site aqui" 
-                        class="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                    <button 
-                        onclick="viewMiniSite()" 
-                        class="bg-blue-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-600 transition"
-                    >
-                        <i class="fas fa-external-link-alt mr-2"></i> Acessar
-                    </button>
-                </div>
-            </section>
+  <h1>Bem-vindo à Rede de Mini Sites</h1>
 
-            <!-- Recent Sites -->
-            <section>
-                <h2 class="text-2xl font-bold mb-6">Mini Sites Recentes</h2>
-                <div id="recent-sites" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <!-- Sites will be loaded here dynamically -->
-                    <div class="text-center py-12">
-                        <i class="fas fa-spinner fa-spin text-3xl text-gray-400 mb-4"></i>
-                        <p>Carregando mini sites...</p>
-                    </div>
-                </div>
-            </section>
-        </main>
+  <div id="createSiteSection">
+    <h2>Criar seu Mini Site</h2>
+    <input type="text" id="siteNameInput" placeholder="Nome do seu site" />
+    <button onclick="criarSite()">Criar Site</button>
+  </div>
 
-        <!-- Footer -->
-        <footer class="bg-gray-800 text-white py-6 mt-12">
-            <div class="container mx-auto px-4 text-center">
-                <p>© 2023 MiniSite Network. Todos os direitos reservados.</p>
-            </div>
-        </footer>
-    </div>
+  <div id="enterSiteSection">
+    <h2>Acessar um Site</h2>
+    <input type="text" id="siteIdInput" placeholder="ID do site" />
+    <button onclick="entrarNoSite()">Acessar Site</button>
+  </div>
 
-    <!-- Mini Site Creator (hidden by default) -->
-    <div id="mini-site-creator" class="hidden container mx-auto px-4 py-8">
-        <div class="max-w-4xl mx-auto">
-            <div class="flex justify-between items-center mb-8">
-                <h2 class="text-2xl font-bold text-gray-800">Criar Novo Mini Site</h2>
-                <button 
-                    onclick="window.location.href='index.html'" 
-                    class="text-gray-500 hover:text-gray-700"
-                >
-                    <i class="fas fa-times text-2xl"></i>
-                </button>
-            </div>
+  <div class="site-list" id="siteList"></div>
 
-            <div class="bg-white rounded-xl shadow-md p-6 mb-6">
-                <div class="mb-4">
-                    <label for="site-name" class="block text-sm font-medium text-gray-700 mb-1">Nome do Site*</label>
-                    <input 
-                        type="text" 
-                        id="site-name" 
-                        placeholder="Meu Site Incrível" 
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                    >
-                </div>
+  <script>
+    const sites = [];
 
-                <div class="mb-4">
-                    <label for="site-description" class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
-                    <input 
-                        type="text" 
-                        id="site-description" 
-                        placeholder="Uma breve descrição do que seu site é sobre..." 
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                </div>
+    function criarSite() {
+      const nome = document.getElementById("siteNameInput").value.trim();
+      if (!nome) return alert("Por favor, digite o nome do site.");
 
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Conteúdo*</label>
-                    <div class="editor-toolbar">
-                        <button class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300" onclick="document.execCommand('bold', false, null)">
-                            <i class="fas fa-bold"></i>
-                        </button>
-                        <button class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300" onclick="document.execCommand('italic', false, null)">
-                            <i class="fas fa-italic"></i>
-                        </button>
-                        <button class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300" onclick="document.execCommand('underline', false, null)">
-                            <i class="fas fa-underline"></i>
-                        </button>
-                        <button class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300" onclick="document.execCommand('insertUnorderedList', false, null)">
-                            <i class="fas fa-list-ul"></i>
-                        </button>
-                        <button class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300" onclick="document.execCommand('insertOrderedList', false, null)">
-                            <i class="fas fa-list-ol"></i>
-                        </button>
-                    </div>
-                    <div 
-                        id="site-content" 
-                        class="editor-content" 
-                        contenteditable="true"
-                        placeholder="Escreva o conteúdo do seu mini site aqui..."
-                    ></div>
-                </div>
+      const id = Math.random().toString(36).substr(2, 9); // ID aleatório
+      const novoSite = { id, nome };
+      sites.push(novoSite);
 
-                <div class="flex justify-end">
-                    <button 
-                        onclick="saveMiniSite()" 
-                        class="bg-blue-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-600 transition"
-                    >
-                        <i class="fas fa-save mr-2"></i> Publicar Mini Site
-                    </button>
-                </div>
-            </div>
+      mostrarSites();
+      alert(`Seu site foi criado com o ID: ${id}`);
+    }
 
-            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-info-circle text-yellow-400 text-xl mt-1 mr-3"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-medium text-yellow-800">Dicas para criar seu mini site</h3>
-                        <div class="mt-2 text-sm text-yellow-700">
-                            <ul class="list-disc pl-5 space-y-1">
-                                <li>Use HTML básico para formatar seu conteúdo</li>
-                                <li>Você pode adicionar links, listas e formatação de texto</li>
-                                <li>Após publicar, você receberá um ID único para compartilhar</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    function entrarNoSite() {
+      const idDigitado = document.getElementById("siteIdInput").value.trim();
+      const siteEncontrado = sites.find(site => site.id === idDigitado);
 
-    <!-- Mini Site Viewer (hidden by default) -->
-    <div id="mini-site-viewer" class="hidden min-h-screen">
-        <header class="gradient-bg text-white shadow-lg">
-            <div class="container mx-auto px-4 py-4">
-                <div class="flex justify-between items-center">
-                    <h1 id="mini-site-title" class="text-xl font-bold">Carregando...</h1>
-                    <button 
-                        onclick="window.location.href='index.html'" 
-                        class="bg-white text-blue-600 px-3 py-1 rounded-lg font-medium hover:bg-gray-100 transition text-sm"
-                    >
-                        <i class="fas fa-home mr-1"></i> Início
-                    </button>
-                </div>
-            </div>
-        </header>
+      if (siteEncontrado) {
+        abrirPaginaSite(siteEncontrado);
+      } else {
+        alert("Site não encontrado.");
+      }
+    }
 
-        <main class="container mx-auto px-4 py-8">
-            <div id="mini-site-content" class="bg-white rounded-xl shadow-md p-6">
-                <div class="text-center py-12">
-                    <i class="fas fa-spinner fa-spin text-3xl text-gray-400 mb-4"></i>
-                    <p>Carregando mini site...</p>
-                </div>
-            </div>
-        </main>
+    function mostrarSites() {
+      const lista = document.getElementById("siteList");
+      lista.innerHTML = "";
 
-        <footer class="bg-gray-800 text-white py-6 mt-12">
-            <div class="container mx-auto px-4 text-center text-sm">
-                <p>Este é um mini site hospedado na MiniSite Network</p>
-            </div>
-        </footer>
-    </div>
+      sites.forEach(site => {
+        const card = document.createElement("div");
+        card.className = "site-card";
+        card.innerHTML = `
+          <strong>${site.nome}</strong><br/>
+          <small>ID: ${site.id}</small><br/>
+          <button onclick='abrirPaginaSite(${JSON.stringify(site)})'>Acessar</button>
+        `;
+        lista.appendChild(card);
+      });
+    }
+
+    function abrirPaginaSite(site) {
+      const win = window.open("", "_blank");
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>${site.nome}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              text-align: center;
+              padding: 50px;
+              background: #eef;
+            }
+            input, button {
+              padding: 10px;
+              margin: 10px;
+              font-size: 16px;
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Bem-vindo ao seu Mini Site: ${site.nome}</h1>
+          <p>Este é o mini site com ID: <strong>${site.id}</strong></p>
+          <h2>Editar Conteúdo</h2>
+          <textarea id="conteudo" rows="10" cols="50">Escreva aqui sua página...</textarea><br/>
+          <button onclick="salvarConteudo('${site.id}')">Salvar Conteúdo</button>
+          <script>
+            function salvarConteudo(id) {
+              const conteudo = document.getElementById('conteudo').value;
+              localStorage.setItem('miniSiteContent_' + id, conteudo);
+              alert('Conteúdo salvo!');
+            }
+            window.onload = () => {
+              const saved = localStorage.getItem('miniSiteContent_${site.id}');
+              if (saved) document.getElementById('conteudo').value = saved;
+            };
+          <\/script>
+        </body>
+        </html>
+      `;
+      win.document.write(html);
+      win.document.close();
+    }
+  </script>
+
 </body>
 </html>
+```
