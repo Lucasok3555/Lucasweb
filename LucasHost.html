@@ -2,114 +2,208 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Mini Sites com Firebase</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mini Sites - Rede de Páginas</title>
   <style>
-    body {
-      font-family: Arial;
-      padding: 20px;
-      background: #f9f9f9;
+    :root {
+      --primary: #007bff;
+      --primary-dark: #0056b3;
+      --bg: #f4f4f4;
+      --white: #fff;
+      --card-bg: #fff;
+      --shadow: rgba(0, 0, 0, 0.1);
     }
-    input,
-    textarea,
-    button,
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--bg);
+      color: #333;
+    }
+
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      background: var(--card-bg);
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px var(--shadow);
+    }
+
+    h2 {
+      margin-top: 0;
+      color: var(--primary);
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+      box-sizing: border-box;
+      margin-bottom: 15px;
+    }
+
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: var(--primary-dark);
+    }
+
     iframe {
       width: 100%;
-      margin-top: 10px;
-    }
-    iframe {
       height: 300px;
       border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+
+    .alert {
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
+      display: none;
+      font-weight: bold;
+    }
+
+    .success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .error {
+      background: #f8d7da;
+      color: #721c24;
     }
   </style>
 </head>
 <body>
 
-  <h2>Criar Mini Site</h2>
-  <input type="text" id="siteName" placeholder="Nome do site" />
-  <textarea id="siteContent" placeholder="Insira o HTML/CSS/JS do seu site"></textarea><br />
-  <button onclick="salvarSite()">Salvar Site</button>
+<header>
+  <h1>Mini Sites - Rede de Páginas</h1>
+</header>
 
-  <h2>Acessar Mini Site</h2>
-  <input type="text" id="siteId" placeholder="Digite o ID do site" />
-  <button onclick="carregarSite()">Carregar Site</button>
+<div class="container">
 
-  <iframe id="preview"></iframe>
+  <!-- Criar Site -->
+  <section>
+    <h2>Criar Mini Site</h2>
+    <input type="text" id="siteName" placeholder="Nome do site" />
+    <textarea id="siteContent" rows="6" placeholder="Digite aqui seu conteúdo HTML/CSS/JS"></textarea>
+    <button onclick="salvarSite()">Salvar Site</button>
+    <div id="createAlert" class="alert"></div>
+  </section>
 
-  <!-- Firebase SDKs -->
-  <script type="module">
-    // Import the functions you need from the SDKs
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js ";
-    import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js ";
+  <!-- Acessar Site -->
+  <section style="margin-top: 30px;">
+    <h2>Acessar Mini Site</h2>
+    <input type="text" id="siteId" placeholder="Digite o ID do site" />
+    <button onclick="carregarSite()">Carregar Site</button>
+    <iframe id="preview"></iframe>
+    <div id="loadAlert" class="alert"></div>
+  </section>
 
-    // Your Firebase configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyCPHbBvlltlG-ZK8su2_dKz3jHjeamwwkM",
-      authDomain: "redelucas-3291e.firebaseapp.com",
-      projectId: "redelucas-3291e",
-      storageBucket: "redelucas-3291e.firebasestorage.app",
-      messagingSenderId: "1043104316422",
-      appId: "1:1043104316422:web:39c82d7f86f8a2a83b1787",
-      measurementId: "G-15YEHMJF6M"
-    };
+</div>
 
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js ";
+  import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js ";
 
-    // Função para gerar um ID único
-    function gerarIdUnico() {
-      return Math.random().toString(36).substr(2, 9);
+  const firebaseConfig = {
+    apiKey: "AIzaSyCPHbBvlltlG-ZK8su2_dKz3jHjeamwwkM",
+    authDomain: "redelucas-3291e.firebaseapp.com",
+    projectId: "redelucas-3291e",
+    databaseURL: "https://redelucas-3291e-default-rtdb.firebaseio.com ",
+    storageBucket: "redelucas-3291e.firebasestorage.app",
+    messagingSenderId: "1043104316422",
+    appId: "1:1043104316422:web:39c82d7f86f8a2a83b1787"
+  };
+
+  // Inicializa o Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  function gerarIdUnico() {
+    return Math.random().toString(36).substr(2, 9);
+  }
+
+  async function salvarSite() {
+    const nome = document.getElementById("siteName").value.trim();
+    const conteudo = document.getElementById("siteContent").value.trim();
+    const alertEl = document.getElementById("createAlert");
+
+    if (!nome || !conteudo) {
+      mostrarAlerta(alertEl, "Por favor, preencha todos os campos.", "error");
+      return;
     }
 
-    // Função para salvar site
-    async function salvarSite() {
-      const nome = document.getElementById("siteName").value.trim();
-      const conteudo = document.getElementById("siteContent").value.trim();
+    const id = gerarIdUnico();
 
-      if (!nome || !conteudo) {
-        alert("Por favor, preencha todos os campos.");
-        return;
-      }
+    try {
+      await set(ref(db, "sites/" + id), {
+        nome,
+        conteudo,
+        createdAt: Date.now()
+      });
+      mostrarAlerta(alertEl, `Site salvo! ID: ${id}`, "success");
+      document.getElementById("siteName").value = "";
+      document.getElementById("siteContent").value = "";
+    } catch (error) {
+      console.error("Erro ao salvar:", error);
+      mostrarAlerta(alertEl, "Erro ao salvar o site.", "error");
+    }
+  }
 
-      const id = gerarIdUnico();
+  async function carregarSite() {
+    const id = document.getElementById("siteId").value.trim();
+    const alertEl = document.getElementById("loadAlert");
 
-      try {
-        await set(ref(db, "sites/" + id), {
-          nome: nome,
-          conteudo: conteudo,
-          createdAt: Date.now()
-        });
-        alert("Site salvo com sucesso! ID: " + id);
-      } catch (error) {
-        console.error("Erro ao salvar:", error);
-        alert("Erro ao salvar o site.");
-      }
+    if (!id) {
+      mostrarAlerta(alertEl, "Digite um ID válido.", "error");
+      return;
     }
 
-    // Função para carregar site pelo ID
-    async function carregarSite() {
-      const id = document.getElementById("siteId").value.trim();
-      if (!id) {
-        alert("Digite um ID válido.");
-        return;
-      }
+    const siteRef = ref(db, "sites/" + id);
 
-      const siteRef = ref(db, "sites/" + id);
-
-      try {
-        const snapshot = await get(siteRef);
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          document.getElementById("preview").srcdoc = data.conteudo;
-        } else {
-          alert("Site não encontrado.");
-        }
-      } catch (error) {
-        console.error("Erro ao carregar:", error);
-        alert("Erro ao carregar o site.");
+    try {
+      const snapshot = await get(siteRef);
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        document.getElementById("preview").srcdoc = data.conteudo;
+        alertEl.style.display = "none";
+      } else {
+        mostrarAlerta(alertEl, "Site não encontrado.", "error");
       }
+    } catch (error) {
+      console.error("Erro ao carregar:", error);
+      mostrarAlerta(alertEl, "Erro ao carregar o site.", "error");
     }
-  </script>
+  }
+
+  function mostrarAlerta(el, mensagem, tipo) {
+    el.className = `alert ${tipo}`;
+    el.textContent = mensagem;
+    el.style.display = "block";
+  }
+</script>
 
 </body>
 </html>
