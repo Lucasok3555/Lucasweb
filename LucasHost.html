@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mini Sites - Rede P2P</title>
+  <title>Mini Sites - Rede de Páginas</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -45,6 +45,27 @@
     button:hover {
       background-color: #0056b3;
     }
+    .site-list {
+      margin-top: 20px;
+    }
+    .site-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    .site-card:last-child {
+      border-bottom: none;
+    }
+    .site-info {
+      flex: 1;
+    }
+    .site-link {
+      color: #007bff;
+      cursor: pointer;
+      text-decoration: underline;
+    }
     .editor {
       display: none;
       margin-top: 20px;
@@ -73,35 +94,21 @@
     .header-site-view h2 {
       margin: 0;
     }
-    .p2p-section {
-      margin-top: 30px;
-      padding: 15px;
-      background: #eef;
-      border-radius: 8px;
-    }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>Bem-vindo à Rede de Mini Sites (P2P)</h1>
+  <h1>Bem-vindo à Rede de Mini Sites</h1>
 </header>
 
 <div class="container">
 
-  <!-- Seção para criar site -->
-  <div id="criarSeção">
-    <h2>Criar seu Mini Site</h2>
-    <input type="text" id="siteNameInput" placeholder="Digite o nome do seu site" />
-    <button onclick="criarSite()">Criar Site</button>
-    <p><strong>ID Público:</strong> <span id="publicIdDisplay"></span></p>
-  </div>
-
-  <!-- Seção para acessar por ID -->
+  <!-- Busca por ID no topo -->
   <div class="acesso-site">
-    <h2>Acessar um Site Externo</h2>
-    <input type="text" id="remoteIdInput" placeholder="Digite o ID do site" />
-    <button onclick="conectarAoSite()">Conectar</button>
+    <h2>Procurar um Site pelo ID</h2>
+    <input type="text" id="siteIdInput" placeholder="Digite o ID do site" />
+    <button onclick="acessarSite()">Acessar</button>
   </div>
 
   <!-- Exibição do site acessado -->
@@ -110,130 +117,112 @@
     <p><strong>ID:</strong> <span id="headerSiteID"></span></p>
   </div>
 
-  <!-- Editor local -->
+  <h2>Criar seu Mini Site</h2>
+  <input type="text" id="siteNameInput" placeholder="Digite o nome do seu site" />
+  <button onclick="criarSite()">Criar Site</button>
+
+  <div class="site-list" id="siteList"></div>
+
   <div class="editor" id="codeEditor">
     <h3>Edite o conteúdo do seu site (HTML/CSS/JS)</h3>
     <textarea id="htmlContent" placeholder="Insira aqui o código HTML, CSS ou JS do seu site..."></textarea>
     <br/>
     <button onclick="salvarConteudo()">Salvar Conteúdo</button>
+    <button onclick="editarNovamente()">Editar Novamente</button>
   </div>
 
-  <!-- Visualização do site -->
   <div class="editor" id="visualizadorSite">
     <h3>Visualização do Seu Site</h3>
     <iframe id="iframeSite" style="width: 100%; height: 300px; border: 1px solid #ccc;"></iframe>
   </div>
-
 </div>
 
-<!-- Carrega PeerJS -->
-<script src="https://cdn.jsdelivr.net/npm/peerjs @1.4.7/dist/peerjs.min.js"></script>
 <script>
-  let peer = null;
-  let isCreator = false;
+  const API_URL = 'https://lucasok3555.github.io/Lucasweb '; // Ajuste se necessário
+
   let currentSite = {
     id: '',
     nome: '',
-    conteudo: '<h1>Bem-vindo ao meu mini site!</h1>'
+    conteudo: ''
   };
-
-  // --- PEERJS ---
-
-  function iniciarServidorP2P(id) {
-    peer = new Peer(id, {
-      host: 'peerjs.com',
-      port: 443,
-      secure: true
-    });
-
-    peer.on('connection', (conn) => {
-      conn.on('open', () => {
-        conn.send({
-          tipo: 'site',
-          site: currentSite
-        });
-      });
-    });
-
-    document.getElementById('publicIdDisplay').textContent = id;
-    alert("Você está no modo criador. ID público: " + id);
-  }
-
-  function conectarAoSite() {
-    const remoteId = document.getElementById('remoteIdInput').value.trim();
-    const conn = peer.connect(remoteId);
-
-    conn.on('open', () => {
-      conn.on('data', (data) => {
-        if (data.tipo === 'site') {
-          currentSite = data.site;
-          mostrarCabecalhoSite(currentSite.id);
-          abrirVisualizador(currentSite.conteudo);
-        }
-      });
-    });
-
-    conn.on('error', (err) => {
-      alert("Erro ao conectar ao ID remoto.");
-      console.error(err);
-    });
-  }
-
-  // --- FUNCIONALIDADES DO SITE ---
 
   function criarSite() {
     const nome = document.getElementById('siteNameInput').value.trim();
     if (!nome) return alert("Por favor, insira um nome para o site.");
-
     const id = Math.random().toString(36).substr(2, 9);
     currentSite = {
       id: id,
       nome: nome,
       conteudo: '<h1>Bem-vindo ao meu mini site!</h1>'
     };
-
-    isCreator = true;
-    document.getElementById('criarSeção').style.display = 'none';
-    document.getElementById('codeEditor').classList.add('active');
-    document.getElementById('htmlContent').value = currentSite.conteudo;
-
-    iniciarServidorP2P(id);
+    alert(`Seu site foi criado! ID: ${id}. Use esse ID para acessar.`);
+    abrirEditor(currentSite.id);
   }
 
-  function salvarConteudo() {
+  async function acessarSite() {
+    const id = document.getElementById('siteIdInput').value.trim();
+    try {
+      const res = await fetch(`${API_URL}/api/site/${id}`);
+      if (!res.ok) throw new Error("Site não encontrado");
+      const data = await res.json();
+      currentSite = data;
+      mostrarCabecalhoSite(id);
+      abrirVisualizador(data.conteudo);
+    } catch (e) {
+      alert("Erro ao buscar site.");
+      console.error(e);
+    }
+  }
+
+  async function salvarConteudo() {
     const conteudo = document.getElementById('htmlContent').value;
     currentSite.conteudo = conteudo;
 
-    if (isCreator && peer && peer.connections) {
-      for (const id in peer.connections) {
-        peer.connections[id].forEach(conn => {
-          conn.send({
-            tipo: 'site',
-            site: currentSite
-          });
-        });
-      }
-    }
+    try {
+      const res = await fetch(`${API_URL}/api/site/${currentSite.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(currentSite)
+      });
 
-    document.getElementById('iframeSite').srcdoc = conteudo;
-    alert("Conteúdo atualizado e enviado aos visualizadores!");
+      if (res.ok) {
+        alert("Conteúdo salvo no servidor!");
+        document.getElementById('iframeSite').srcdoc = conteudo;
+      } else {
+        alert("Erro ao salvar no servidor.");
+      }
+    } catch (e) {
+      alert("Falha na conexão com o servidor.");
+      console.error(e);
+    }
   }
 
-  function mostrarCabecalhoSite(id) {
-    document.getElementById('headerSiteName').textContent = currentSite.nome;
-    document.getElementById('headerSiteID').textContent = id;
-    document.getElementById('headerSiteView').style.display = 'block';
+  function editarNovamente() {
+    abrirEditor(currentSite.id);
+  }
+
+  function abrirEditor(id) {
+    document.getElementById('codeEditor').classList.add('active');
+    document.getElementById('htmlContent').value = currentSite.conteudo || '<h1>Bem-vindo ao meu mini site!</h1>';
+    document.getElementById('visualizadorSite').classList.remove('active');
+    document.getElementById('iframeSite').srcdoc = '';
+    mostrarCabecalhoSite(id);
   }
 
   function abrirVisualizador(conteudo) {
     document.getElementById('iframeSite').srcdoc = conteudo;
     document.getElementById('visualizadorSite').classList.add('active');
+    document.getElementById('codeEditor').classList.remove('active');
   }
 
-  // --- INICIALIZAÇÃO ---
-  window.onload = () => {
-    peer = new Peer();
-  };
+  function mostrarCabecalhoSite(id) {
+    const cabecalho = document.getElementById('headerSiteView');
+    const nomeEl = document.getElementById('headerSiteName');
+    const idEl = document.getElementById('headerSiteID');
+    nomeEl.textContent = currentSite.nome;
+    idEl.textContent = id;
+    cabecalho.style.display = 'block';
+  }
 </script>
 
 </body>
