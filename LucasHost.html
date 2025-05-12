@@ -2,131 +2,206 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Mini Sites - Sistema tipo DNS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mini Sites - Rede de Páginas</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 20px auto;
+      margin: 0;
+      padding: 20px;
+      background: #f4f4f4;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .container {
       max-width: 600px;
-      background: #f9f9f9;
+      margin: auto;
+      background: white;
       padding: 20px;
       border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    input, textarea, button {
-      width: 100%;
-      margin-top: 10px;
+    input[type="text"] {
+      width: calc(100% - 22px);
       padding: 10px;
-      font-size: 16px;
+      margin-top: 10px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
     }
     button {
-      background: #007bff;
-      color: white;
+      padding: 6px 12px;
       border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 4px;
       cursor: pointer;
+      margin-right: 5px;
+      margin-bottom: 5px;
+      font-size: 14px;
     }
     button:hover {
-      background: #0056b3;
+      background-color: #0056b3;
     }
-    iframe {
+    .editor {
+      display: none;
+      margin-top: 20px;
+    }
+    .editor.active {
+      display: block;
+    }
+    textarea {
       width: 100%;
-      height: 300px;
+      height: 200px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 14px;
       border: 1px solid #ccc;
-      margin-top: 10px;
+      border-radius: 4px;
+      resize: vertical;
+    }
+    .header-site-view {
+      display: none;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .header-site-view h2 {
+      margin: 0;
     }
   </style>
 </head>
 <body>
 
-<h2>Criar Mini Site</h2>
-<input type="text" id="siteName" placeholder="Nome do site">
-<input type="text" id="siteId" placeholder="ID do site (ex: xxxxx)">
-<input type="text" id="serverIp" placeholder="IP ou URL do servidor (ex: https://meusite.com/site/xxxxx )">
-<textarea id="siteContent" placeholder="HTML/CSS/JS do seu site"></textarea>
-<button onclick="salvarSite()">Salvar no Sistema</button>
+<header>
+  <h1>Bem-vindo à Rede de Mini Sites</h1>
+</header>
 
-<h2>Acessar Mini Site</h2>
-<input type="text" id="accessId" placeholder="Digite o ID do site (ex: xxxxx)">
-<button onclick="acessarSite()">Acessar Site</button>
+<div class="container">
 
-<iframe id="preview"></iframe>
+  <!-- Criar Site -->
+  <h2>Criar seu Mini Site</h2>
+  <input type="text" id="siteNameInput" placeholder="Digite o nome do seu site" />
+  <button onclick="criarSite()">Criar Site</button>
 
-<!-- Firebase SDK -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js ";
-  import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js ";
+  <p><strong>ID Gerado:</strong> <span id="generatedId"></span></p>
 
-  // Configuração do Firebase
-  const firebaseConfig = {
-    apiKey: "AIzaSyCPHbBvlltlG-ZK8su2_dKz3jHjeamwwkM",
-    authDomain: "redelucas-3291e.firebaseapp.com",
-    projectId: "redelucas-3291e",
-    databaseURL: "https://redelucas-3291e-default-rtdb.firebaseio.com ",
-    storageBucket: "redelucas-3291e.firebasestorage.app",
-    messagingSenderId: "1043104316422",
-    appId: "1:1043104316422:web:39c82d7f86f8a2a83b1787"
+  <div class="editor" id="codeEditor">
+    <h3>Edite o conteúdo do seu site (HTML/CSS/JS)</h3>
+    <textarea id="htmlContent" placeholder="Insira aqui o código HTML, CSS ou JS do seu site..."></textarea>
+    <br/>
+    <button onclick="salvarConteudo()">Salvar Conteúdo</button>
+  </div>
+
+  <!-- Acessar Site -->
+  <div style="margin-top: 30px;">
+    <h2>Acessar um Site Externo</h2>
+    <input type="text" id="siteId" placeholder="Digite o ID do site (ex: xxxxx)" />
+    <button onclick="acessarSite()">Acessar</button>
+  </div>
+
+  <!-- Exibição do site acessado -->
+  <div class="header-site-view" id="headerSiteView">
+    <h2 id="headerSiteName"></h2>
+    <p><strong>ID:</strong> <span id="headerSiteID"></span></p>
+  </div>
+
+  <!-- Visualização do site -->
+  <div class="editor" id="visualizadorSite">
+    <h3>Visualização do Site</h3>
+    <iframe id="iframeSite" style="width: 100%; height: 300px; border: 1px solid #ccc;"></iframe>
+  </div>
+
+</div>
+
+<script>
+  let currentSite = {
+    id: '',
+    nome: '',
+    conteudo: ''
   };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-
+  // Gera ID único
   function gerarIdUnico() {
-    return Math.random().toString(36).substr(2, 9);
+    return Math.random().toString(36).substr(2, 9); // Ex: abcdefghij
   }
 
-  async function salvarSite() {
-    const nome = document.getElementById("siteName").value.trim();
-    let id = document.getElementById("siteId").value.trim();
-    const ip = document.getElementById("serverIp").value.trim();
-    const conteudo = document.getElementById("siteContent").value.trim();
+  // Cria site com ID automático
+  function criarSite() {
+    const nome = document.getElementById('siteNameInput').value.trim();
+    if (!nome) return alert("Por favor, insira um nome para o site.");
 
-    if (!nome || !ip || !conteudo) {
-      alert("Preencha todos os campos.");
-      return;
-    }
+    const id = gerarIdUnico();
+    currentSite = {
+      id: id,
+      nome: nome,
+      conteudo: '<h1>Bem-vindo ao meu mini site!</h1>'
+    };
 
-    if (!id) {
-      id = gerarIdUnico();
-      alert("ID gerado automaticamente: " + id);
-    }
-
-    try {
-      await set(ref(db, 'sites/' + id), {
-        nome,
-        ip_servidor: ip,
-        conteudo,
-        criado_em: Date.now()
-      });
-      alert("Site registrado com sucesso! ID: " + id);
-    } catch (error) {
-      console.error("Erro ao salvar:", error);
-      alert("Erro ao salvar no Firebase.");
-    }
+    document.getElementById('generatedId').textContent = id;
+    abrirEditor(id);
   }
 
+  // Abre editor
+  function abrirEditor(id) {
+    document.getElementById('codeEditor').classList.add('active');
+    document.getElementById('htmlContent').value = currentSite.conteudo;
+    document.getElementById('visualizadorSite').classList.remove('active');
+    document.getElementById('iframeSite').srcdoc = '';
+  }
+
+  // Salva conteúdo (simulado)
+  function salvarConteudo() {
+    const conteudo = document.getElementById('htmlContent').value;
+    currentSite.conteudo = conteudo;
+
+    alert("Conteúdo salvo localmente! Para publicar, envie este ID e conteúdo para o arquivo LucasHostservidor.json");
+    document.getElementById('iframeSite').srcdoc = conteudo;
+  }
+
+  // Acessa site pelo ID no JSON público
   async function acessarSite() {
-    const id = document.getElementById("accessId").value.trim();
-    if (!id) {
-      alert("Digite um ID válido.");
-      return;
-    }
+    const id = document.getElementById('siteId').value.trim();
+    if (!id) return alert("Digite um ID válido.");
 
     try {
-      const snapshot = await get(ref(db, 'sites/' + id));
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        // Mostra no iframe o conteúdo ou redireciona para o servidor
-        if (data.ip_servidor) {
-          window.open(data.ip_servidor, '_blank');
-        } else {
-          document.getElementById('preview').srcdoc = data.conteudo;
-        }
+      const res = await fetch('https://lucasok3555.github.io/Lucasweb/LucasHostservidor.json ');
+      if (!res.ok) throw new Error("Erro ao carregar servidor");
+
+      const data = await res.json();
+
+      if (data[id]) {
+        const site = data[id];
+        currentSite = {
+          id: id,
+          nome: site.nome || 'Site sem título',
+          conteudo: site.conteudo || '<p>Nenhum conteúdo encontrado.</p>'
+        };
+        mostrarCabecalhoSite(id);
+        abrirVisualizador(site.conteudo);
       } else {
-        alert("Site não encontrado.");
+        alert("Site com esse ID não foi encontrado.");
       }
-    } catch (error) {
-      alert("Erro ao buscar site.");
-      console.error(error);
+    } catch (e) {
+      console.error("Erro:", e);
+      alert("Falha ao buscar o site.");
     }
+  }
+
+  function abrirVisualizador(conteudo) {
+    document.getElementById('iframeSite').srcdoc = conteudo;
+    document.getElementById('visualizadorSite').classList.add('active');
+  }
+
+  function mostrarCabecalhoSite(id) {
+    const cabecalho = document.getElementById('headerSiteView');
+    const nomeEl = document.getElementById('headerSiteName');
+    const idEl = document.getElementById('headerSiteID');
+
+    nomeEl.textContent = currentSite.nome;
+    idEl.textContent = id;
+    cabecalho.style.display = 'block';
   }
 </script>
 
