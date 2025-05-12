@@ -45,13 +45,6 @@
     button:hover {
       background-color: #0056b3;
     }
-    .editor {
-      display: none;
-      margin-top: 20px;
-    }
-    .editor.active {
-      display: block;
-    }
     textarea {
       width: 100%;
       height: 200px;
@@ -62,78 +55,54 @@
       border-radius: 4px;
       resize: vertical;
     }
-    .header-site-view {
+    .editor {
       display: none;
-      margin-bottom: 20px;
-      text-align: center;
-    }
-    .header-site-view h2 {
-      margin: 0;
-    }
-    .site-list {
       margin-top: 20px;
     }
-    .site-card {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px;
-      border-bottom: 1px solid #ddd;
+    .editor.active {
+      display: block;
     }
-    .site-card:last-child {
-      border-bottom: none;
+    #linkDisplay {
+      word-break: break-all;
+      margin-top: 10px;
+      color: green;
     }
-    .site-link {
-      color: #007bff;
-      cursor: pointer;
-      text-decoration: underline;
+    iframe {
+      width: 100%;
+      height: 300px;
+      border: 1px solid #ccc;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>Bem-vindo à Rede de Mini Sites</h1>
+  <h1>Crie seu Mini Site</h1>
 </header>
 
 <div class="container">
 
   <!-- Criar Site -->
   <h2>Criar seu Mini Site</h2>
-  <input type="text" id="siteNameInput" placeholder="Digite o nome do seu site" />
+  <input type="text" id="siteNameInput" placeholder="Nome do site" />
+  <textarea id="htmlContent" placeholder="Edite aqui o conteúdo HTML/CSS/JS"></textarea>
+  <br/>
   <button onclick="criarSite()">Criar Site</button>
+  <button onclick="visualizarSite()">Visualizar</button>
 
-  <p><strong>ID Gerado:</strong> <span id="generatedId"></span></p>
-
-  <div class="editor" id="codeEditor">
-    <h3>Edite o conteúdo do seu site (HTML/CSS/JS)</h3>
-    <textarea id="htmlContent" placeholder="Insira aqui o código HTML, CSS ou JS do seu site..."></textarea>
-    <br/>
-    <button onclick="salvarConteudo()">Salvar Conteúdo</button>
-    <button onclick="enviarParaAPI()">Enviar para API</button>
+  <!-- Exibe o link compartilhável -->
+  <div style="margin-top: 20px;">
+    <strong>Link do seu site:</strong>
+    <p id="linkDisplay">Digite um nome e crie um site primeiro.</p>
+    <button onclick="copiarLink()">Copiar Link</button>
   </div>
 
-  <!-- Acessar Site -->
-  <div style="margin-top: 30px;">
-    <h2>Acessar um Site Externo</h2>
-    <input type="text" id="siteId" placeholder="Digite o ID do site (ex: xxxxx)" />
-    <button onclick="acessarSite()">Acessar</button>
+  <!-- Preview do site -->
+  <div class="editor" id="previewArea">
+    <h3>Preview do seu site</h3>
+    <iframe id="iframeSite" style="width: 100%; height: 300px;"></iframe>
   </div>
-
-  <!-- Exibição do site acessado -->
-  <div class="header-site-view" id="headerSiteView">
-    <h2 id="headerSiteName"></h2>
-    <p><strong>ID:</strong> <span id="headerSiteID"></span></p>
-  </div>
-
-  <!-- Visualização do site -->
-  <div class="editor" id="visualizadorSite">
-    <h3>Visualização do Site</h3>
-    <iframe id="iframeSite" style="width: 100%; height: 300px; border: 1px solid #ccc;"></iframe>
-  </div>
-
-  <!-- Lista de sites criados -->
-  <div class="site-list" id="siteList"></div>
 
 </div>
 
@@ -144,120 +113,72 @@
     conteudo: ''
   };
 
-  const sitesSalvos = {};
-
-  // Gera ID único
   function gerarIdUnico() {
     return Math.random().toString(36).substr(2, 9); // Ex: abcdefghij
   }
 
-  // Cria site com ID automático
   function criarSite() {
     const nome = document.getElementById('siteNameInput').value.trim();
-    if (!nome) return alert("Por favor, insira um nome para o site.");
+    const conteudo = document.getElementById('htmlContent').value;
+
+    if (!nome || !conteudo) {
+      alert("Por favor, preencha todos os campos.");
+      return;
+    }
 
     const id = gerarIdUnico();
-    currentSite = {
-      id: id,
-      nome: nome,
-      conteudo: '<h1>Bem-vindo ao meu mini site!</h1>'
-    };
-
-    document.getElementById('generatedId').textContent = id;
-    abrirEditor(id);
-  }
-
-  // Abre editor
-  function abrirEditor(id) {
-    document.getElementById('codeEditor').classList.add('active');
-    document.getElementById('htmlContent').value = currentSite.conteudo || '<h1>Bem-vindo ao meu mini site!</h1>';
-    document.getElementById('visualizadorSite').classList.remove('active');
-    document.getElementById('iframeSite').srcdoc = '';
-  }
-
-  // Salva conteúdo localmente
-  function salvarConteudo() {
-    const conteudo = document.getElementById('htmlContent').value;
-    currentSite.conteudo = conteudo;
-    document.getElementById('iframeSite').srcdoc = conteudo;
-    alert("Conteúdo salvo localmente.");
-  }
-
-  // Simula envio para API (você deve atualizar manualmente o JSON)
-  function enviarParaAPI() {
-    alert("O site foi salvo localmente. Para publicar, adicione os dados no LucasHostservidor.json");
-    console.log("Dados do site:", currentSite);
-  }
-
-  // Acessa site pelo ID na API pública
-  async function acessarSite() {
-    const id = document.getElementById('siteId').value.trim();
-    if (!id) return alert("Digite um ID válido.");
-
-    try {
-      const res = await fetch('https://lucasok3555.github.io/Lucasweb/LucasHostservidor.json ');
-      if (!res.ok) throw new Error("Erro ao carregar servidor");
-
-      const data = await res.json();
-
-      if (data[id]) {
-        const site = data[id];
-        currentSite = {
-          id: id,
-          nome: site.nome || 'Site sem título',
-          conteudo: site.conteudo || '<p>Nenhum conteúdo encontrado.</p>'
-        };
-        mostrarCabecalhoSite(id);
-        abrirVisualizador(site.conteudo);
-        atualizarListaSites(data);
-      } else {
-        alert("Site com esse ID não foi encontrado.");
-      }
-    } catch (e) {
-      console.error("Erro:", e);
-      alert("Falha ao buscar o site.");
-    }
-  }
-
-  // Abre visualização do site
-  function abrirVisualizador(conteudo) {
-    document.getElementById('iframeSite').srcdoc = conteudo;
-    document.getElementById('visualizadorSite').classList.add('active');
-  }
-
-  // Exibe cabeçalho do site
-  function mostrarCabecalhoSite(id) {
-    const cabecalho = document.getElementById('headerSiteView');
-    const nomeEl = document.getElementById('headerSiteName');
-    const idEl = document.getElementById('headerSiteID');
-
-    nomeEl.textContent = currentSite.nome;
-    idEl.textContent = id;
-    cabecalho.style.display = 'block';
-  }
-
-  // Atualiza a lista de sites a partir do JSON público
-  function atualizarListaSites(data) {
-    const lista = document.getElementById('siteList');
-    lista.innerHTML = '';
-
-    for (const id in data) {
-      const item = document.createElement('div');
-      item.className = 'site-card';
-      item.innerHTML = `
-        <span class="site-link" onclick="visualizarSite('${id}', '${data[id].nome}', \`${data[id].conteudo}\`)">${data[id].nome}</span>
-        <small>ID: <strong>${id}</strong></small>
-      `;
-      lista.appendChild(item);
-    }
-  }
-
-  // Visualiza site diretamente da lista
-  function visualizarSite(id, nome, conteudo) {
     currentSite = { id, nome, conteudo };
-    mostrarCabecalhoSite(id);
-    abrirVisualizador(conteudo);
+
+    // Atualiza o link
+    const link = `${window.location.href}?id=${id}`;
+    document.getElementById('linkDisplay').innerHTML = `<a href="${link}" target="_blank">${link}</a>`;
+    alert("Link criado! Compartilhe ele com seus amigos.");
+
+    // Salva localmente (para exibir na mesma aba)
+    localStorage.setItem(`mini-site-${id}`, JSON.stringify(currentSite));
   }
+
+  function visualizarSite() {
+    const id = new URLSearchParams(window.location.search).get('id');
+    if (!id) {
+      alert("Este modo é para visualização. Use o editor para criar um site.");
+      return;
+    }
+
+    const saved = localStorage.getItem(`mini-site-${id}`);
+    if (!saved) {
+      alert("Site não encontrado. Tente criar um novo.");
+      return;
+    }
+
+    const site = JSON.parse(saved);
+    document.getElementById('iframeSite').srcdoc = site.conteudo;
+  }
+
+  function copiarLink() {
+    const link = document.querySelector('#linkDisplay a')?.href;
+    if (!link) return alert("Nenhum link disponível para copiar.");
+
+    navigator.clipboard.writeText(link).then(() => {
+      alert("Link copiado para a área de transferência!");
+    }).catch(err => {
+      alert("Erro ao copiar link.");
+      console.error(err);
+    });
+  }
+
+  // Se carregar com ?id=xxx, mostra o site
+  window.onload = () => {
+    const id = new URLSearchParams(window.location.search).get('id');
+    if (id) {
+      const saved = localStorage.getItem(`mini-site-${id}`);
+      if (saved) {
+        const site = JSON.parse(saved);
+        document.getElementById('iframeSite').srcdoc = site.conteudo;
+        document.getElementById('previewArea').classList.add('active');
+      }
+    }
+  };
 </script>
 
 </body>
