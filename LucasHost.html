@@ -70,6 +70,24 @@
     .header-site-view h2 {
       margin: 0;
     }
+    .site-list {
+      margin-top: 20px;
+    }
+    .site-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    .site-card:last-child {
+      border-bottom: none;
+    }
+    .site-link {
+      color: #007bff;
+      cursor: pointer;
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -92,6 +110,7 @@
     <textarea id="htmlContent" placeholder="Insira aqui o código HTML, CSS ou JS do seu site..."></textarea>
     <br/>
     <button onclick="salvarConteudo()">Salvar Conteúdo</button>
+    <button onclick="enviarParaAPI()">Enviar para API</button>
   </div>
 
   <!-- Acessar Site -->
@@ -113,6 +132,9 @@
     <iframe id="iframeSite" style="width: 100%; height: 300px; border: 1px solid #ccc;"></iframe>
   </div>
 
+  <!-- Lista de sites criados -->
+  <div class="site-list" id="siteList"></div>
+
 </div>
 
 <script>
@@ -121,6 +143,8 @@
     nome: '',
     conteudo: ''
   };
+
+  const sitesSalvos = {};
 
   // Gera ID único
   function gerarIdUnico() {
@@ -146,21 +170,26 @@
   // Abre editor
   function abrirEditor(id) {
     document.getElementById('codeEditor').classList.add('active');
-    document.getElementById('htmlContent').value = currentSite.conteudo;
+    document.getElementById('htmlContent').value = currentSite.conteudo || '<h1>Bem-vindo ao meu mini site!</h1>';
     document.getElementById('visualizadorSite').classList.remove('active');
     document.getElementById('iframeSite').srcdoc = '';
   }
 
-  // Salva conteúdo (simulado)
+  // Salva conteúdo localmente
   function salvarConteudo() {
     const conteudo = document.getElementById('htmlContent').value;
     currentSite.conteudo = conteudo;
-
-    alert("Conteúdo salvo localmente! Para publicar, envie este ID e conteúdo para o arquivo LucasHostservidor.json");
     document.getElementById('iframeSite').srcdoc = conteudo;
+    alert("Conteúdo salvo localmente.");
   }
 
-  // Acessa site pelo ID no JSON público
+  // Simula envio para API (você deve atualizar manualmente o JSON)
+  function enviarParaAPI() {
+    alert("O site foi salvo localmente. Para publicar, adicione os dados no LucasHostservidor.json");
+    console.log("Dados do site:", currentSite);
+  }
+
+  // Acessa site pelo ID na API pública
   async function acessarSite() {
     const id = document.getElementById('siteId').value.trim();
     if (!id) return alert("Digite um ID válido.");
@@ -180,6 +209,7 @@
         };
         mostrarCabecalhoSite(id);
         abrirVisualizador(site.conteudo);
+        atualizarListaSites(data);
       } else {
         alert("Site com esse ID não foi encontrado.");
       }
@@ -189,11 +219,13 @@
     }
   }
 
+  // Abre visualização do site
   function abrirVisualizador(conteudo) {
     document.getElementById('iframeSite').srcdoc = conteudo;
     document.getElementById('visualizadorSite').classList.add('active');
   }
 
+  // Exibe cabeçalho do site
   function mostrarCabecalhoSite(id) {
     const cabecalho = document.getElementById('headerSiteView');
     const nomeEl = document.getElementById('headerSiteName');
@@ -203,7 +235,30 @@
     idEl.textContent = id;
     cabecalho.style.display = 'block';
   }
+
+  // Atualiza a lista de sites a partir do JSON público
+  function atualizarListaSites(data) {
+    const lista = document.getElementById('siteList');
+    lista.innerHTML = '';
+
+    for (const id in data) {
+      const item = document.createElement('div');
+      item.className = 'site-card';
+      item.innerHTML = `
+        <span class="site-link" onclick="visualizarSite('${id}', '${data[id].nome}', \`${data[id].conteudo}\`)">${data[id].nome}</span>
+        <small>ID: <strong>${id}</strong></small>
+      `;
+      lista.appendChild(item);
+    }
+  }
+
+  // Visualiza site diretamente da lista
+  function visualizarSite(id, nome, conteudo) {
+    currentSite = { id, nome, conteudo };
+    mostrarCabecalhoSite(id);
+    abrirVisualizador(conteudo);
+  }
 </script>
 
 </body>
-      </html>
+</html>
