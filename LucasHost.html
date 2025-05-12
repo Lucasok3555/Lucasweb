@@ -73,6 +73,24 @@
       border: 1px solid #ccc;
       margin-top: 10px;
     }
+    .site-list {
+      margin-top: 30px;
+    }
+    .site-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    .site-card:last-child {
+      border-bottom: none;
+    }
+    .site-link {
+      color: #007bff;
+      cursor: pointer;
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -104,17 +122,28 @@
     <iframe id="iframeSite" style="width: 100%; height: 300px;"></iframe>
   </div>
 
+  <!-- Lista de sites criados -->
+  <div class="site-list" id="siteList">
+    <h3>Seus Sites</h3>
+    <!-- Sites vão aparecer aqui -->
+  </div>
+
 </div>
 
 <script>
-  let currentSite = {
-    id: '',
-    nome: '',
-    conteudo: ''
-  };
+  let currentSite = null;
 
   function gerarIdUnico() {
-    return Math.random().toString(36).substr(2, 9); // Ex: abcdefghij
+    return Math.random().toString(36).substr(2, 9); // abcdefghij
+  }
+
+  function salvarNoLocalStorage(sites) {
+    localStorage.setItem('miniSites', JSON.stringify(sites));
+  }
+
+  function carregarDoLocalStorage() {
+    const data = localStorage.getItem('miniSites');
+    return data ? JSON.parse(data) : {};
   }
 
   function criarSite() {
@@ -129,13 +158,17 @@
     const id = gerarIdUnico();
     currentSite = { id, nome, conteudo };
 
-    // Atualiza o link
+    const sites = carregarDoLocalStorage();
+    sites[id] = currentSite;
+    salvarNoLocalStorage(sites);
+
+    // Atualiza link
     const link = `${window.location.href}?id=${id}`;
     document.getElementById('linkDisplay').innerHTML = `<a href="${link}" target="_blank">${link}</a>`;
-    alert("Link criado! Compartilhe ele com seus amigos.");
+    alert("Site criado! Link atualizado.");
 
-    // Salva localmente (para exibir na mesma aba)
-    localStorage.setItem(`mini-site-${id}`, JSON.stringify(currentSite));
+    // Atualiza lista de sites
+    atualizarListaSites();
   }
 
   function visualizarSite() {
@@ -145,14 +178,15 @@
       return;
     }
 
-    const saved = localStorage.getItem(`mini-site-${id}`);
-    if (!saved) {
-      alert("Site não encontrado. Tente criar um novo.");
+    const sites = carregarDoLocalStorage();
+    const site = sites[id];
+    if (!site) {
+      alert("Site não encontrado.");
       return;
     }
 
-    const site = JSON.parse(saved);
     document.getElementById('iframeSite').srcdoc = site.conteudo;
+    document.getElementById('previewArea').classList.add('active');
   }
 
   function copiarLink() {
@@ -160,21 +194,68 @@
     if (!link) return alert("Nenhum link disponível para copiar.");
 
     navigator.clipboard.writeText(link).then(() => {
-      alert("Link copiado para a área de transferência!");
+      alert("Link copiado!");
     }).catch(err => {
-      alert("Erro ao copiar link.");
       console.error(err);
+      alert("Erro ao copiar.");
     });
   }
 
-  // Se carregar com ?id=xxx, mostra o site
+  function atualizarListaSites() {
+    const sites = carregarDoLocalStorage();
+    const lista = document.getElementById('siteList');
+    lista.innerHTML = '<h3>Seus Sites</h3>';
+
+    for (const id in sites) {
+      const site = sites[id];
+      const card = document.createElement('div');
+      card.className = 'site-card';
+      card.innerHTML = `
+        <span class="site-link" onclick="carregarParaEdicao('${id}')">${site.nome}</span>
+        <button onclick="atualizarSite('${id}')">Atualizar</button>
+      `;
+      lista.appendChild(card);
+    }
+  }
+
+  function carregarParaEdicao(id) {
+    const sites = carregarDoLocalStorage();
+    const site = sites[id];
+    if (!site) return alert("Site não encontrado.");
+
+    currentSite = site;
+    document.getElementById('siteNameInput').value = site.nome;
+    document.getElementById('htmlContent').value = site.conteudo;
+    document.getElementById('linkDisplay').innerHTML = `<a href="?id=${id}" target="_blank">${window.location.origin + window.location.pathname}?id=${id}</a>`;
+    alert("Você está editando esse site. Clique em 'Atualizar' para salvar as mudanças.");
+  }
+
+  function atualizarSite(id) {
+    const novoNome = document.getElementById('siteNameInput').value.trim();
+    const novoConteudo = document.getElementById('htmlContent').value;
+
+    if (!novoNome || !novoConteudo) return alert("Preencha tudo antes de atualizar.");
+
+    const sites = carregarDoLocalStorage();
+    sites[id] = {
+      id,
+      nome: novoNome,
+      conteudo: novoConteudo
+    };
+    salvarNoLocalStorage(sites);
+    alert("Site atualizado!");
+    atualizarListaSites();
+  }
+
+  // Carrega lista ao iniciar
   window.onload = () => {
+    atualizarListaSites();
+
     const id = new URLSearchParams(window.location.search).get('id');
     if (id) {
-      const saved = localStorage.getItem(`mini-site-${id}`);
-      if (saved) {
-        const site = JSON.parse(saved);
-        document.getElementById('iframeSite').srcdoc = site.conteudo;
+      const sites = carregarDoLocalStorage();
+      if (sites[id]) {
+        document.getElementById('iframeSite').srcdoc = sites[id].conteudo;
         document.getElementById('previewArea').classList.add('active');
       }
     }
