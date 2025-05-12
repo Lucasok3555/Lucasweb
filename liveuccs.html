@@ -182,3 +182,91 @@
   </script>
 </body>
 </html>
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suporte para Formatos Personalizados</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            border: 5px solid blue;
+            margin-top: 10px;
+        }
+        audio, video {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Suporte para Formatos Personalizados</h1>
+
+    <!-- Seção de Áudio -->
+    <h2>Reproduzir Áudio (lxsa)</h2>
+    <audio id="customAudioPlayer" controls></audio>
+
+    <!-- Seção de Vídeo -->
+    <h2>Reproduzir Vídeo (lxsv)</h2>
+    <video id="customVideoPlayer" controls width="640" height="360"></video>
+
+    <!-- Seção de Imagem -->
+    <h2>Exibir Imagem (lxs)</h2>
+    <img id="customImageDisplay" alt="Imagem personalizada">
+
+    <script>
+        // Função para simular a decodificação de formatos personalizados
+        function decodeCustomFormat(fileType, fileData) {
+            // Simulação de decodificação (substitua por sua lógica real)
+            if (fileType === 'lxsa') {
+                return new Blob([fileData], { type: 'audio/mp3' }); // Convertendo para MP3
+            } else if (fileType === 'lxsv') {
+                return new Blob([fileData], { type: 'video/mp4' }); // Convertendo para MP4
+            } else if (fileType === 'lxs') {
+                return new Blob([fileData], { type: 'image/jpeg' }); // Convertendo para JPEG
+            }
+            throw new Error('Formato não suportado');
+        }
+
+        // Função para carregar e renderizar arquivos personalizados
+        async function loadCustomFile(fileType, filePath) {
+            try {
+                // Simulando o carregamento do arquivo (substitua por fetch ou FileReader)
+                const response = await fetch(filePath);
+                const fileData = await response.arrayBuffer();
+
+                // Decodificar o formato personalizado
+                const decodedBlob = decodeCustomFormat(fileType, fileData);
+
+                // Renderizar o conteúdo no navegador
+                if (fileType === 'lxsa') {
+                    const audioPlayer = document.getElementById('customAudioPlayer');
+                    audioPlayer.src = URL.createObjectURL(decodedBlob);
+                } else if (fileType === 'lxsv') {
+                    const videoPlayer = document.getElementById('customVideoPlayer');
+                    videoPlayer.src = URL.createObjectURL(decodedBlob);
+                } else if (fileType === 'lxs') {
+                    const imageDisplay = document.getElementById('customImageDisplay');
+                    imageDisplay.src = URL.createObjectURL(decodedBlob);
+                }
+            } catch (error) {
+                console.error('Erro ao carregar arquivo:', error);
+            }
+        }
+
+        // Carregar exemplos de arquivos personalizados
+        loadCustomFile('lxsa', 'caminho/para/arquivo.lxsa'); // Áudio
+        loadCustomFile('lxsv', 'caminho/para/arquivo.lxsv'); // Vídeo
+        loadCustomFile('lxs', 'caminho/para/arquivo.lxs');   // Imagem
+    </script>
+</body>
+</html>
