@@ -1,144 +1,134 @@
-```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mini Sites - Rede de Páginas</title>
+  <title>Mini Sites - Sistema tipo DNS</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      text-align: center;
+      margin: 20px auto;
+      max-width: 600px;
+      background: #f9f9f9;
       padding: 20px;
-      background-color: #f4f4f4;
+      border-radius: 8px;
     }
-    input, button {
+    input, textarea, button {
+      width: 100%;
+      margin-top: 10px;
       padding: 10px;
-      margin: 10px;
       font-size: 16px;
     }
-    .site-list {
-      margin-top: 30px;
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
     }
-    .site-card {
-      background: white;
-      border-radius: 5px;
-      padding: 15px;
-      margin: 10px auto;
-      width: 300px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    button:hover {
+      background: #0056b3;
     }
-    .site-card button {
+    iframe {
+      width: 100%;
+      height: 300px;
+      border: 1px solid #ccc;
       margin-top: 10px;
     }
   </style>
 </head>
 <body>
 
-  <h1>Bem-vindo à Rede de Mini Sites</h1>
+<h2>Criar Mini Site</h2>
+<input type="text" id="siteName" placeholder="Nome do site">
+<input type="text" id="siteId" placeholder="ID do site (ex: xxxxx)">
+<input type="text" id="serverIp" placeholder="IP ou URL do servidor (ex: https://meusite.com/site/xxxxx )">
+<textarea id="siteContent" placeholder="HTML/CSS/JS do seu site"></textarea>
+<button onclick="salvarSite()">Salvar no Sistema</button>
 
-  <div id="createSiteSection">
-    <h2>Criar seu Mini Site</h2>
-    <input type="text" id="siteNameInput" placeholder="Nome do seu site" />
-    <button onclick="criarSite()">Criar Site</button>
-  </div>
+<h2>Acessar Mini Site</h2>
+<input type="text" id="accessId" placeholder="Digite o ID do site (ex: xxxxx)">
+<button onclick="acessarSite()">Acessar Site</button>
 
-  <div id="enterSiteSection">
-    <h2>Acessar um Site</h2>
-    <input type="text" id="siteIdInput" placeholder="ID do site" />
-    <button onclick="entrarNoSite()">Acessar Site</button>
-  </div>
+<iframe id="preview"></iframe>
 
-  <div class="site-list" id="siteList"></div>
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js ";
+  import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-database.js ";
 
-  <script>
-    const sites = [];
+  // Configuração do Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyCPHbBvlltlG-ZK8su2_dKz3jHjeamwwkM",
+    authDomain: "redelucas-3291e.firebaseapp.com",
+    projectId: "redelucas-3291e",
+    databaseURL: "https://redelucas-3291e-default-rtdb.firebaseio.com ",
+    storageBucket: "redelucas-3291e.firebasestorage.app",
+    messagingSenderId: "1043104316422",
+    appId: "1:1043104316422:web:39c82d7f86f8a2a83b1787"
+  };
 
-    function criarSite() {
-      const nome = document.getElementById("siteNameInput").value.trim();
-      if (!nome) return alert("Por favor, digite o nome do site.");
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
 
-      const id = Math.random().toString(36).substr(2, 9); // ID aleatório
-      const novoSite = { id, nome };
-      sites.push(novoSite);
+  function gerarIdUnico() {
+    return Math.random().toString(36).substr(2, 9);
+  }
 
-      mostrarSites();
-      alert(`Seu site foi criado com o ID: ${id}`);
+  async function salvarSite() {
+    const nome = document.getElementById("siteName").value.trim();
+    let id = document.getElementById("siteId").value.trim();
+    const ip = document.getElementById("serverIp").value.trim();
+    const conteudo = document.getElementById("siteContent").value.trim();
+
+    if (!nome || !ip || !conteudo) {
+      alert("Preencha todos os campos.");
+      return;
     }
 
-    function entrarNoSite() {
-      const idDigitado = document.getElementById("siteIdInput").value.trim();
-      const siteEncontrado = sites.find(site => site.id === idDigitado);
+    if (!id) {
+      id = gerarIdUnico();
+      alert("ID gerado automaticamente: " + id);
+    }
 
-      if (siteEncontrado) {
-        abrirPaginaSite(siteEncontrado);
+    try {
+      await set(ref(db, 'sites/' + id), {
+        nome,
+        ip_servidor: ip,
+        conteudo,
+        criado_em: Date.now()
+      });
+      alert("Site registrado com sucesso! ID: " + id);
+    } catch (error) {
+      console.error("Erro ao salvar:", error);
+      alert("Erro ao salvar no Firebase.");
+    }
+  }
+
+  async function acessarSite() {
+    const id = document.getElementById("accessId").value.trim();
+    if (!id) {
+      alert("Digite um ID válido.");
+      return;
+    }
+
+    try {
+      const snapshot = await get(ref(db, 'sites/' + id));
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        // Mostra no iframe o conteúdo ou redireciona para o servidor
+        if (data.ip_servidor) {
+          window.open(data.ip_servidor, '_blank');
+        } else {
+          document.getElementById('preview').srcdoc = data.conteudo;
+        }
       } else {
         alert("Site não encontrado.");
       }
+    } catch (error) {
+      alert("Erro ao buscar site.");
+      console.error(error);
     }
-
-    function mostrarSites() {
-      const lista = document.getElementById("siteList");
-      lista.innerHTML = "";
-
-      sites.forEach(site => {
-        const card = document.createElement("div");
-        card.className = "site-card";
-        card.innerHTML = `
-          <strong>${site.nome}</strong><br/>
-          <small>ID: ${site.id}</small><br/>
-          <button onclick='abrirPaginaSite(${JSON.stringify(site)})'>Acessar</button>
-        `;
-        lista.appendChild(card);
-      });
-    }
-
-    function abrirPaginaSite(site) {
-      const win = window.open("", "_blank");
-      const html = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>${site.nome}</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              text-align: center;
-              padding: 50px;
-              background: #eef;
-            }
-            input, button {
-              padding: 10px;
-              margin: 10px;
-              font-size: 16px;
-            }
-          </style>
-        </head>
-        <body>
-          <h1>Bem-vindo ao seu Mini Site: ${site.nome}</h1>
-          <p>Este é o mini site com ID: <strong>${site.id}</strong></p>
-          <h2>Editar Conteúdo</h2>
-          <textarea id="conteudo" rows="10" cols="50">Escreva aqui sua página...</textarea><br/>
-          <button onclick="salvarConteudo('${site.id}')">Salvar Conteúdo</button>
-          <script>
-            function salvarConteudo(id) {
-              const conteudo = document.getElementById('conteudo').value;
-              localStorage.setItem('miniSiteContent_' + id, conteudo);
-              alert('Conteúdo salvo!');
-            }
-            window.onload = () => {
-              const saved = localStorage.getItem('miniSiteContent_${site.id}');
-              if (saved) document.getElementById('conteudo').value = saved;
-            };
-          <\/script>
-        </body>
-        </html>
-      `;
-      win.document.write(html);
-      win.document.close();
-    }
-  </script>
+  }
+</script>
 
 </body>
 </html>
-```
