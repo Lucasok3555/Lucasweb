@@ -1,837 +1,119 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GaloChat - Mensagens P2P</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .message-animation {
-            animation: fadeIn 0.3s ease-in-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .dark-mode {
-            background-color: #1a202c;
-            color: #e2e8f0;
-        }
-        .light-mode {
-            background-color: #f7fafc;
-            color: #2d3748;
-        }
-        .chat-container {
-            height: calc(100vh - 120px);
-        }
-        @media (max-width: 640px) {
-            .chat-container {
-                height: calc(100vh - 100px);
-            }
-        }
-    </style>
-</head>
-<body class="light-mode transition-colors duration-200">
-    <div class="flex flex-col h-screen">
-        <!-- Header -->
-        <header class="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center">
-            <div class="flex items-center">
-                <i class="fas fa-crow text-2xl mr-2"></i>
-                <h1 class="text-xl font-bold">GaloChat</h1>
-            </div>
-            <div class="flex items-center space-x-4">
-                <button id="themeToggle" class="p-2 rounded-full hover:bg-blue-700">
-                    <i class="fas fa-moon"></i>
-                </button>
-                <button id="userMenu" class="p-2 rounded-full hover:bg-blue-700">
-                    <i class="fas fa-user"></i>
-                </button>
-            </div>
-        </header>
+jsx
+import { useState, useEffect, useRef } from "react";
 
-        <!-- Main Content -->
-        <div class="flex flex-1 overflow-hidden">
-            <!-- Sidebar -->
-            <div class="w-64 bg-gray-100 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
-                <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-                    <button id="newChatBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-plus mr-2"></i> Nova Conversa
-                    </button>
-                </div>
-                
-                <div class="flex-1 overflow-y-auto">
-                    <div class="p-4">
-                        <h2 class="font-semibold text-gray-700 dark:text-gray-300 mb-2">Conversas</h2>
-                        <ul id="chatList" class="space-y-2">
-                            <!-- Chats will be added here dynamically -->
-                        </ul>
-                    </div>
-                    
-                    <div class="p-4 border-t border-gray-200 dark:border-gray-700">
-                        <h2 class="font-semibold text-gray-700 dark:text-gray-300 mb-2">Grupos</h2>
-                        <ul id="groupList" class="space-y-2">
-                            <!-- Groups will be added here dynamically -->
-                        </ul>
-                    </div>
-                </div>
-            </div>
+export default function App() {
+  const [messages, setMessages] = useState([]);
+  const [inputText, setInputText] = useState("");
+  const [targetId, setTargetId] = useState("");
+  const [myId] = useState(() => Math.random().toString(36).substr(2, 9));
+  const messagesEndRef = useRef(null);
 
-            <!-- Chat Area -->
-            <div class="flex-1 flex flex-col">
-                <!-- Chat Header -->
-                <div id="chatHeader" class="bg-white dark:bg-gray-700 p-4 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between hidden">
-                    <div class="flex items-center">
-                        <div class="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center mr-3">
-                            <i class="fas fa-user text-gray-600 dark:text-gray-300"></i>
-                        </div>
-                        <div>
-                            <h2 id="currentChatName" class="font-semibold text-gray-800 dark:text-white">Nome do Contato</h2>
-                            <p id="connectionStatus" class="text-xs text-gray-500 dark:text-gray-400">Conectado</p>
-                        </div>
-                    </div>
-                    <div class="flex space-x-2">
-                        <button id="voiceCallBtn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">
-                            <i class="fas fa-phone text-blue-600 dark:text-blue-400"></i>
-                        </button>
-                        <button id="videoCallBtn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">
-                            <i class="fas fa-video text-blue-600 dark:text-blue-400"></i>
-                        </button>
-                    </div>
-                </div>
+  const sendMessage = () => {
+    if (inputText.trim() === "") return;
 
-                <!-- Messages -->
-                <div id="chatContainer" class="chat-container overflow-y-auto p-4 hidden">
-                    <div id="messages" class="space-y-4">
-                        <!-- Messages will be added here dynamically -->
-                    </div>
-                </div>
+    const newMessage = {
+      id: Math.random().toString(36).substr(2, 9),
+      text: inputText,
+      from: myId,
+      to: targetId || "Broadcast",
+      timestamp: new Date(),
+    };
 
-                <!-- Connection Panel -->
-                <div id="connectionPanel" class="flex-1 flex flex-col items-center justify-center p-4">
-                    <div class="max-w-md w-full bg-white dark:bg-gray-700 rounded-lg shadow-md p-6">
-                        <h2 class="text-xl font-bold text-center mb-6 text-gray-800 dark:text-white">Conectar com um amigo</h2>
-                        <div class="mb-4">
-                            <label class="block text-gray-700 dark:text-gray-300 mb-2">Seu ID:</label>
-                            <div class="flex items-center">
-                                <input id="myId" type="text" readonly class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-l-md bg-gray-100 dark:bg-gray-800">
-                                <button id="copyIdBtn" class="px-4 py-2 bg-blue-600 text-white rounded-r-md hover:bg-blue-700">
-                                    <i class="fas fa-copy"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="mb-6">
-                            <label class="block text-gray-700 dark:text-gray-300 mb-2">ID do amigo:</label>
-                            <input id="friendId" type="text" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800" placeholder="Cole o ID aqui">
-                        </div>
-                        <button id="connectBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg">
-                            Conectar
-                        </button>
-                    </div>
-                </div>
+    setMessages((prev) => [...prev, newMessage]);
+    setInputText("");
+  };
 
-                <!-- Message Input -->
-                <div id="messageInput" class="bg-white dark:bg-gray-700 p-4 border-t border-gray-200 dark:border-gray-600 hidden">
-                    <div class="flex items-center">
-                        <button id="moreOptionsBtn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 mr-2">
-                            <i class="fas fa-plus text-gray-600 dark:text-gray-300"></i>
-                        </div>
-                        <div id="moreOptionsMenu" class="hidden absolute bottom-16 left-0 bg-white dark:bg-gray-700 shadow-lg rounded-lg p-2 w-48">
-                            <button id="sendFileBtn" class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded">
-                                <i class="fas fa-paperclip mr-2"></i> Enviar arquivo
-                            </button>
-                            <button id="createGroupBtn" class="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded">
-                                <i class="fas fa-users mr-2"></i> Criar grupo
-                            </button>
-                        </div>
-                        <input id="messageText" type="text" placeholder="Digite uma mensagem..." class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <button id="recordAudioBtn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 ml-2">
-                            <i class="fas fa-microphone text-gray-600 dark:text-gray-300"></i>
-                        </button>
-                        <button id="sendMessageBtn" class="ml-2 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white flex flex-col">
+      {/* Header */}
+      <header className="bg-gray-800 p-4 shadow-lg">
+        <div className="max-w-4xl mx-auto flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
+            P2P Messenger
+          </h1>
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-400">Seu ID:</span>
+            <span className="font-mono text-sm bg-gray-700 px-2 py-1 rounded">{myId}</span>
+          </div>
         </div>
-    </div>
+      </header>
 
-    <!-- Modals -->
-    <!-- Create Group Modal -->
-    <div id="createGroupModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white dark:bg-gray-700 rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Criar novo grupo</h3>
-            <div class="mb-4">
-                <label class="block text-gray-700 dark:text-gray-300 mb-2">Nome do grupo:</label>
-                <input id="groupName" type="text" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800">
+      {/* Main Content */}
+      <main className="flex-grow max-w-4xl mx-auto w-full p-4 flex flex-col space-y-4">
+        {/* Messages Box */}
+        <div className="bg-gray-800 rounded-lg shadow-lg p-4 h-96 overflow-y-auto">
+          {messages.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-gray-500">
+              Nenhuma mensagem enviada ainda...
             </div>
-            <div class="mb-4">
-                <label class="block text-gray-700 dark:text-gray-300 mb-2">Selecione membros:</label>
-                <div id="groupMembersList" class="max-h-40 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-white dark:bg-gray-800">
-                    <!-- Contacts will be added here -->
-                </div>
-            </div>
-            <div class="flex justify-end space-x-3">
-                <button id="cancelGroupBtn" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600">Cancelar</button>
-                <button id="confirmGroupBtn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Criar</button>
-            </div>
+          ) : (
+            <ul className="space-y-3">
+              {messages.map((msg) => (
+                <li
+                  key={msg.id}
+                  className={`p-3 rounded-md ${
+                    msg.from === myId
+                      ? "bg-blue-600 self-end ml-auto"
+                      : "bg-gray-700 self-start mr-auto"
+                  }`}
+                >
+                  <div className="text-sm text-gray-300">
+                    De: <span className="font-medium">{msg.from}</span> | Para:{" "}
+                    <span className="font-medium">{msg.to}</span>
+                  </div>
+                  <p className="mt-1">{msg.text}</p>
+                  <div className="text-xs text-gray-400 mt-1">
+                    {msg.timestamp.toLocaleTimeString()}
+                  </div>
+                </li>
+              ))}
+              <div ref={messagesEndRef} />
+            </ul>
+          )}
         </div>
-    </div>
 
-    <!-- File Upload Modal -->
-    <div id="fileUploadModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white dark:bg-gray-700 rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Enviar arquivo</h3>
-            <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center mb-4">
-                <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 dark:text-gray-500 mb-2"></i>
-                <p class="text-gray-500 dark:text-gray-400">Arraste e solte arquivos aqui ou</p>
-                <input id="fileInput" type="file" class="hidden">
-                <button id="selectFileBtn" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Selecionar arquivo</button>
+        {/* Message Input */}
+        <div className="bg-gray-800 rounded-lg shadow-lg p-4">
+          <div className="flex flex-col space-y-3">
+            <textarea
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder="Digite sua mensagem..."
+              className="w-full p-2 rounded bg-gray-700 focus:bg-gray-600 outline-none resize-none"
+              rows="2"
+            />
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                value={targetId}
+                onChange={(e) => setTargetId(e.target.value)}
+                placeholder="ID do destinatário (opcional)"
+                className="flex-grow p-2 rounded bg-gray-700 focus:bg-gray-600 outline-none"
+              />
+              <button
+                onClick={sendMessage}
+                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-4 py-2 rounded transition-colors"
+              >
+                Enviar
+              </button>
             </div>
-            <div class="flex justify-end">
-                <button id="cancelFileBtn" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600">Cancelar</button>
-            </div>
+          </div>
         </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-gray-800 p-3 text-center text-sm text-gray-500">
+        Comunicação simulada P2P - ID único gerado automaticamente
+      </footer>
     </div>
-
-    <!-- Call Modal -->
-    <div id="callModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white dark:bg-gray-700 rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h3 id="callTitle" class="text-xl font-bold mb-4 text-center text-gray-800 dark:text-white">Chamada em andamento</h3>
-            <div class="flex justify-center mb-6">
-                <div class="w-32 h-32 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
-                    <i class="fas fa-user text-4xl text-gray-500 dark:text-gray-400"></i>
-                </div>
-            </div>
-            <div class="flex justify-center space-x-4">
-                <button id="endCallBtn" class="p-4 bg-red-600 text-white rounded-full hover:bg-red-700">
-                    <i class="fas fa-phone-slash"></i>
-                </button>
-                <button id="muteCallBtn" class="p-4 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-full hover:bg-gray-300 dark:hover:bg-gray-500">
-                    <i class="fas fa-microphone-slash"></i>
-                </button>
-                <button id="videoToggleBtn" class="p-4 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-full hover:bg-gray-300 dark:hover:bg-gray-500">
-                    <i class="fas fa-video"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Incoming Call Modal -->
-    <div id="incomingCallModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white dark:bg-gray-700 rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h3 class="text-xl font-bold mb-4 text-center text-gray-800 dark:text-white">Chamada recebida</h3>
-            <div class="flex justify-center mb-6">
-                <div class="w-32 h-32 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
-                    <i class="fas fa-user text-4xl text-gray-500 dark:text-gray-400"></i>
-                </div>
-            </div>
-            <p id="callerName" class="text-center text-lg mb-6 text-gray-800 dark:text-white">João está chamando...</p>
-            <div class="flex justify-center space-x-4">
-                <button id="rejectCallBtn" class="px-6 py-3 bg-red-600 text-white rounded-full hover:bg-red-700">
-                    <i class="fas fa-phone-slash"></i>
-                </button>
-                <button id="acceptCallBtn" class="px-6 py-3 bg-green-600 text-white rounded-full hover:bg-green-700">
-                    <i class="fas fa-phone"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Generate random user ID
-        const userId = 'user_' + Math.random().toString(36).substr(2, 9);
-        document.getElementById('myId').value = userId;
-        
-        // Simulated database
-        let contacts = [
-            { id: 'user_abc123', name: 'João Silva', online: true },
-            { id: 'user_def456', name: 'Maria Souza', online: false },
-            { id: 'user_ghi789', name: 'Carlos Oliveira', online: true }
-        ];
-        
-        let groups = [];
-        let currentChat = null;
-        let audioChunks = [];
-        let mediaRecorder;
-        let isRecording = false;
-        let currentCall = null;
-        let isDarkMode = false;
-
-        // DOM Elements
-        const themeToggle = document.getElementById('themeToggle');
-        const newChatBtn = document.getElementById('newChatBtn');
-        const chatList = document.getElementById('chatList');
-        const groupList = document.getElementById('groupList');
-        const chatHeader = document.getElementById('chatHeader');
-        const chatContainer = document.getElementById('chatContainer');
-        const connectionPanel = document.getElementById('connectionPanel');
-        const messageInput = document.getElementById('messageInput');
-        const messages = document.getElementById('messages');
-        const myId = document.getElementById('myId');
-        const copyIdBtn = document.getElementById('copyIdBtn');
-        const friendId = document.getElementById('friendId');
-        const connectBtn = document.getElementById('connectBtn');
-        const moreOptionsBtn = document.getElementById('moreOptionsBtn');
-        const moreOptionsMenu = document.getElementById('moreOptionsMenu');
-        const sendFileBtn = document.getElementById('sendFileBtn');
-        const createGroupBtn = document.getElementById('createGroupBtn');
-        const messageText = document.getElementById('messageText');
-        const recordAudioBtn = document.getElementById('recordAudioBtn');
-        const sendMessageBtn = document.getElementById('sendMessageBtn');
-        const voiceCallBtn = document.getElementById('voiceCallBtn');
-        const videoCallBtn = document.getElementById('videoCallBtn');
-        const createGroupModal = document.getElementById('createGroupModal');
-        const groupName = document.getElementById('groupName');
-        const groupMembersList = document.getElementById('groupMembersList');
-        const cancelGroupBtn = document.getElementById('cancelGroupBtn');
-        const confirmGroupBtn = document.getElementById('confirmGroupBtn');
-        const fileUploadModal = document.getElementById('fileUploadModal');
-        const selectFileBtn = document.getElementById('selectFileBtn');
-        const fileInput = document.getElementById('fileInput');
-        const cancelFileBtn = document.getElementById('cancelFileBtn');
-        const callModal = document.getElementById('callModal');
-        const endCallBtn = document.getElementById('endCallBtn');
-        const muteCallBtn = document.getElementById('muteCallBtn');
-        const videoToggleBtn = document.getElementById('videoToggleBtn');
-        const incomingCallModal = document.getElementById('incomingCallModal');
-        const rejectCallBtn = document.getElementById('rejectCallBtn');
-        const acceptCallBtn = document.getElementById('acceptCallBtn');
-
-        // Initialize the app
-        function init() {
-            renderContacts();
-            setupEventListeners();
-            generateSampleMessages();
-        }
-
-        // Render contacts in the sidebar
-        function renderContacts() {
-            chatList.innerHTML = '';
-            contacts.forEach(contact => {
-                const li = document.createElement('li');
-                li.className = 'flex items-center p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer';
-                li.innerHTML = `
-                    <div class="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center mr-3">
-                        <i class="fas fa-user text-gray-600 dark:text-gray-300"></i>
-                    </div>
-                    <div class="flex-1">
-                        <p class="font-medium text-gray-800 dark:text-white">${contact.name}</p>
-                        <p class="text-xs ${contact.online ? 'text-green-500' : 'text-gray-500 dark:text-gray-400'}">${contact.online ? 'Online' : 'Offline'}</p>
-                    </div>
-                `;
-                li.addEventListener('click', () => startChat(contact.id, contact.name));
-                chatList.appendChild(li);
-            });
-        }
-
-        // Render groups in the sidebar
-        function renderGroups() {
-            groupList.innerHTML = '';
-            groups.forEach(group => {
-                const li = document.createElement('li');
-                li.className = 'flex items-center p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer';
-                li.innerHTML = `
-                    <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3">
-                        <i class="fas fa-users text-blue-600 dark:text-blue-400"></i>
-                    </div>
-                    <div class="flex-1">
-                        <p class="font-medium text-gray-800 dark:text-white">${group.name}</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">${group.members.length} membros</p>
-                    </div>
-                `;
-                li.addEventListener('click', () => startGroupChat(group.id, group.name));
-                groupList.appendChild(li);
-            });
-        }
-
-        // Start a chat with a contact
-        function startChat(contactId, contactName) {
-            currentChat = { type: 'contact', id: contactId, name: contactName };
-            document.getElementById('currentChatName').textContent = contactName;
-            chatHeader.classList.remove('hidden');
-            chatContainer.classList.remove('hidden');
-            messageInput.classList.remove('hidden');
-            connectionPanel.classList.add('hidden');
-            
-            // Clear and load messages for this chat
-            messages.innerHTML = '';
-            loadMessages(contactId);
-        }
-
-        // Start a group chat
-        function startGroupChat(groupId, groupName) {
-            currentChat = { type: 'group', id: groupId, name: groupName };
-            document.getElementById('currentChatName').textContent = groupName;
-            chatHeader.classList.remove('hidden');
-            chatContainer.classList.remove('hidden');
-            messageInput.classList.remove('hidden');
-            connectionPanel.classList.add('hidden');
-            
-            // Clear and load messages for this group
-            messages.innerHTML = '';
-            loadGroupMessages(groupId);
-        }
-
-        // Load messages for a contact (simulated)
-        function loadMessages(contactId) {
-            // Simulated messages
-            const sampleMessages = [
-                { sender: contactId, text: 'Oi, tudo bem?', timestamp: new Date(Date.now() - 3600000), type: 'text' },
-                { sender: userId, text: 'Tudo ótimo! E com você?', timestamp: new Date(Date.now() - 1800000), type: 'text' },
-                { sender: contactId, text: 'Também estou bem, obrigado!', timestamp: new Date(Date.now() - 600000), type: 'text' }
-            ];
-            
-            sampleMessages.forEach(msg => addMessage(msg.sender, msg.text, msg.timestamp, msg.type));
-        }
-
-        // Load messages for a group (simulated)
-        function loadGroupMessages(groupId) {
-            // Simulated group messages
-            const sampleMessages = [
-                { sender: 'user_abc123', text: 'Bem-vindos ao grupo!', timestamp: new Date(Date.now() - 86400000), type: 'text' },
-                { sender: userId, text: 'Obrigado!', timestamp: new Date(Date.now() - 82800000), type: 'text' },
-                { sender: 'user_def456', text: 'Vamos marcar algo?', timestamp: new Date(Date.now() - 79200000), type: 'text' }
-            ];
-            
-            sampleMessages.forEach(msg => addMessage(msg.sender, msg.text, msg.timestamp, msg.type));
-        }
-
-        // Add a message to the chat
-        function addMessage(senderId, text, timestamp, type = 'text') {
-            const isMe = senderId === userId;
-            const senderName = isMe ? 'Você' : contacts.find(c => c.id === senderId)?.name || 'Desconhecido';
-            
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `flex ${isMe ? 'justify-end' : 'justify-start'} message-animation`;
-            
-            if (type === 'text') {
-                messageDiv.innerHTML = `
-                    <div class="max-w-xs md:max-w-md rounded-lg ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-bl-none'} p-3">
-                        <p class="font-semibold text-xs ${isMe ? 'text-blue-100' : 'text-gray-500 dark:text-gray-300'}">${senderName}</p>
-                        <p class="mt-1">${text}</p>
-                        <p class="text-right text-xs mt-1 ${isMe ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'}">${formatTime(timestamp)}</p>
-                    </div>
-                `;
-            } else if (type === 'audio') {
-                messageDiv.innerHTML = `
-                    <div class="max-w-xs md:max-w-md rounded-lg ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-bl-none'} p-3">
-                        <p class="font-semibold text-xs ${isMe ? 'text-blue-100' : 'text-gray-500 dark:text-gray-300'}">${senderName}</p>
-                        <div class="mt-2 flex items-center">
-                            <button class="audio-play-btn p-2 rounded-full bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400">
-                                <i class="fas fa-play"></i>
-                            </button>
-                            <div class="ml-3 flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-2">
-                                <div class="bg-blue-500 dark:bg-blue-400 h-2 rounded-full" style="width: 100%"></div>
-                            </div>
-                            <span class="ml-2 text-xs">0:05</span>
-                        </div>
-                        <p class="text-right text-xs mt-1 ${isMe ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'}">${formatTime(timestamp)}</p>
-                    </div>
-                `;
-            } else if (type === 'file') {
-                messageDiv.innerHTML = `
-                    <div class="max-w-xs md:max-w-md rounded-lg ${isMe ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-bl-none'} p-3">
-                        <p class="font-semibold text-xs ${isMe ? 'text-blue-100' : 'text-gray-500 dark:text-gray-300'}">${senderName}</p>
-                        <div class="mt-2 flex items-center p-2 bg-white dark:bg-gray-700 bg-opacity-30 rounded">
-                            <i class="fas fa-file-alt text-xl mr-3"></i>
-                            <div class="flex-1">
-                                <p class="text-sm truncate">${text}</p>
-                                <p class="text-xs text-gray-300 dark:text-gray-400">1.2 MB</p>
-                            </div>
-                            <button class="text-blue-400 hover:text-blue-300">
-                                <i class="fas fa-download"></i>
-                            </button>
-                        </div>
-                        <p class="text-right text-xs mt-1 ${isMe ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'}">${formatTime(timestamp)}</p>
-                    </div>
-                `;
-            }
-            
-            messages.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        // Format time for messages
-        function formatTime(date) {
-            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        }
-
-        // Send a message
-        function sendMessage() {
-            const text = messageText.value.trim();
-            if (!text || !currentChat) return;
-            
-            // Simulate sending message
-            addMessage(userId, text, new Date());
-            messageText.value = '';
-            
-            // Simulate receiving a reply after 1-3 seconds
-            if (currentChat.type === 'contact') {
-                setTimeout(() => {
-                    const replies = ['Ok!', 'Entendi', 'Tudo bem', 'Ótimo!', 'Vamos combinar algo?'];
-                    const randomReply = replies[Math.floor(Math.random() * replies.length)];
-                    addMessage(currentChat.id, randomReply, new Date());
-                }, 1000 + Math.random() * 2000);
-            }
-        }
-
-        // Start recording audio
-        function startRecording() {
-            if (isRecording) return;
-            
-            // In a real app, we would use the Web Audio API
-            isRecording = true;
-            recordAudioBtn.innerHTML = '<i class="fas fa-stop text-red-600"></i>';
-            recordAudioBtn.classList.add('animate-pulse');
-            
-            // Simulate recording for 5 seconds
-            setTimeout(() => {
-                stopRecording();
-            }, 5000);
-        }
-
-        // Stop recording audio
-        function stopRecording() {
-            if (!isRecording) return;
-            
-            isRecording = false;
-            recordAudioBtn.innerHTML = '<i class="fas fa-microphone text-gray-600 dark:text-gray-300"></i>';
-            recordAudioBtn.classList.remove('animate-pulse');
-            
-            // Simulate sending audio message
-            addMessage(userId, 'Mensagem de áudio', new Date(), 'audio');
-            
-            // Simulate receiving a reply after 2-4 seconds
-            if (currentChat.type === 'contact') {
-                setTimeout(() => {
-                    addMessage(currentChat.id, 'Mensagem de áudio', new Date(), 'audio');
-                }, 2000 + Math.random() * 2000);
-            }
-        }
-
-        // Start a call (voice or video)
-        function startCall(isVideo) {
-            if (!currentChat) return;
-            
-            currentCall = {
-                id: 'call_' + Math.random().toString(36).substr(2, 9),
-                with: currentChat.id,
-                isVideo: isVideo,
-                isMuted: false,
-                isVideoOn: isVideo
-            };
-            
-            // Show call UI
-            callModal.classList.remove('hidden');
-            document.getElementById('callTitle').textContent = `Chamando ${currentChat.name}...`;
-            
-            // Simulate call being answered after 3-5 seconds
-            setTimeout(() => {
-                document.getElementById('callTitle').textContent = `Chamada com ${currentChat.name}`;
-                
-                // Simulate receiving a call on the other end
-                if (Math.random() > 0.2) { // 80% chance of answer
-                    setTimeout(() => {
-                        simulateIncomingCall(currentChat.id, currentChat.name, isVideo);
-                    }, 1000);
-                }
-            }, 3000 + Math.random() * 2000);
-        }
-
-        // Simulate an incoming call
-        function simulateIncomingCall(callerId, callerName, isVideo) {
-            incomingCallModal.classList.remove('hidden');
-            document.getElementById('callerName').textContent = `${callerName} está chamando...`;
-            
-            // Auto-reject after 30 seconds if not answered
-            const timeout = setTimeout(() => {
-                if (incomingCallModal.classList.contains('hidden')) return;
-                endIncomingCall();
-            }, 30000);
-            
-            // Setup call answer/reject buttons
-            acceptCallBtn.onclick = () => {
-                clearTimeout(timeout);
-                endIncomingCall();
-                callModal.classList.remove('hidden');
-                document.getElementById('callTitle').textContent = `Chamada com ${callerName}`;
-            };
-            
-            rejectCallBtn.onclick = () => {
-                clearTimeout(timeout);
-                endIncomingCall();
-                // Show call ended notification
-                addSystemMessage(`${callerName} rejeitou sua chamada`);
-            };
-        }
-
-        // End incoming call UI
-        function endIncomingCall() {
-            incomingCallModal.classList.add('hidden');
-        }
-
-        // End current call
-        function endCurrentCall() {
-            if (!currentCall) return;
-            
-            callModal.classList.add('hidden');
-            currentCall = null;
-            
-            // Show call ended notification
-            addSystemMessage('Chamada encerrada');
-        }
-
-        // Add a system message (notifications)
-        function addSystemMessage(text) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'flex justify-center message-animation';
-            messageDiv.innerHTML = `
-                <div class="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs px-3 py-1 rounded-full">
-                    ${text}
-                </div>
-            `;
-            messages.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        // Create a new group
-        function createNewGroup() {
-            const name = groupName.value.trim();
-            if (!name) return;
-            
-            // Select checked members
-            const checkboxes = groupMembersList.querySelectorAll('input[type="checkbox"]:checked');
-            const members = Array.from(checkboxes).map(cb => cb.value);
-            
-            if (members.length === 0) {
-                alert('Selecione pelo menos um membro para o grupo');
-                return;
-            }
-            
-            // Create new group
-            const newGroup = {
-                id: 'group_' + Math.random().toString(36).substr(2, 9),
-                name: name,
-                members: members,
-                admin: userId,
-                inviteLink: `https://galochat.com/join/${Math.random().toString(36).substr(2, 10)}`
-            };
-            
-            groups.push(newGroup);
-            renderGroups();
-            
-            // Close modal
-            createGroupModal.classList.add('hidden');
-            groupName.value = '';
-            
-            // Uncheck all checkboxes
-            groupMembersList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-                cb.checked = false;
-            });
-            
-            // Show group created notification
-            addSystemMessage(`Grupo "${name}" criado com sucesso!`);
-            
-            // Start chat with the new group
-            startGroupChat(newGroup.id, newGroup.name);
-        }
-
-        // Show create group modal
-        function showCreateGroupModal() {
-            // Populate members list
-            groupMembersList.innerHTML = '';
-            contacts.forEach(contact => {
-                const div = document.createElement('div');
-                div.className = 'flex items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded';
-                div.innerHTML = `
-                    <input type="checkbox" id="member_${contact.id}" value="${contact.id}" class="mr-2">
-                    <label for="member_${contact.id}" class="flex-1 cursor-pointer">${contact.name}</label>
-                `;
-                groupMembersList.appendChild(div);
-            });
-            
-            createGroupModal.classList.remove('hidden');
-        }
-
-        // Show file upload modal
-        function showFileUploadModal() {
-            fileUploadModal.classList.remove('hidden');
-        }
-
-        // Handle file selection
-        function handleFileSelect() {
-            const file = fileInput.files[0];
-            if (!file) return;
-            
-            // Simulate file upload
-            addMessage(userId, file.name, new Date(), 'file');
-            fileUploadModal.classList.add('hidden');
-            
-            // Simulate receiving a file after 2-4 seconds
-            if (currentChat.type === 'contact') {
-                setTimeout(() => {
-                    addMessage(currentChat.id, 'documento.pdf', new Date(), 'file');
-                }, 2000 + Math.random() * 2000);
-            }
-        }
-
-        // Toggle dark/light mode
-        function toggleTheme() {
-            isDarkMode = !isDarkMode;
-            document.body.classList.toggle('dark-mode', isDarkMode);
-            document.body.classList.toggle('light-mode', !isDarkMode);
-            
-            themeToggle.innerHTML = isDarkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-        }
-
-        // Generate sample messages for demo
-        function generateSampleMessages() {
-            // Add a sample group
-            groups.push({
-                id: 'group_sample1',
-                name: 'Amigos',
-                members: ['user_abc123', 'user_def456', userId],
-                admin: 'user_abc123',
-                inviteLink: 'https://galochat.com/join/samplegroup1'
-            });
-            renderGroups();
-        }
-
-        // Setup event listeners
-        function setupEventListeners() {
-            // Theme toggle
-            themeToggle.addEventListener('click', toggleTheme);
-            
-            // New chat button
-            newChatBtn.addEventListener('click', () => {
-                chatHeader.classList.add('hidden');
-                chatContainer.classList.add('hidden');
-                messageInput.classList.add('hidden');
-                connectionPanel.classList.remove('hidden');
-                currentChat = null;
-            });
-            
-            // Copy ID button
-            copyIdBtn.addEventListener('click', () => {
-                myId.select();
-                document.execCommand('copy');
-                addSystemMessage('ID copiado para a área de transferência!');
-            });
-            
-            // Connect button
-            connectBtn.addEventListener('click', () => {
-                const friendIdValue = friendId.value.trim();
-                if (!friendIdValue) return;
-                
-                // Simulate connection
-                const contact = contacts.find(c => c.id === friendIdValue);
-                if (contact) {
-                    startChat(contact.id, contact.name);
-                } else {
-                    // If contact not found, add to contacts and start chat
-                    const newContact = {
-                        id: friendIdValue,
-                        name: `Usuário ${friendIdValue.substr(5, 3)}`,
-                        online: true
-                    };
-                    contacts.push(newContact);
-                    renderContacts();
-                    startChat(newContact.id, newContact.name);
-                }
-            });
-            
-            // More options button
-            moreOptionsBtn.addEventListener('click', () => {
-                moreOptionsMenu.classList.toggle('hidden');
-            });
-            
-            // Close more options when clicking elsewhere
-            document.addEventListener('click', (e) => {
-                if (!moreOptionsBtn.contains(e.target) && !moreOptionsMenu.contains(e.target)) {
-                    moreOptionsMenu.classList.add('hidden');
-                }
-            });
-            
-            // Send file button
-            sendFileBtn.addEventListener('click', showFileUploadModal);
-            
-            // Create group button
-            createGroupBtn.addEventListener('click', showCreateGroupModal);
-            
-            // Message input events
-            messageText.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    sendMessage();
-                }
-            });
-            
-            // Send message button
-            sendMessageBtn.addEventListener('click', sendMessage);
-            
-            // Record audio button
-            recordAudioBtn.addEventListener('mousedown', startRecording);
-            recordAudioBtn.addEventListener('mouseup', stopRecording);
-            recordAudioBtn.addEventListener('mouseleave', stopRecording);
-            
-            // Touch events for mobile recording
-            recordAudioBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                startRecording();
-            });
-            
-            recordAudioBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                stopRecording();
-            });
-            
-            // Voice call button
-            voiceCallBtn.addEventListener('click', () => startCall(false));
-            
-            // Video call button
-            videoCallBtn.addEventListener('click', () => startCall(true));
-            
-            // Group modal buttons
-            cancelGroupBtn.addEventListener('click', () => {
-                createGroupModal.classList.add('hidden');
-            });
-            
-            confirmGroupBtn.addEventListener('click', createNewGroup);
-            
-            // File upload modal buttons
-            selectFileBtn.addEventListener('click', () => {
-                fileInput.click();
-            });
-            
-            fileInput.addEventListener('change', handleFileSelect);
-            
-            cancelFileBtn.addEventListener('click', () => {
-                fileUploadModal.classList.add('hidden');
-            });
-            
-            // Call control buttons
-            endCallBtn.addEventListener('click', endCurrentCall);
-            
-            muteCallBtn.addEventListener('click', () => {
-                if (!currentCall) return;
-                currentCall.isMuted = !currentCall.isMuted;
-                muteCallBtn.innerHTML = currentCall.isMuted 
-                    ? '<i class="fas fa-microphone"></i>' 
-                    : '<i class="fas fa-microphone-slash"></i>';
-            });
-            
-            videoToggleBtn.addEventListener('click', () => {
-                if (!currentCall || !currentCall.isVideo) return;
-                currentCall.isVideoOn = !currentCall.isVideoOn;
-                videoToggleBtn.innerHTML = currentCall.isVideoOn 
-                    ? '<i class="fas fa-video-slash"></i>' 
-                    : '<i class="fas fa-video"></i>';
-            });
-        }
-
-        // Initialize the app
-        init();
-    </script>
-</body>
-</html>
+  );
+}
