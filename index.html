@@ -1,181 +1,117 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AnonSocial - P2P Network</title>
-    <meta name="description" content="Anonymous P2P social network with local storage">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: "#4F46E5",
-                        dark: "#1E293B",
-                        light: "#F8FAFC"
-                    }
-                }
-            }
+    <title>Lucas Web</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
         }
-    </script>
+        header {
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+        }
+        .search-bar {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .search-bar input {
+            width: 60%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .feed {
+            padding: 20px;
+        }
+        .news-item {
+            background-color: white;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .news-item a {
+            color: #007BFF;
+            text-decoration: none;
+        }
+        .news-item a:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <header class="bg-white shadow-sm">
-        <nav class="container mx-auto px-4 py-4 flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-primary">AnonSocial</h1>
-            <div class="flex items-center space-x-4">
-                <button id="newPostBtn" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition">
-                    <i class="fas fa-plus mr-2"></i>New Post
-                </button>
-            </div>
-        </nav>
+<body>
+    <header>
+        <h1>Lucas Web</h1>
     </header>
-
-    <main class="container mx-auto px-4 py-8">
-        <!-- Post Creation Modal -->
-        <div id="postModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-            <div class="bg-white rounded-lg p-6 w-full max-w-md">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold">Create Anonymous Post</h2>
-                    <button id="closeModal" class="text-gray-500 hover:text-gray-700">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <textarea id="postContent" class="w-full h-32 p-3 border rounded-lg mb-4" placeholder="What's on your mind?"></textarea>
-                <button id="submitPost" class="w-full bg-primary text-white py-2 rounded-lg hover:bg-opacity-90 transition">
-                    Post Anonymously
-                </button>
-            </div>
+    <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Pesquisar...">
+    </div>
+    <div class="feed">
+        <div class="news-item">
+            <h3><a href="https://www.google.com " target="_blank">Google</a></h3>
+            <p>Acesse o site do Google para realizar suas pesquisas e encontrar tudo o que precisa.</p>
         </div>
-
-        <!-- Feed Section -->
-        <section class="max-w-2xl mx-auto">
-            <h2 class="text-xl font-semibold mb-6 text-dark">Your Feed</h2>
-            
-            <div id="feedContainer" class="space-y-6">
-                <!-- Posts will be dynamically inserted here -->
-                <div class="text-center py-10 text-gray-500" id="emptyFeed">
-                    <i class="fas fa-comment-slash text-4xl mb-3"></i>
-                    <p>No posts yet. Create your first anonymous post!</p>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer class="bg-white border-t mt-12 py-6">
-        <div class="container mx-auto px-4 text-center text-gray-500">
-            <p>All posts are stored locally in your browser. No tracking. No servers.</p>
+        <div class="news-item">
+            <h3><a href="#" target="_blank">Tendência: Inteligência Artificial</a></h3>
+            <p>A inteligência artificial está transformando o mundo moderno. Saiba mais sobre as últimas novidades.</p>
         </div>
-    </footer>
-    
+        <div class="news-item">
+            <h3><a href="#" target="_blank">Desenvolvimento Web em Alta</a></h3>
+            <p>Descubra as tendências mais recentes no desenvolvimento web e como se destacar no mercado.</p>
+        </div>
+        <div class="news-item">
+            <h3><a href="#" target="_blank">Inovações em CSS</a></h3>
+            <p>Explore as novas funcionalidades do CSS que estão revolucionando o design de interfaces.</p>
+        </div>
+    </div>
+
     <script>
-        // DOM Elements
-        const newPostBtn = document.getElementById('newPostBtn');
-        const postModal = document.getElementById('postModal');
-        const closeModal = document.getElementById('closeModal');
-        const submitPost = document.getElementById('submitPost');
-        const postContent = document.getElementById('postContent');
-        const feedContainer = document.getElementById('feedContainer');
-        const emptyFeed = document.getElementById('emptyFeed');
+        const links = [
+            { title: "Google", url: "https://www.google.com " },
+            { title: "Inteligência Artificial", url: "https://exemplo.com/ia " },
+            { title: "Desenvolvimento Web", url: "https://exemplo.com/webdev " },
+            { title: "CSS Moderno", url: "https://exemplo.com/css " }
+        ];
 
-        // Initialize posts array from localStorage or create empty array
-        let posts = JSON.parse(localStorage.getItem('anonPosts')) || [];
+        const searchInput = document.getElementById('searchInput');
+        const feed = document.querySelector('.feed');
 
-        // Modal handlers
-        newPostBtn.addEventListener('click', () => {
-            postModal.classList.remove('hidden');
-            postContent.focus();
-        });
-
-        closeModal.addEventListener('click', () => {
-            postModal.classList.add('hidden');
-            postContent.value = '';
-        });
-
-        // Submit new post
-        submitPost.addEventListener('click', () => {
-            const content = postContent.value.trim();
-            if (content) {
-                const newPost = {
-                    id: Date.now(),
-                    content: content,
-                    timestamp: new Date().toISOString(),
-                    likes: 0
-                };
-                
-                posts.unshift(newPost);
-                localStorage.setItem('anonPosts', JSON.stringify(posts));
-                
-                renderPosts();
-                postModal.classList.add('hidden');
-                postContent.value = '';
-            }
-        });
-
-        // Render all posts
-        function renderPosts() {
-            if (posts.length === 0) {
-                emptyFeed.classList.remove('hidden');
-                feedContainer.innerHTML = '';
-                feedContainer.appendChild(emptyFeed);
+        function updateFeed(filteredLinks) {
+            feed.innerHTML = '';
+            if (filteredLinks.length === 0) {
+                feed.innerHTML = '<p>Nenhum resultado encontrado.</p>';
                 return;
             }
-            
-            emptyFeed.classList.add('hidden');
-            feedContainer.innerHTML = '';
-            
-            posts.forEach(post => {
-                const postElement = document.createElement('div');
-                postElement.className = 'bg-white rounded-lg shadow p-6';
-                postElement.innerHTML = `
-                    <div class="flex items-start space-x-3">
-                        <div class="bg-gray-200 rounded-full w-10 h-10 flex items-center justify-center">
-                            <i class="fas fa-user-secret text-gray-500"></i>
-                        </div>
-                        <div class="flex-1">
-                            <div class="flex items-center space-x-2 text-sm text-gray-500 mb-2">
-                                <span>Anonymous</span>
-                                <span>•</span>
-                                <span>${new Date(post.timestamp).toLocaleString()}</span>
-                            </div>
-                            <p class="text-gray-800 mb-4">${post.content}</p>
-                            <div class="flex items-center space-x-4 text-gray-500">
-                                <button class="like-btn flex items-center space-x-1 hover:text-primary" data-id="${post.id}">
-                                    <i class="far fa-heart"></i>
-                                    <span>${post.likes}</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+            filteredLinks.forEach(link => {
+                const item = document.createElement('div');
+                item.className = 'news-item';
+                item.innerHTML = `
+                    <h3><a href="${link.url}" target="_blank">${link.title}</a></h3>
+                    <p>Confira mais informações sobre ${link.title.toLowerCase()}.</p>
                 `;
-                feedContainer.appendChild(postElement);
-            });
-
-            // Add event listeners to like buttons
-            document.querySelectorAll('.like-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const postId = parseInt(this.getAttribute('data-id'));
-                    const postIndex = posts.findIndex(p => p.id === postId);
-                    if (postIndex !== -1) {
-                        posts[postIndex].likes += 1;
-                        localStorage.setItem('anonPosts', JSON.stringify(posts));
-                        renderPosts();
-                    }
-                });
+                feed.appendChild(item);
             });
         }
 
-        // Initial render
-        renderPosts();
-
-        // Close modal when clicking outside
-        postModal.addEventListener('click', (e) => {
-            if (e.target === postModal) {
-                postModal.classList.add('hidden');
-            }
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value.toLowerCase();
+            const filteredLinks = links.filter(link =>
+                link.title.toLowerCase().includes(query)
+            );
+            updateFeed(filteredLinks);
         });
+
+        // Inicializa com todos os links
+        updateFeed(links);
     </script>
 </body>
 </html>
