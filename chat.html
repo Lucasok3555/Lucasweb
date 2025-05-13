@@ -1,119 +1,146 @@
-jsx
-import { useState, useEffect, useRef } from "react";
 
-export default function App() {
-  const [messages, setMessages] = useState([]);
-  const [inputText, setInputText] = useState("");
-  const [targetId, setTargetId] = useState("");
-  const [myId] = useState(() => Math.random().toString(36).substr(2, 9));
-  const messagesEndRef = useRef(null);
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chat P2P</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background-color: #f7f7f7;
+    }
+    h1 {
+      text-align: center;
+    }
+    #chat-container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .message {
+      border-bottom: 1px solid #ddd;
+      padding: 10px 0;
+    }
+    .message:last-child {
+      border-bottom: none;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 15px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #messages {
+      margin-top: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="chat-container">
+    <h1>Chat P2P</h1>
+    <label for="peer-id">Seu ID (gerado automaticamente):</label>
+    <input type="text" id="peer-id" readonly />
 
-  const sendMessage = () => {
-    if (inputText.trim() === "") return;
+    <label for="target-id">ID do Destino:</label>
+    <input type="text" id="target-id" placeholder="Digite o ID do destinatário"/>
 
-    const newMessage = {
-      id: Math.random().toString(36).substr(2, 9),
-      text: inputText,
-      from: myId,
-      to: targetId || "Broadcast",
-      timestamp: new Date(),
-    };
+    <label for="message-input">Mensagem:</label>
+    <textarea id="message-input" rows="3" placeholder="Escreva sua mensagem aqui..."></textarea>
 
-    setMessages((prev) => [...prev, newMessage]);
-    setInputText("");
-  };
+    <button onclick="sendMessage()">Enviar Mensagem</button>
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+    <h3>Mensagens Recebidas:</h3>
+    <div id="messages"></div>
+  </div>
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  <!-- Carregando a biblioteca PeerJS -->
+  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+  <script>
+    const peerIdInput = document.getElementById('peer-id');
+    const messagesDiv = document.getElementById('messages');
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white flex flex-col">
-      {/* Header */}
-      <header className="bg-gray-800 p-4 shadow-lg">
-        <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
-            P2P Messenger
-          </h1>
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-400">Seu ID:</span>
-            <span className="font-mono text-sm bg-gray-700 px-2 py-1 rounded">{myId}</span>
-          </div>
-        </div>
-      </header>
+    // Gerar um ID aleatório para o usuário
+    function generateRandomId() {
+      return Math.random().toString(36).substr(2, 10);
+    }
 
-      {/* Main Content */}
-      <main className="flex-grow max-w-4xl mx-auto w-full p-4 flex flex-col space-y-4">
-        {/* Messages Box */}
-        <div className="bg-gray-800 rounded-lg shadow-lg p-4 h-96 overflow-y-auto">
-          {messages.length === 0 ? (
-            <div className="flex h-full items-center justify-center text-gray-500">
-              Nenhuma mensagem enviada ainda...
-            </div>
-          ) : (
-            <ul className="space-y-3">
-              {messages.map((msg) => (
-                <li
-                  key={msg.id}
-                  className={`p-3 rounded-md ${
-                    msg.from === myId
-                      ? "bg-blue-600 self-end ml-auto"
-                      : "bg-gray-700 self-start mr-auto"
-                  }`}
-                >
-                  <div className="text-sm text-gray-300">
-                    De: <span className="font-medium">{msg.from}</span> | Para:{" "}
-                    <span className="font-medium">{msg.to}</span>
-                  </div>
-                  <p className="mt-1">{msg.text}</p>
-                  <div className="text-xs text-gray-400 mt-1">
-                    {msg.timestamp.toLocaleTimeString()}
-                  </div>
-                </li>
-              ))}
-              <div ref={messagesEndRef} />
-            </ul>
-          )}
-        </div>
+    const localPeerId = generateRandomId();
+    peerIdInput.value = localPeerId;
 
-        {/* Message Input */}
-        <div className="bg-gray-800 rounded-lg shadow-lg p-4">
-          <div className="flex flex-col space-y-3">
-            <textarea
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder="Digite sua mensagem..."
-              className="w-full p-2 rounded bg-gray-700 focus:bg-gray-600 outline-none resize-none"
-              rows="2"
-            />
+    // Inicializar PeerJS
+    const peer = new Peer(localPeerId);
 
-            <div className="flex items-center space-x-2">
-              <input
-                type="text"
-                value={targetId}
-                onChange={(e) => setTargetId(e.target.value)}
-                placeholder="ID do destinatário (opcional)"
-                className="flex-grow p-2 rounded bg-gray-700 focus:bg-gray-600 outline-none"
-              />
-              <button
-                onClick={sendMessage}
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-4 py-2 rounded transition-colors"
-              >
-                Enviar
-              </button>
-            </div>
-          </div>
-        </div>
-      </main>
+    let connections = {};
 
-      {/* Footer */}
-      <footer className="bg-gray-800 p-3 text-center text-sm text-gray-500">
-        Comunicação simulada P2P - ID único gerado automaticamente
-      </footer>
-    </div>
-  );
-}
+    peer.on('open', () => {
+      console.log('Meu ID:', peer.id);
+    });
+
+    peer.on('connection', conn => {
+      connections[conn.peer] = conn;
+      conn.on('data', data => {
+        addMessage(`De ${conn.peer}: ${data.text}`);
+      });
+    });
+
+    function sendMessage() {
+      const targetId = document.getElementById('target-id').value.trim();
+      const messageText = document.getElementById('message-input').value.trim();
+
+      if (!targetId || !messageText) {
+        alert("Por favor, preencha o ID do destino e a mensagem.");
+        return;
+      }
+
+      if (!connections[targetId]) {
+        connections[targetId] = peer.connect(targetId);
+        connections[targetId].on('open', () => {
+          connections[targetId].send({ text: messageText });
+          addMessage(`Para ${targetId}: ${messageText}`);
+        });
+        connections[targetId].on('error', err => {
+          console.error('Erro de conexão:', err);
+          alert('Erro ao conectar ao destinatário.');
+        });
+      } else {
+        connections[targetId].send({ text: messageText });
+        addMessage(`Para ${targetId}: ${messageText}`);
+      }
+
+      document.getElementById('message-input').value = '';
+    }
+
+    function addMessage(text) {
+      const msgElem = document.createElement('div');
+      msgElem.className = 'message';
+      msgElem.textContent = text;
+      messagesDiv.appendChild(msgElem);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+  </script>
+</body>
+</html>
