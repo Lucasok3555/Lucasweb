@@ -5,37 +5,70 @@
     const STORAGE_KEY = "lucasweb_cache";
     const MAX_CHUNK_SIZE = 1024 * 1024; // 1MB por parte
     const LOCAL_DOMAIN_MAP = {
-        "BR": "google.com.br",
-        "US": "google.com",
-        "DE": "google.de",
-        "FR": "google.fr"
+        "BR": ".com.br",
+        "US": ".com",
+        "DE": ".de",
+        "FR": ".fr"
     };
 
-    // === 1. Detectar país do usuário ===
+    // === 1. Usar DNS seguro (opcional) ===
+    function useSecureDNS(enable = false) {
+        if (enable) {
+            console.log("Ativando DNS seguro...");
+            try {
+                if (window.navigator && navigator.connection) {
+                    navigator.connection.setDNS("1.1.1.1"); // Cloudflare DNS
+                    console.log("DNS seguro ativado.");
+                } else {
+                    console.warn("Navegador não suporta configuração de DNS.");
+                }
+            } catch (e) {
+                console.error("Erro ao configurar DNS seguro:", e);
+            }
+        } else {
+            console.log("DNS seguro desativado por padrão.");
+        }
+    }
+
+    // === 2. Gerenciar "Não Rastrear" (Do Not Track) ===
+    function toggleDoNotTrack(enable = true) {
+        if (enable) {
+            navigator.__defineGetter__("doNotTrack", () => "1");
+            console.log("Do Not Track ativado automaticamente.");
+        } else {
+            navigator.__defineGetter__("doNotTrack", () => "0");
+            console.log("Do Not Track desativado.");
+        }
+    }
+
+    // === 3. Redirecionar para versão local de qualquer site ===
+    async function redirectToLocalDomainIfNeeded() {
+        const userCountry = await detectUserCountry();
+        const targetSuffix = LOCAL_DOMAIN_MAP[userCountry] || ".com";
+
+        const currentUrl = window.location.href;
+
+        // Verifica se o domínio já termina com o sufixo correto
+        if (!currentUrl.endsWith(targetSuffix)) {
+            const newUrl = currentUrl.replace(/(\.[a-z]{2,3})(\/|$)/, `${targetSuffix}$2`);
+            console.log(`Redirecionando para versão local: ${newUrl}`);
+            window.location.href = newUrl;
+        }
+    }
+
+    // === 4. Detectar país do usuário ===
     async function detectUserCountry() {
         try {
             const response = await fetch("https://ipapi.co/json/ ");
             const data = await response.json();
             return data.country;
         } catch (e) {
-            console.warn("Não foi possível detectar o país.");
+            console.warn("Não foi possível detectar o país. Usando padrão.");
             return "US";
         }
     }
 
-    // === 2. Redirecionar para versão local do site ===
-    async function redirectToLocalDomainIfNeeded(currentDomain = "google.com") {
-        const userCountry = await detectUserCountry();
-        const targetDomain = LOCAL_DOMAIN_MAP[userCountry] || currentDomain;
-
-        if (!window.location.href.includes(targetDomain)) {
-            const newUrl = window.location.href.replace(currentDomain, targetDomain);
-            console.log(`Redirecionando para: ${newUrl}`);
-            window.location.href = newUrl;
-        }
-    }
-
-    // === 3. Dividir downloads em partes (chunks) ===
+    // === 5. Dividir downloads em partes (chunks) ===
     async function splitDownload(url, parts = 4) {
         let allChunks = [];
 
@@ -76,7 +109,7 @@
         return result.buffer;
     }
 
-    // === 4. Armazenamento local avançado (IndexedDB ou localStorage) ===
+    // === 6. Armazenamento local avançado (IndexedDB ou localStorage) ===
     function saveToStorage(key, data) {
         if (window.indexedDB) {
             const request = indexedDB.open(STORAGE_KEY, 1);
@@ -100,7 +133,7 @@
         }
     }
 
-    // === 5. Carregar dados do armazenamento local ===
+    // === 7. Carregar dados do armazenamento local ===
     function loadFromStorage(url) {
         return new Promise((resolve, reject) => {
             if (window.indexedDB) {
@@ -118,7 +151,7 @@
         });
     }
 
-    // === 6. Permitir download de arquivos .torrent ===
+    // === 8. Permitir download de arquivos .torrent ===
     function enableTorrentSupport() {
         document.addEventListener("click", e => {
             const link = e.target.closest("a");
@@ -143,7 +176,7 @@
         }, 500);
     }
 
-    // === 7. Modo escuro opcional ===
+    // === 9. Modo escuro opcional ===
     function toggleDarkMode(force = false) {
         const isDark = force || document.documentElement.classList.contains("dark-mode");
 
@@ -202,17 +235,7 @@
         document.body.appendChild(btn);
     }
 
-    // === 8. Desativar HTTPS se site for HTTP ===
-    function adjustProtocolIfNeeded(url) {
-        if (url.startsWith("http://")) {
-            console.log("Site inseguro. HTTPS desativado.");
-            document.body.style.border = "2px solid red";
-        } else {
-            console.log("Conexão segura (HTTPS).");
-        }
-    }
-
-    // === 9. Bloquear pressão digital (fingerprinting) ===
+    // === 10. Bloquear pressão digital (fingerprinting) ===
     function blockFingerprinting() {
         CanvasRenderingContext2D.prototype.fillText = function () {
             console.warn("Canvas fingerprint bloqueado");
@@ -235,34 +258,6 @@
         });
     }
 
-    // === 10. Enviar pacotes por múltiplas rotas ===
-    function sendViaMultipleRoutes(url, payload) {
-        const routes = ["/route/a", "/route/b", "/route/c"];
-        const chunks = splitPayload(payload, MAX_CHUNK_SIZE);
-
-        chunks.forEach((chunk, index) => {
-            const route = routes[index % routes.length];
-            fetch(route, {
-                method: "POST",
-                body: chunk,
-                headers: { "X-Requested-With": "LucasWebApp" }
-            }).catch(() => {
-                console.warn(`Pacote ${index} falhou.`);
-            });
-        });
-    }
-
-    function splitPayload(data, size) {
-        const array = new TextEncoder().encode(data).buffer;
-        const chunks = [];
-
-        for (let i = 0; i < array.byteLength; i += size) {
-            chunks.push(array.slice(i, i + size));
-        }
-
-        return chunks;
-    }
-
     // === 11. Interceptação de navegação para evitar sites inseguros ===
     function interceptNavigation() {
         document.querySelectorAll("a").forEach(link => {
@@ -278,12 +273,16 @@
 
     // === 12. Inicialização Geral ===
     window.addEventListener("load", async () => {
+        useSecureDNS(false); // Desativa DNS seguro por padrão
+        toggleDoNotTrack(true); // Ativa "Não Rastrear" automaticamente
+        blockFingerprinting(); // Bloqueia fingerprinting
         injectDarkModeStyle();
         applyInitialDarkMode();
         addDarkModeToggle();
         interceptNavigation();
         enableTorrentSupport();
-        blockFingerprinting();
+
+        await redirectToLocalDomainIfNeeded(); // Redireciona para versões locais
 
         const pageUrl = window.location.href;
         const cached = await loadFromStorage(pageUrl);
@@ -292,8 +291,26 @@
             saveToStorage(pageUrl, html);
         }
 
-        // Exemplo: dividir download de recurso
-        // await splitDownload("https://example.com/video.mp4 ");
+        // Botão para ativar DNS seguro manualmente
+        const dnsButton = document.createElement("button");
+        dnsButton.textContent = "Ativar DNS Seguro";
+        dnsButton.style.position = "fixed";
+        dnsButton.style.bottom = "10px";
+        dnsButton.style.right = "10px";
+        dnsButton.style.zIndex = "9999";
+        dnsButton.style.padding = "10px 20px";
+        dnsButton.style.backgroundColor = "#333";
+        dnsButton.style.color = "#fff";
+        dnsButton.style.border = "none";
+        dnsButton.style.borderRadius = "8px";
+        dnsButton.style.cursor = "pointer";
+
+        dnsButton.onclick = () => {
+            useSecureDNS(true);
+            alert("DNS seguro ativado!");
+        };
+
+        document.body.appendChild(dnsButton);
     });
 
 })();
