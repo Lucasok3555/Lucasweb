@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assistente Virtual com Voz</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      width: 300px;
+    }
+    .avatar {
+      font-size: 50px;
+      color: #007bff;
+      margin-bottom: 20px;
+    }
+    input[type="text"] {
+      width: calc(100% - 22px);
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .response {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #333;
+    }
+    .microphone {
+      font-size: 30px;
+      color: #007bff;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="avatar">🤖</div>
+    <input type="text" id="commandInput" placeholder="Digite um comando...">
+    <button onclick="processCommand()">Enviar</button>
+    <div class="response" id="response"></div>
+    <div class="microphone" onclick="startVoiceRecognition()">🎙️</div>
+  </div>
+
+  <script>
+    const synth = window.speechSynthesis;
+
+    function processCommand(input) {
+      const responseDiv = document.getElementById('response');
+
+      if (input.includes('previsão do tempo')) {
+        const region = prompt('Por favor, informe sua região:');
+        if (region) {
+          const response = `Previsão do tempo para ${region}: Ensolarado com temperaturas amenas.`;
+          responseDiv.textContent = response;
+          speak(response);
+        } else {
+          const response = 'Região não informada. Por favor, tente novamente.';
+          responseDiv.textContent = response;
+          speak(response);
+        }
+      } else if (input.includes('que horas são') || input.includes('horas')) {
+        const now = new Date();
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        const response = `Agora são ${hours}:${minutes}.`;
+        responseDiv.textContent = response;
+        speak(response);
+      } else {
+        const response = 'Comando não reconhecido. Tente "previsão do tempo" ou "que horas são".';
+        responseDiv.textContent = response;
+        speak(response);
+      }
+    }
+
+    function speak(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      synth.speak(utterance);
+    }
+
+    function startVoiceRecognition() {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = 'pt-BR';
+      recognition.interimResults = false;
+
+      recognition.start();
+
+      recognition.onresult = function (event) {
+        const transcript = event.results[0][0].transcript.toLowerCase();
+        document.getElementById('commandInput').value = transcript;
+        processCommand(transcript);
+      };
+
+      recognition.onerror = function (event) {
+        console.error('Erro no reconhecimento de fala:', event.error);
+        alert('Ocorreu um erro ao capturar a fala. Tente novamente.');
+      };
+    }
+  </script>
+</body>
+</html>
