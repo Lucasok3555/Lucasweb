@@ -101,7 +101,7 @@
   // Carrega respostas da API (JSON local)
   async function carregarRespostas() {
     try {
-      const response = await fetch('messages.json');
+      const response = await fetch('https://lucasok3555.github.io/Lucasweb/Ai.json');
       const data = await response.json();
       respostas = data.respostas;
     } catch (error) {
