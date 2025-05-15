@@ -42,9 +42,30 @@
       "resposta": "eu não posso criar uma imagem no momento"
     },
     {
-      "pergunta": "tchau",
-      "resposta": "Até mais! 😊"
+      "pergunta": "A História do Brasil",
+      "resposta": "A história do Brasil é marcada por uma rica diversidade cultural e eventos significativos. Iniciada com a chegada dos portugueses em 1500, a colonização trouxe exploração e a introdução da escravidão africana. A independência em 1822, proclamada por Dom Pedro I, deu início ao Império, que durou até 1889. A República Velha e a Era Vargas foram períodos de transformações sociais e políticas. A ditadura militar (1964-1985) trouxe repressão, mas também resistência. Desde a redemocratização, o Brasil enfrenta desafios como desigualdade e corrupção, enquanto busca consolidar sua identidade e fortalecer a democracia em um cenário global em constante mudança."
     },
+    {
+      "pergunta": "O que é google",
+      "resposta": "O Google é uma empresa multinacional de tecnologia que oferece uma variedade de serviços e produtos, sendo mais conhecida pelo seu motor de busca na internet. Fundada em 1998 por Larry Page e Sergey Brin, a empresa se expandiu para incluir serviços como o Gmail (serviço de e-mail), Google Drive (armazenamento em nuvem), Google Maps (serviço de mapas e navegação), YouTube (plataforma de compartilhamento de vídeos) e muitos outros.
+Além disso, o Google desenvolve o sistema operacional Android, utilizado em muitos smartphones e tablets, e também está envolvido em áreas como"
+    },
+    {
+      "pergunta": "O que é YouTube",
+      "resposta": "O YouTube é uma plataforma de compartilhamento de vídeos onde os usuários podem assistir, enviar, comentar e compartilhar vídeos. Fundado em 2005, o YouTube permite que pessoas de todo o mundo publiquem conteúdo em uma ampla variedade de categorias, incluindo música, vlogs, tutoriais, documentários, jogos e muito mais. A plataforma é acessível por meio de navegadores da web e aplicativos móveis, e é uma das redes sociais mais populares do mundo, com bilhões de usuários ativos. Além disso, o YouTube oferece um serviço de assinatura chamado YouTube Premium, que permite aos usuários assistir a vídeos sem anúncios e acessar conteúdo exclusivo."
+    },
+    {
+      "pergunta": "O que é tor",
+      "Tor é uma rede de anonimato que permite aos usuários navegar na internet de forma mais privada e segura. O nome Tor é uma abreviação de The Onion Router, que se refere à técnica de camadas de criptografia que a rede utiliza para proteger a identidade e a localização dos usuários.
+Quando você usa o Tor, seu tráfego de internet é roteado através de uma série de servidores (chamados de nós) operados por voluntários em todo o mundo. Cada vez que seus dados passam por um nó, uma camada de criptografia é removida, semelhante às camadas de uma cebola, permitindo que o próximo nó saiba para onde enviar os dados, mas não a origem original.
+O Tor é frequentemente utilizado por pessoas que desejam proteger sua privacidade online, como jornalistas, ativistas e usuários em países com censura. No entanto, também pode ser usado para acessar conteúdos na dark web, que é uma parte da internet que não é indexada por mecanismos de busca convencionais e pode conter atividades ilegais.
+    },
+    {
+      "pergunta": "O que é i2p",
+      "resposta": "I2P, ou Invisible Internet Project, é uma rede anônima que permite a comunicação e a troca de dados de forma segura e privada. Ela foi projetada para proteger a privacidade dos usuários e permitir que eles se conectem à internet de maneira anônima, evitando a vigilância e a censura.
+A principal característica do I2P é que ele utiliza um sistema de roteamento em camadas, semelhante ao Tor, mas com algumas diferenças. No I2P, os dados são criptografados e enviados através de múltiplos nós na rede, o que dificulta a identificação da origem e do destino das informações. Isso permite que os usuários acessem serviços e sites que estão disponíveis apenas dentro da rede I2P, conhecidos como eepsites.
+O I2P é frequentemente utilizado por pessoas que buscam maior privacidade online, como jornalistas, ativistas e usuários que desejam contornar restrições de acesso à informação."
+    },  
     {
       "pergunta": "ajuda",
       "resposta": "Posso te ajudar com informações básicas. Pergunte algo!"
