@@ -1,93 +1,128 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <title>Chatbot com API JSON</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chatbot - Lucas AI</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f2f2f2;
       margin: 0;
-      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #e0f7fa;
       display: flex;
-      height: 100vh;
       justify-content: center;
       align-items: center;
+      height: 100vh;
     }
 
     .chat-container {
-      width: 400px;
-      height: 600px;
+      width: 100%;
+      max-width: 500px;
+      height: 90vh;
+      max-height: 800px;
       background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     }
 
     .chat-header {
-      background-color: #4CAF50;
+      background-color: #00796b;
       color: white;
-      padding: 15px;
+      padding: 20px;
       text-align: center;
-      font-size: 18px;
+      font-size: 1.2rem;
+      font-weight: bold;
     }
 
     .chat-messages {
       flex: 1;
       padding: 15px;
       overflow-y: auto;
+      background-color: #f0faff;
     }
 
     .message {
-      margin-bottom: 10px;
+      margin-bottom: 15px;
+      padding: 10px 15px;
+      border-radius: 20px;
+      max-width: 80%;
+      line-height: 1.4;
+      font-size: 0.95rem;
+      word-wrap: break-word;
     }
 
     .user {
-      text-align: right;
-      color: blue;
+      background-color: #00796b;
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 0;
     }
 
     .bot {
-      text-align: left;
-      color: green;
+      background-color: #ffffff;
+      color: #00796b;
+      align-self: flex-start;
+      border-bottom-left-radius: 0;
+      border: 1px solid #d0ecf0;
     }
 
     .chat-input {
       display: flex;
       border-top: 1px solid #ccc;
+      padding: 10px;
+      background-color: #f0faff;
     }
 
     input[type="text"] {
       flex: 1;
-      padding: 10px;
+      padding: 12px 15px;
+      border-radius: 25px;
       border: none;
       outline: none;
-      font-size: 16px;
+      font-size: 1rem;
+      margin-right: 10px;
+      background-color: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
     }
 
     button {
-      padding: 10px 20px;
+      padding: 12px 20px;
       border: none;
-      background-color: #4CAF50;
+      background-color: #00796b;
       color: white;
+      border-radius: 25px;
       cursor: pointer;
-      font-size: 16px;
+      font-size: 1rem;
+      transition: background 0.3s ease;
     }
 
     button:hover {
-      background-color: #45a049;
+      background-color: #004d40;
+    }
+
+    @media (max-width: 500px) {
+      .chat-container {
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+      }
     }
   </style>
 </head>
 <body>
 
 <div class="chat-container">
-  <div class="chat-header">Chatbot com API</div>
+  <div class="chat-header">Lucas AI</div>
   <div class="chat-messages" id="chatMessages"></div>
   <div class="chat-input">
-    <input type="text" id="userInput" placeholder="Digite sua mensagem...">
+    <input type="text" id="userInput" placeholder="Digite sua pergunta...">
     <button onclick="sendMessage()">Enviar</button>
   </div>
 </div>
@@ -98,14 +133,14 @@
 
   let respostas = [];
 
-  // Carrega respostas da API (JSON local)
+  // Carrega dados da sua API JSON
   async function carregarRespostas() {
     try {
-      const response = await fetch('https://lucasok3555.github.io/Lucasweb/Ai.json');
-      const data = await response.json();
-      respostas = data.respostas;
+      const response = await fetch('https://lucasok3555.github.io/Lucasweb/Ai.json ');
+      respostas = await response.json();
     } catch (error) {
-      console.error("Erro ao carregar respostas:", error);
+      console.error("Erro ao carregar JSON:", error);
+      addMessage("⚠️ Erro ao carregar base de conhecimento.", "bot");
     }
   }
 
@@ -120,7 +155,7 @@
     const respostaBot = getBotReply(text);
     setTimeout(() => {
       addMessage(respostaBot, 'bot');
-    }, 500);
+    }, 600);
   }
 
   // Adiciona mensagem na tela
@@ -132,7 +167,7 @@
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
-  // Busca resposta do bot em messages.json
+  // Busca resposta do bot na API
   function getBotReply(userText) {
     const match = respostas.find(r => userText.includes(r.pergunta.toLowerCase()));
     return match ? match.resposta : "Desculpe, não entendi.";
@@ -142,6 +177,13 @@
   window.onload = () => {
     carregarRespostas();
   };
+
+  // Permitir enviar com Enter
+  userInput.addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+      sendMessage();
+    }
+  });
 </script>
 
 </body>
