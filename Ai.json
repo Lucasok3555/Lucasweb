@@ -1,0 +1,20 @@
+{
+  "respostas": [
+    {
+      "pergunta": "oi",
+      "resposta": "Olá! Como posso ajudar?"
+    },
+    {
+      "pergunta": "nome",
+      "resposta": "Meu nome é Chatbot!"
+    },
+    {
+      "pergunta": "tchau",
+      "resposta": "Até mais! 😊"
+    },
+    {
+      "pergunta": "ajuda",
+      "resposta": "Posso te ajudar com informações básicas. Pergunte algo!"
+    }
+  ]
+}
