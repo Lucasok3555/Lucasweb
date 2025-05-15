@@ -9,6 +9,14 @@
       "resposta": "Meu nome é Chatbot!"
     },
     {
+      "pergunta": "io",
+      "resposta": "Olá! Como posso ajudar?"
+    },
+    {
+      "pergunta": "oi!",
+      "resposta": "Olá! Como posso ajudar?"
+    },
+    {
       "pergunta": "tchau",
       "resposta": "Até mais! 😊"
     },
