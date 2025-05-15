@@ -13,8 +13,33 @@
       "resposta": "Olá! Como posso ajudar?"
     },
     {
-      "pergunta": "oi!",
+      "pergunta": "Olá",
       "resposta": "Olá! Como posso ajudar?"
+    },
+    {
+      "pergunta": "bom dia",
+      "resposta": "bom dia como você está"
+    },
+
+    {
+      "pergunta": "boa noite",
+      "resposta": "boa noite um bom sono para você"
+    },
+    {
+      "pergunta": "quem é você",
+      "resposta": "o meu nome é Lucas IA eu sou assistente do Lucas"
+    },
+    {
+      "pergunta": "como você está",
+      "resposta": "eu estou tudo bem como você está também"
+    },
+    {
+      "pergunta": "boa tarde",
+      "resposta": "boa tarde para você também"
+    },
+    {
+      "pergunta": "criar uma imagem",
+      "resposta": "eu não posso criar uma imagem no momento"
     },
     {
       "pergunta": "tchau",
