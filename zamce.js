@@ -131,48 +131,7 @@
         }
     }
 
-    // === 7. Dividir downloads em partes (chunks) ===
-    async function splitDownload(url, parts = 4) {
-        let allChunks = [];
-
-        for (let i = 0; i < parts; i++) {
-            const start = i * MAX_CHUNK_SIZE;
-            const end = start + MAX_CHUNK_SIZE - 1;
-
-            try {
-                const response = await fetch(url, {
-                    headers: { Range: `bytes=${start}-${end}` }
-                });
-
-                if (response.ok || response.status === 206) {
-                    const buffer = await response.arrayBuffer();
-                    allChunks.push(buffer);
-                    saveToStorage(`${url}_part${i}`, buffer);
-                }
-            } catch (e) {
-                console.error("Erro ao baixar parte:", i, e);
-            }
-        }
-
-        const fullData = concatenateBuffers(allChunks);
-        saveToStorage(url, fullData);
-        return fullData;
-    }
-
-    function concatenateBuffers(buffers) {
-        const totalLength = buffers.reduce((acc, b) => acc + b.byteLength, 0);
-        const result = new Uint8Array(totalLength);
-        let offset = 0;
-
-        buffers.forEach(buffer => {
-            result.set(new Uint8Array(buffer), offset);
-            offset += buffer.byteLength;
-        });
-
-        return result.buffer;
-    }
-
-    // === 8. Armazenamento local avançado (IndexedDB ou localStorage) ===
+    // === 7. Armazenamento local avançado (IndexedDB ou localStorage) ===
     function saveToStorage(key, data) {
         const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 horas
         const payload = {
@@ -234,7 +193,7 @@
         });
     }
 
-    // === 9. Permitir download de arquivos .torrent ===
+    // === 8. Permitir download de arquivos .torrent ===
     function enableTorrentSupport() {
         document.addEventListener("click", e => {
             const link = e.target.closest("a");
@@ -257,6 +216,19 @@
                 console.log(`Progresso do torrent: ${Math.min(progress, 95)}%`);
             }
         }, 500);
+    }
+
+    // === 9. Interceptação de navegação para evitar sites inseguros ===
+    function interceptNavigation() {
+        document.querySelectorAll("a").forEach(link => {
+            link.addEventListener("click", e => {
+                const href = link.getAttribute("href");
+                if (href && href.startsWith("http://")) {
+                    e.preventDefault();
+                    alert("Este site usa HTTP inseguro. Tente usar uma versão IPFS ou HTTPS.");
+                }
+            });
+        });
     }
 
     // === 10. Bloquear fingerprinting ===
@@ -294,16 +266,50 @@
         });
     }
 
-    // === 11. Interceptação de navegação para evitar sites inseguros ===
-    function interceptNavigation() {
-        document.querySelectorAll("a").forEach(link => {
-            link.addEventListener("click", e => {
-                const href = link.getAttribute("href");
-                if (href && href.startsWith("http://")) {
-                    e.preventDefault();
-                    alert("Este site usa HTTP inseguro. Tente usar uma versão IPFS ou HTTPS.");
+    // === 11. Adicionar barra de busca com DuckDuckGo ===
+    function addDuckDuckGoSearchBar() {
+        const wrapper = document.createElement("div");
+        wrapper.style.position = "fixed";
+        wrapper.style.top = "10px";
+        wrapper.style.left = "10px";
+        wrapper.style.zIndex = "99999";
+        wrapper.style.display = "flex";
+        wrapper.style.alignItems = "center";
+        wrapper.style.background = "#fff";
+        wrapper.style.borderRadius = "8px";
+        wrapper.style.border = "1px solid #ccc";
+        wrapper.style.padding = "6px 10px";
+        wrapper.style.boxShadow = "0 4px 10px rgba(0,0,0,0.1)";
+        wrapper.style.width = "300px";
+        wrapper.style.fontFamily = "Arial, sans-serif";
+
+        const icon = document.createElement("img");
+        icon.src = "https://duckduckgo.com/favicon.ico ";
+        icon.alt = "DuckDuckGo";
+        icon.style.width = "20px";
+        icon.style.height = "20px";
+        icon.style.marginRight = "8px";
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = "Pesquisar no DuckDuckGo...";
+        input.style.flex = "1";
+        input.style.border = "none";
+        input.style.outline = "none";
+        input.style.fontSize = "14px";
+        input.style.padding = "4px 0";
+
+        wrapper.appendChild(icon);
+        wrapper.appendChild(input);
+        document.body.appendChild(wrapper);
+
+        input.addEventListener("keypress", function (e) {
+            if (e.key === "Enter") {
+                const query = encodeURIComponent(input.value.trim());
+                if (query) {
+                    window.location.href = `https://duckduckgo.com/?q= ${query}`;
                 }
-            });
+            }
         });
     }
 
@@ -314,6 +320,8 @@
         interceptNavigation();
         enableTorrentSupport();
         enableLazyLoading();
+
+        addDuckDuckGoSearchBar(); // <<< ADICIONADO AQUI
 
         await redirectToLocalDomainIfNeeded();
 
@@ -339,7 +347,7 @@
             document.body.appendChild(newScript);
         });
 
-        // Botão para ativar DNS seguro manualmente (simulação)
+        // Botão para alerta de DNS seguro
         const dnsButton = document.createElement("button");
         dnsButton.textContent = "Ativar DNS Seguro";
         dnsButton.style.position = "fixed";
