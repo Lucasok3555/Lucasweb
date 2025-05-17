@@ -88,28 +88,22 @@
         document.querySelectorAll("img[data-src], iframe[data-src]").forEach(el => lazyObserver.observe(el));
     }
 
-    // === 4. Usar DNS seguro (opcional) ===
-    function useSecureDNS(enable = false) {
-        if (enable) {
-            console.log("Ativando DNS seguro...");
-            alert("Funcionalidade experimental: DNS seguro (não suportado por todos os navegadores)");
-        } else {
-            console.log("DNS seguro desativado por padrão.");
-        }
-    }
-
-    // === 5. Gerenciar "Não Rastrear" (Do Not Track) ===
+    // === 4. Gerenciar "Não Rastrear" (Do Not Track) ===
     function toggleDoNotTrack(enable = true) {
         if (enable) {
-            navigator.__defineGetter__("doNotTrack", () => "1");
+            Object.defineProperty(navigator, 'doNotTrack', {
+                value: '1',
+                configurable: false,
+                writable: false
+            });
             console.log("Do Not Track ativado automaticamente.");
         } else {
-            navigator.__defineGetter__("doNotTrack", () => "0");
+            delete navigator.doNotTrack;
             console.log("Do Not Track desativado.");
         }
     }
 
-    // === 6. Redirecionar para versão local de qualquer site ===
+    // === 5. Redirecionar para versão local de qualquer site ===
     async function redirectToLocalDomainIfNeeded() {
         const userCountry = await detectUserCountry();
         const targetSuffix = LOCAL_DOMAIN_MAP[userCountry] || ".com";
@@ -125,7 +119,7 @@
         window.location.href = newUrl;
     }
 
-    // === 7. Detectar país do usuário ===
+    // === 6. Detectar país do usuário ===
     async function detectUserCountry() {
         try {
             const response = await fetch("https://ipapi.co/json/ ");
@@ -137,7 +131,7 @@
         }
     }
 
-    // === 8. Dividir downloads em partes (chunks) ===
+    // === 7. Dividir downloads em partes (chunks) ===
     async function splitDownload(url, parts = 4) {
         let allChunks = [];
 
@@ -178,8 +172,9 @@
         return result.buffer;
     }
 
-    // === 9. Armazenamento local avançado (IndexedDB ou localStorage) ===
+    // === 8. Armazenamento local avançado (IndexedDB ou localStorage) ===
     function saveToStorage(key, data) {
+        const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 horas
         const payload = {
             timestamp: Date.now(),
             data: data
@@ -239,7 +234,7 @@
         });
     }
 
-    // === 10. Permitir download de arquivos .torrent ===
+    // === 9. Permitir download de arquivos .torrent ===
     function enableTorrentSupport() {
         document.addEventListener("click", e => {
             const link = e.target.closest("a");
@@ -264,66 +259,7 @@
         }, 500);
     }
 
-    // === 11. Modo escuro opcional ===
-    function toggleDarkMode(force = false) {
-        const isDark = force || document.documentElement.classList.contains("dark-mode");
-
-        if (isDark) {
-            document.documentElement.classList.remove("dark-mode");
-            document.body.style.background = "#fff";
-            document.body.style.color = "#000";
-        } else {
-            document.documentElement.classList.add("dark-mode");
-            document.body.style.background = "#121212";
-            document.body.style.color = "#f0f0f0";
-        }
-
-        localStorage.setItem("user_dark_mode", isDark ? "false" : "true");
-    }
-
-    function injectDarkModeStyle() {
-        const style = document.createElement("style");
-        style.textContent = `
-            .dark-mode, .dark-mode body {
-                background-color: #121212 !important;
-                color: #f0f0f0 !important;
-            }
-            .dark-mode img {
-                filter: invert(1) hue-rotate(180deg);
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    function applyInitialDarkMode() {
-        injectDarkModeStyle();
-        if (localStorage.getItem("user_dark_mode") === "true") {
-            document.documentElement.classList.add("dark-mode");
-        }
-    }
-
-    function addDarkModeToggle() {
-        const btn = document.createElement("button");
-        btn.textContent = "Modo Escuro";
-        btn.style.position = "fixed";
-        btn.style.top = "10px";
-        btn.style.right = "10px";
-        btn.style.zIndex = "9999";
-        btn.style.padding = "10px 20px";
-        btn.style.backgroundColor = "#333";
-        btn.style.color = "#fff";
-        btn.style.border = "none";
-        btn.style.borderRadius = "8px";
-        btn.style.cursor = "pointer";
-
-        btn.onclick = () => {
-            toggleDarkMode();
-        };
-
-        document.body.appendChild(btn);
-    }
-
-    // === 12. Bloquear fingerprinting ===
+    // === 10. Bloquear fingerprinting ===
     function blockFingerprinting() {
         CanvasRenderingContext2D.prototype.fillText = function () {
             console.warn("Canvas fingerprint bloqueado");
@@ -358,7 +294,7 @@
         });
     }
 
-    // === 13. Interceptação de navegação para evitar sites inseguros ===
+    // === 11. Interceptação de navegação para evitar sites inseguros ===
     function interceptNavigation() {
         document.querySelectorAll("a").forEach(link => {
             link.addEventListener("click", e => {
@@ -371,14 +307,10 @@
         });
     }
 
-    // === 14. Inicialização Geral ===
+    // === 12. Inicialização Geral ===
     window.addEventListener("load", async () => {
-        useSecureDNS(false);
-        toggleDoNotTrack(true);
+        toggleDoNotTrack(true); // Não rastrear ativado por padrão
         blockFingerprinting();
-        injectDarkModeStyle();
-        applyInitialDarkMode();
-        addDarkModeToggle();
         interceptNavigation();
         enableTorrentSupport();
         enableLazyLoading();
@@ -407,7 +339,7 @@
             document.body.appendChild(newScript);
         });
 
-        // Botão para ativar DNS seguro manualmente
+        // Botão para ativar DNS seguro manualmente (simulação)
         const dnsButton = document.createElement("button");
         dnsButton.textContent = "Ativar DNS Seguro";
         dnsButton.style.position = "fixed";
@@ -422,8 +354,7 @@
         dnsButton.style.cursor = "pointer";
 
         dnsButton.onclick = () => {
-            useSecureDNS(true);
-            alert("DNS seguro ativado!");
+            alert("Funcionalidade experimental: DNS seguro não é suportado diretamente no navegador.");
         };
 
         document.body.appendChild(dnsButton);
