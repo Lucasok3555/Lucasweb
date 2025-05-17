@@ -11,26 +11,94 @@
         "FR": ".fr"
     };
 
-    // === 1. Usar DNS seguro (opcional) ===
+    // === 1. Simular HTTP/3 (otimização de requisição) ===
+    async function fetchWithOptimizedHeaders(url) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                mode: 'cors',
+                cache: 'force-cache',
+                signal: controller.signal,
+                headers: {
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Connection': 'keep-alive'
+                }
+            });
+
+            clearTimeout(timeoutId);
+            return response;
+        } catch (e) {
+            console.error("Erro ao carregar com HTTP otimizado:", e);
+            return null;
+        }
+    }
+
+    // === 2. Minificação de conteúdo ===
+    function minifyHTML(html) {
+        return html.replace(/<!--[\s\S]*?-->/g, '')
+                  .replace(/\s+/g, ' ')
+                  .trim();
+    }
+
+    function minifyCSS(css) {
+        return css.replace(/\s+/g, ' ')
+                 .replace(/\/\*[\s\S]*?\*\//g, '')
+                 .trim();
+    }
+
+    function minifyJS(js) {
+        return js.replace(/\s+/g, ' ')
+                .replace(/\/\/.*$/gm, '')
+                .trim();
+    }
+
+    // === 3. Lazy Loading de Imagens e Iframes ===
+    function enableLazyLoading() {
+        document.querySelectorAll("img").forEach(img => {
+            if (!img.hasAttribute("data-src")) {
+                img.setAttribute("data-src", img.src);
+                img.src = "";
+                img.loading = "lazy";
+            }
+        });
+
+        document.querySelectorAll("iframe").forEach(iframe => {
+            if (!iframe.hasAttribute("data-src")) {
+                iframe.setAttribute("data-src", iframe.src);
+                iframe.src = "";
+                iframe.loading = "lazy";
+            }
+        });
+
+        const lazyObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const element = entry.target;
+                    if (element.dataset.src) {
+                        element.src = element.dataset.src;
+                        observer.unobserve(element);
+                    }
+                }
+            });
+        }, { rootMargin: "0px 0px 200px 0px" });
+
+        document.querySelectorAll("img[data-src], iframe[data-src]").forEach(el => lazyObserver.observe(el));
+    }
+
+    // === 4. Usar DNS seguro (opcional) ===
     function useSecureDNS(enable = false) {
         if (enable) {
             console.log("Ativando DNS seguro...");
-            try {
-                if (window.navigator && navigator.connection) {
-                    navigator.connection.setDNS("1.1.1.1"); // Cloudflare DNS
-                    console.log("DNS seguro ativado.");
-                } else {
-                    console.warn("Navegador não suporta configuração de DNS.");
-                }
-            } catch (e) {
-                console.error("Erro ao configurar DNS seguro:", e);
-            }
+            alert("Funcionalidade experimental: DNS seguro (não suportado por todos os navegadores)");
         } else {
             console.log("DNS seguro desativado por padrão.");
         }
     }
 
-    // === 2. Gerenciar "Não Rastrear" (Do Not Track) ===
+    // === 5. Gerenciar "Não Rastrear" (Do Not Track) ===
     function toggleDoNotTrack(enable = true) {
         if (enable) {
             navigator.__defineGetter__("doNotTrack", () => "1");
@@ -41,22 +109,23 @@
         }
     }
 
-    // === 3. Redirecionar para versão local de qualquer site ===
+    // === 6. Redirecionar para versão local de qualquer site ===
     async function redirectToLocalDomainIfNeeded() {
         const userCountry = await detectUserCountry();
         const targetSuffix = LOCAL_DOMAIN_MAP[userCountry] || ".com";
 
-        const currentUrl = window.location.href;
+        const currentHost = window.location.host;
 
-        // Verifica se o domínio já termina com o sufixo correto
-        if (!currentUrl.endsWith(targetSuffix)) {
-            const newUrl = currentUrl.replace(/(\.[a-z]{2,3})(\/|$)/, `${targetSuffix}$2`);
-            console.log(`Redirecionando para versão local: ${newUrl}`);
-            window.location.href = newUrl;
-        }
+        if (currentHost.endsWith(targetSuffix)) return;
+
+        const newHost = currentHost.split('.').slice(0, -1).join('.') + targetSuffix;
+        const newUrl = window.location.href.replace(currentHost, newHost);
+
+        console.log(`Redirecionando para versão local: ${newUrl}`);
+        window.location.href = newUrl;
     }
 
-    // === 4. Detectar país do usuário ===
+    // === 7. Detectar país do usuário ===
     async function detectUserCountry() {
         try {
             const response = await fetch("https://ipapi.co/json/ ");
@@ -68,7 +137,7 @@
         }
     }
 
-    // === 5. Dividir downloads em partes (chunks) ===
+    // === 8. Dividir downloads em partes (chunks) ===
     async function splitDownload(url, parts = 4) {
         let allChunks = [];
 
@@ -84,7 +153,7 @@
                 if (response.ok || response.status === 206) {
                     const buffer = await response.arrayBuffer();
                     allChunks.push(buffer);
-                    saveToStorage(`${url}_part${i}`, buffer); // Salva cada parte
+                    saveToStorage(`${url}_part${i}`, buffer);
                 }
             } catch (e) {
                 console.error("Erro ao baixar parte:", i, e);
@@ -92,7 +161,7 @@
         }
 
         const fullData = concatenateBuffers(allChunks);
-        saveToStorage(url, fullData); // Salva conteúdo completo
+        saveToStorage(url, fullData);
         return fullData;
     }
 
@@ -109,8 +178,13 @@
         return result.buffer;
     }
 
-    // === 6. Armazenamento local avançado (IndexedDB ou localStorage) ===
+    // === 9. Armazenamento local avançado (IndexedDB ou localStorage) ===
     function saveToStorage(key, data) {
+        const payload = {
+            timestamp: Date.now(),
+            data: data
+        };
+
         if (window.indexedDB) {
             const request = indexedDB.open(STORAGE_KEY, 1);
             request.onupgradeneeded = event => {
@@ -122,36 +196,50 @@
             request.onsuccess = event => {
                 const db = event.target.result;
                 const tx = db.transaction("resources", "readwrite");
-                tx.objectStore("resources").put({ url: key, data: data });
+                tx.objectStore("resources").put(payload);
                 tx.commit();
             };
         } else {
-            localStorage.setItem(key, JSON.stringify({
-                timestamp: Date.now(),
-                data: data
-            }));
+            localStorage.setItem(key, JSON.stringify(payload));
         }
     }
 
-    // === 7. Carregar dados do armazenamento local ===
     function loadFromStorage(url) {
         return new Promise((resolve, reject) => {
+            const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 horas
+
             if (window.indexedDB) {
                 const request = indexedDB.open(STORAGE_KEY, 1);
                 request.onsuccess = event => {
                     const db = event.target.result;
                     const store = db.transaction("resources", "readonly").objectStore("resources").get(url);
-                    store.onsuccess = () => resolve(store.result?.data || null);
+                    store.onsuccess = () => {
+                        const cached = store.result;
+                        if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+                            resolve(cached.data);
+                        } else {
+                            resolve(null);
+                        }
+                    };
                     store.onerror = () => reject(null);
                 };
             } else {
                 const cached = localStorage.getItem(url);
-                resolve(cached ? JSON.parse(cached).data : null);
+                if (cached) {
+                    const item = JSON.parse(cached);
+                    if (Date.now() - item.timestamp < CACHE_TTL) {
+                        resolve(item.data);
+                    } else {
+                        resolve(null);
+                    }
+                } else {
+                    resolve(null);
+                }
             }
         });
     }
 
-    // === 8. Permitir download de arquivos .torrent ===
+    // === 10. Permitir download de arquivos .torrent ===
     function enableTorrentSupport() {
         document.addEventListener("click", e => {
             const link = e.target.closest("a");
@@ -176,7 +264,7 @@
         }, 500);
     }
 
-    // === 9. Modo escuro opcional ===
+    // === 11. Modo escuro opcional ===
     function toggleDarkMode(force = false) {
         const isDark = force || document.documentElement.classList.contains("dark-mode");
 
@@ -235,7 +323,7 @@
         document.body.appendChild(btn);
     }
 
-    // === 10. Bloquear pressão digital (fingerprinting) ===
+    // === 12. Bloquear fingerprinting ===
     function blockFingerprinting() {
         CanvasRenderingContext2D.prototype.fillText = function () {
             console.warn("Canvas fingerprint bloqueado");
@@ -256,9 +344,21 @@
             configurable: false,
             writable: false
         });
+
+        Object.defineProperty(navigator, 'platform', {
+            value: 'Win32',
+            configurable: false,
+            writable: false
+        });
+
+        Object.defineProperty(navigator, 'userAgent', {
+            value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+            configurable: false,
+            writable: false
+        });
     }
 
-    // === 11. Interceptação de navegação para evitar sites inseguros ===
+    // === 13. Interceptação de navegação para evitar sites inseguros ===
     function interceptNavigation() {
         document.querySelectorAll("a").forEach(link => {
             link.addEventListener("click", e => {
@@ -271,25 +371,41 @@
         });
     }
 
-    // === 12. Inicialização Geral ===
+    // === 14. Inicialização Geral ===
     window.addEventListener("load", async () => {
-        useSecureDNS(false); // Desativa DNS seguro por padrão
-        toggleDoNotTrack(true); // Ativa "Não Rastrear" automaticamente
-        blockFingerprinting(); // Bloqueia fingerprinting
+        useSecureDNS(false);
+        toggleDoNotTrack(true);
+        blockFingerprinting();
         injectDarkModeStyle();
         applyInitialDarkMode();
         addDarkModeToggle();
         interceptNavigation();
         enableTorrentSupport();
+        enableLazyLoading();
 
-        await redirectToLocalDomainIfNeeded(); // Redireciona para versões locais
+        await redirectToLocalDomainIfNeeded();
 
         const pageUrl = window.location.href;
-        const cached = await loadFromStorage(pageUrl);
-        if (!cached) {
-            const html = await fetch(pageUrl).then(res => res.text());
+        let html = await loadFromStorage(pageUrl);
+
+        if (!html) {
+            const response = await fetchWithOptimizedHeaders(pageUrl);
+            html = await response.text();
+            html = minifyHTML(html);
             saveToStorage(pageUrl, html);
         }
+
+        // Reinsere conteúdo minificado na página
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+        document.documentElement.innerHTML = doc.documentElement.innerHTML;
+
+        // Reaplicar scripts dinâmicos se necessário
+        document.querySelectorAll("script").forEach(script => {
+            const newScript = document.createElement("script");
+            newScript.textContent = script.textContent;
+            document.body.appendChild(newScript);
+        });
 
         // Botão para ativar DNS seguro manualmente
         const dnsButton = document.createElement("button");
