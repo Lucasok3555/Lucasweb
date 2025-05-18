@@ -1,0 +1,94 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Baixar Páginas da Web</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background-color: #f4f4f4;
+    }
+    h1 {
+      color: #333;
+    }
+    input[type="text"] {
+      width: 300px;
+      padding: 8px;
+      margin-right: 10px;
+    }
+    button {
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    #status {
+      margin-top: 20px;
+      color: green;
+    }
+    #error {
+      margin-top: 20px;
+      color: red;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Baixar e Salvar Página HTML</h1>
+  <p>Digite a URL da página que deseja baixar:</p>
+  <input type="text" id="urlInput" placeholder="https://exemplo.com">
+  <button onclick="baixarPagina()">Baixar</button>
+
+  <div id="status"></div>
+  <div id="error"></div>
+
+  <script>
+    function baixarPagina() {
+      const url = document.getElementById('urlInput').value.trim();
+      const statusDiv = document.getElementById('status');
+      const errorDiv = document.getElementById('error');
+
+      if (!url) {
+        errorDiv.textContent = 'Por favor, insira uma URL válida.';
+        return;
+      }
+
+      // Limpar mensagens anteriores
+      statusDiv.textContent = '';
+      errorDiv.textContent = '';
+
+      fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.contents) {
+            const blob = new Blob([data.contents], {type: 'text/html'});
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = obterNomeArquivo(url);
+            link.click();
+
+            statusDiv.textContent = 'Página baixada com sucesso!';
+          } else {
+            throw new Error('Conteúdo não encontrado na resposta.');
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          errorDiv.textContent = 'Erro ao baixar a página. Verifique a URL ou tente novamente mais tarde.';
+        });
+    }
+
+    function obterNomeArquivo(url) {
+      try {
+        const parsedUrl = new URL(url);
+        let path = parsedUrl.pathname.split('/').pop();
+        if (!path || path === '') path = 'index';
+        return `${path}.html`;
+      } catch (e) {
+        return 'pagina.html';
+      }
+    }
+  </script>
+
+</body>
+</html>
