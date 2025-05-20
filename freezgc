@@ -1,0 +1,217 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rede Social P2P</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #333;
+      color: white;
+      padding: 1em;
+      text-align: center;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      padding: 1em;
+    }
+    .post {
+      background: white;
+      border-radius: 5px;
+      padding: 1em;
+      margin-bottom: 1em;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    textarea, input[type="file"] {
+      width: 100%;
+      padding: 1em;
+      margin: 1em 0;
+      font-size: 1em;
+    }
+    button {
+      padding: 0.7em 1.5em;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    .online-count {
+      float: right;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Rede Social P2P Anônima</h1>
+    <div class="online-count">👥 Usuários online: <span id="onlineCount">0</span></div>
+  </header>
+  <div class="container">
+    <h2>Novo Post</h2>
+    <textarea id="postText" placeholder="O que está pensando?"></textarea>
+    <input type="file" id="mediaInput" accept="image/*,video/*" />
+    <button onclick="createPost()">Publicar</button>
+
+    <h2>Feed</h2>
+    <div id="feed"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/libp2p/dist/libp2p.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/it-all/dist/index.min.js"></script>
+  <script src="https://unpkg.com/uint8array-extras@1.0.1/index.min.js"></script>
+  
+  <script>
+    const { createLibp2p } = window['libp2p'];
+    const all = window['it-all'];
+    const uint8arrays = window['uint8array-extras'];
+
+    const FEED_TOPIC = 'social-feed';
+    const ONLINE_TOPIC = 'online-users';
+
+    let libp2p;
+    let posts = {};
+    let postIdCounter = 0;
+    let peerCount = 0;
+
+    async function initP2P() {
+      libp2p = await createLibp2p({
+        addresses: {
+          listen: ['/webrtc']
+        },
+        modules: {
+          transport: [window['libp2p-webrtc-star'].transport],
+          streamMuxer: [window['libp2p-mplex']],
+          connEncryption: [window['libp2p-noise']],
+          peerDiscovery: [window['libp2p-bootstrap'], window['libp2p-webrtc-star']]
+        },
+        config: {
+          peerDiscovery: {
+            autoDial: true,
+            [window['libp2p-webrtc-star'].symbol]: {
+              enabled: true
+            },
+            [window['libp2p-bootstrap'].symbol]: {
+              enabled: true,
+              list: ['/dns4/wrtc-star1.par.dwebops.pub/tcp/443/wss/p2p-webrtc-star']
+            }
+          }
+        }
+      });
+
+      await libp2p.start();
+
+      // Subscribe to topics
+      libp2p.pubsub.subscribe(FEED_TOPIC, handlePostMessage);
+      libp2p.pubsub.subscribe(ONLINE_TOPIC, handleOnlineMessage);
+
+      updateOnlineStatus();
+    }
+
+    function updateOnlineStatus() {
+      // Broadcast presence every 10 seconds
+      setInterval(() => {
+        const msg = new TextEncoder().encode('ping');
+        libp2p.pubsub.publish(ONLINE_TOPIC, msg);
+      }, 10000);
+    }
+
+    function handleOnlineMessage(msg) {
+      if (msg.from.toString() !== libp2p.peerId.toString()) {
+        peerCount++;
+        document.getElementById('onlineCount').innerText = peerCount;
+      }
+    }
+
+    function handlePostMessage(msg) {
+      try {
+        const data = JSON.parse(new TextDecoder().decode(msg.data));
+        addPostToFeed(data);
+      } catch (e) {
+        console.error("Invalid post message", e);
+      }
+    }
+
+    function createPost() {
+      const text = document.getElementById('postText').value.trim();
+      const mediaInput = document.getElementById('mediaInput');
+      const file = mediaInput.files[0];
+
+      if (!text && !file) {
+        alert("Digite algo ou selecione um arquivo.");
+        return;
+      }
+
+      const postId = Date.now() + '-' + (++postIdCounter);
+      const anonId = Math.random().toString(36).substring(2, 8); // pseudo-anonymized ID
+
+      let mediaUrl = '';
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          mediaUrl = reader.result;
+          const postData = {
+            id: postId,
+            author: anonId,
+            text,
+            mediaUrl,
+            timestamp: Date.now()
+          };
+          broadcastPost(postData);
+          addPostToFeed(postData);
+          document.getElementById('postText').value = '';
+          mediaInput.value = '';
+        };
+        reader.readAsDataURL(file);
+        return;
+      }
+
+      const postData = {
+        id: postId,
+        author: anonId,
+        text,
+        timestamp: Date.now()
+      };
+      broadcastPost(postData);
+      addPostToFeed(postData);
+      document.getElementById('postText').value = '';
+    }
+
+    function broadcastPost(postData) {
+      const msg = new TextEncoder().encode(JSON.stringify(postData));
+      libp2p.pubsub.publish(FEED_TOPIC, msg);
+    }
+
+    function addPostToFeed(post) {
+      if (posts[post.id]) return; // avoid duplicates
+      posts[post.id] = post;
+
+      const feedDiv = document.getElementById('feed');
+      const postDiv = document.createElement('div');
+      postDiv.className = 'post';
+      postDiv.id = `post-${post.id}`;
+      postDiv.innerHTML = `
+        <strong>Anônimo (${post.author})</strong><br/>
+        ${post.text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+        ${post.mediaUrl ? `<br/><img src="${post.mediaUrl}" style="max-width:100%;"/>` : ''}
+        <br/><small>${new Date(post.timestamp).toLocaleString()}</small>
+        <br/><button onclick="deletePost('${post.id}')">🗑️ Deletar</button>
+      `;
+      feedDiv.prepend(postDiv);
+    }
+
+    function deletePost(id) {
+      delete posts[id];
+      const el = document.getElementById(`post-${id}`);
+      if (el) el.remove();
+    }
+
+    // Initialize P2P network
+    initP2P();
+  </script>
+</body>
+</html>
