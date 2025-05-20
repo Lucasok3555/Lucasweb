@@ -1,8 +1,9 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Conversor de Texto para Voz</title>
+  <title>Conversor de Texto para Voz com Download</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -32,6 +33,7 @@
       color: white;
       border: none;
       border-radius: 5px;
+      margin: 10px;
     }
 
     button:hover {
@@ -41,11 +43,14 @@
 </head>
 <body>
 
-  <h1>Conversor de Texto para Voz</h1>
+  <h1>Conversor de Texto para Voz com Download</h1>
   <textarea id="texto" placeholder="Digite o texto aqui..."></textarea><br>
-  <button onclick="converterParaVoz()">Converter para Voz</button>
+  <button onclick="converterParaVoz()">Ouvir Voz</button>
+  <button onclick="baixarAudio()">Baixar Áudio</button>
 
   <script>
+    let utterance = null;
+
     function converterParaVoz() {
       const texto = document.getElementById("texto").value;
       if (texto.trim() === "") {
@@ -53,9 +58,18 @@
         return;
       }
 
-      const utterance = new SpeechSynthesisUtterance(texto);
+      utterance = new SpeechSynthesisUtterance(texto);
       utterance.lang = 'pt-BR'; // Define o idioma como português do Brasil
       speechSynthesis.speak(utterance);
+    }
+
+    function baixarAudio() {
+      if (!utterance) {
+        alert("Nenhum áudio foi gerado ainda. Por favor, converta o texto primeiro.");
+        return;
+      }
+
+      alert("Infelizmente, a API Web Speech não permite exportar o áudio diretamente como arquivo devido a limitações técnicas e de segurança. Recomenda-se o uso de ferramentas externas ou servidores para geração e download de áudios.");
     }
   </script>
 
