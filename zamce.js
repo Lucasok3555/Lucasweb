@@ -11,6 +11,23 @@
         "FR": ".fr"
     };
 
+    // === Lista de Domínios Maliciosos ===
+    const DANGEROUS_DOMAINS = [
+        "malware.com",
+        "phishing.net",
+        "fake-login.org",
+        "evil-tracking.com"
+    ];
+
+    // === Lista de Rastreadores Conhecidos ===
+    const TRACKERS = [
+        "google-analytics.com",
+        "googlesyndication.com",
+        "doubleclick.net",
+        "facebook.com/pixel",
+        "adservice.google.com"
+    ];
+
     // === 1. Simular HTTP/3 (otimização de requisição) ===
     async function fetchWithOptimizedHeaders(url) {
         const controller = new AbortController();
@@ -227,11 +244,20 @@
                     e.preventDefault();
                     alert("Este site usa HTTP inseguro. Tente usar uma versão IPFS ou HTTPS.");
                 }
+                if (isDangerousLink(href)) {
+                    e.preventDefault();
+                    alert("Este site é considerado perigoso e foi bloqueado.");
+                }
             });
         });
     }
 
-    // === 10. Bloquear fingerprinting ===
+    // === 10. Verificar se link é perigoso ===
+    function isDangerousLink(url) {
+        return DANGEROUS_DOMAINS.some(domain => url.includes(domain));
+    }
+
+    // === 11. Bloquear fingerprinting e rastreadores ===
     function blockFingerprinting() {
         CanvasRenderingContext2D.prototype.fillText = function () {
             console.warn("Canvas fingerprint bloqueado");
@@ -266,7 +292,67 @@
         });
     }
 
-    // === 11. Adicionar barra de busca com DuckDuckGo ===
+    function trackerBlocker() {
+        document.querySelectorAll("script").forEach(script => {
+            if (script.src) {
+                TRACKERS.forEach(tracker => {
+                    if (script.src.includes(tracker)) {
+                        script.remove();
+                        console.log("Rastreador bloqueado:", script.src);
+                    }
+                });
+            }
+        });
+
+        const observer = new MutationObserver(mutations => {
+            mutations.forEach(mutation => {
+                mutation.addedNodes.forEach(node => {
+                    if (node.tagName === "SCRIPT" && node.src) {
+                        TRACKERS.forEach(tracker => {
+                            if (node.src.includes(tracker)) {
+                                node.remove();
+                                console.log("Rastreador bloqueado (dinâmico):", node.src);
+                            }
+                        });
+                    }
+                });
+            });
+        });
+
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+    }
+
+    // === 12. Mensagem de Boas-Vindas ===
+    function showWelcomeMessage() {
+        const msg = document.createElement("div");
+        msg.style.position = "fixed";
+        msg.style.bottom = "20px";
+        msg.style.right = "20px";
+        msg.style.zIndex = "99999";
+        msg.style.background = "#28a745";
+        msg.style.color = "#fff";
+        msg.style.padding = "10px 15px";
+        msg.style.borderRadius = "8px";
+        msg.style.fontFamily = "Arial, sans-serif";
+        msg.style.fontSize = "14px";
+        msg.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
+        msg.style.opacity = "0";
+        msg.style.transition = "opacity 0.5s ease-in-out";
+        msg.textContent = "Bem-vindo ao ZamCE! Navegação segura iniciada.";
+
+        document.body.appendChild(msg);
+
+        setTimeout(() => {
+            msg.style.opacity = "1";
+        }, 500);
+
+        setTimeout(() => {
+            msg.style.opacity = "0";
+            setTimeout(() => msg.remove(), 500);
+        }, 4000);
+    }
+
+    // === 13. Adicionar barra de busca com DuckDuckGo ===
     function addDuckDuckGoSearchBar() {
         const wrapper = document.createElement("div");
         wrapper.style.position = "fixed";
@@ -313,15 +399,17 @@
         });
     }
 
-    // === 12. Inicialização Geral ===
+    // === 14. Inicialização Geral ===
     window.addEventListener("load", async () => {
         toggleDoNotTrack(true); // Não rastrear ativado por padrão
         blockFingerprinting();
+        trackerBlocker(); // <<< NOVO: Bloqueio de rastreadores
         interceptNavigation();
         enableTorrentSupport();
         enableLazyLoading();
 
-        addDuckDuckGoSearchBar(); // <<< ADICIONADO AQUI
+        addDuckDuckGoSearchBar();
+        showWelcomeMessage(); // <<< NOVO: Mensagem de boas-vindas
 
         await redirectToLocalDomainIfNeeded();
 
