@@ -1,18 +1,15 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Chatbot - Lucas AI</title>
+  <title>Chatbot Simples</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
     body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
       margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #e0f7fa;
+      padding: 0;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -20,24 +17,21 @@
     }
 
     .chat-container {
-      width: 100%;
-      max-width: 500px;
-      height: 90vh;
-      max-height: 800px;
-      background-color: white;
-      border-radius: 12px;
-      overflow: hidden;
+      width: 400px;
+      height: 600px;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
       display: flex;
       flex-direction: column;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      overflow: hidden;
     }
 
     .chat-header {
-      background-color: #00796b;
+      background: #007bff;
       color: white;
-      padding: 20px;
+      padding: 15px;
       text-align: center;
-      font-size: 1.2rem;
       font-weight: bold;
     }
 
@@ -45,142 +39,113 @@
       flex: 1;
       padding: 15px;
       overflow-y: auto;
-      background-color: #f0faff;
+      background: #f9f9f9;
     }
 
     .message {
-      margin-bottom: 15px;
-      padding: 10px 15px;
-      border-radius: 20px;
+      margin-bottom: 10px;
       max-width: 80%;
-      line-height: 1.4;
-      font-size: 0.95rem;
-      word-wrap: break-word;
     }
 
     .user {
-      background-color: #00796b;
-      color: white;
       align-self: flex-end;
-      border-bottom-right-radius: 0;
+      background: #dc3545;
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
     }
 
     .bot {
-      background-color: #ffffff;
-      color: #00796b;
       align-self: flex-start;
-      border-bottom-left-radius: 0;
-      border: 1px solid #d0ecf0;
+      background: #e9e9e9;
+      color: black;
+      padding: 10px;
+      border-radius: 5px;
     }
 
     .chat-input {
       display: flex;
       border-top: 1px solid #ccc;
-      padding: 10px;
-      background-color: #f0faff;
     }
 
-    input[type="text"] {
+    .chat-input input {
       flex: 1;
-      padding: 12px 15px;
-      border-radius: 25px;
+      padding: 10px;
       border: none;
       outline: none;
-      font-size: 1rem;
-      margin-right: 10px;
-      background-color: #fff;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      font-size: 16px;
     }
 
-    button {
-      padding: 12px 20px;
-      border: none;
-      background-color: #00796b;
+    .chat-input button {
+      background: #28a745;
       color: white;
-      border-radius: 25px;
+      border: none;
+      padding: 10px 15px;
       cursor: pointer;
-      font-size: 1rem;
-      transition: background 0.3s ease;
+      font-size: 16px;
     }
 
-    button:hover {
-      background-color: #004d40;
-    }
-
-    @media (max-width: 500px) {
-      .chat-container {
-        height: 100vh;
-        max-height: 100vh;
-        border-radius: 0;
-      }
+    .chat-input button:hover {
+      background: #218838;
     }
   </style>
 </head>
 <body>
 
 <div class="chat-container">
-  <div class="chat-header">Lucas AI</div>
+  <div class="chat-header">Chatbot Simples</div>
   <div class="chat-messages" id="chatMessages"></div>
   <div class="chat-input">
-    <input type="text" id="userInput" placeholder="Digite sua pergunta...">
+    <input type="text" id="userInput" placeholder="Digite sua mensagem..." />
     <button onclick="sendMessage()">Enviar</button>
   </div>
 </div>
 
 <script>
-  const chatMessages = document.getElementById('chatMessages');
-  const userInput = document.getElementById('userInput');
+  const messagesDiv = document.getElementById('chatMessages');
+  const input = document.getElementById('userInput');
 
-  let respostas = [];
+  function sendMessage() {
+    const text = input.value.trim();
+    if (text === '') return;
 
-  // Carrega dados da sua API JSON
-  async function carregarRespostas() {
-    try {
-      const response = await fetch('https://lucasok3555.github.io/Lucasweb/Ai.json ');
-      respostas = await response.json();
-    } catch (error) {
-      console.error("Erro ao carregar JSON:", error);
-      addMessage("⚠️ Erro ao carregar base de conhecimento.", "bot");
+    appendMessage('user', text);
+    input.value = '';
+
+    // Simula resposta do bot
+    setTimeout(() => {
+      const response = getBotResponse(text);
+      appendMessage('bot', response);
+    }, 500);
+  }
+
+  function appendMessage(sender, text) {
+    const msg = document.createElement('div');
+    msg.classList.add('message', sender);
+    msg.textContent = text;
+    messagesDiv.appendChild(msg);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
+  function getBotResponse(userText) {
+    userText = userText.toLowerCase();
+
+    if (userText.includes('olá') || userText.includes('oi')) {
+      return 'Olá! Como posso ajudar?';
+    } else if (userText.includes('seu nome')) {
+      return 'Meu nome é Chatbot Simples.';
+    } else if (userText.includes('tchau')) {
+      return 'Até logo!';
+    } else if (userText.includes('tempo')) {
+      return 'Hoje está um dia maravilhoso!';
+    } else {
+      return 'Desculpe, não entendi. Pode reformular?';
     }
   }
 
-  // Envia mensagem do usuário
-  function sendMessage() {
-    const text = userInput.value.trim().toLowerCase();
-    if (text === '') return;
-
-    addMessage(text, 'user');
-    userInput.value = '';
-
-    const respostaBot = getBotReply(text);
-    setTimeout(() => {
-      addMessage(respostaBot, 'bot');
-    }, 600);
-  }
-
-  // Adiciona mensagem na tela
-  function addMessage(text, sender) {
-    const div = document.createElement('div');
-    div.className = 'message ' + sender;
-    div.textContent = text;
-    chatMessages.appendChild(div);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-  }
-
-  // Busca resposta do bot na API
-  function getBotReply(userText) {
-    const match = respostas.find(r => userText.includes(r.pergunta.toLowerCase()));
-    return match ? match.resposta : "Desculpe, não entendi.";
-  }
-
-  // Inicializa
-  window.onload = () => {
-    carregarRespostas();
-  };
-
   // Permitir enviar com Enter
-  userInput.addEventListener("keypress", function(e) {
-    if (e.key === "Enter") {
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
       sendMessage();
     }
   });
