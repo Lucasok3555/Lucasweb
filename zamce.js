@@ -278,18 +278,6 @@
             configurable: false,
             writable: false
         });
-
-        Object.defineProperty(navigator, 'platform', {
-            value: 'Win32',
-            configurable: false,
-            writable: false
-        });
-
-        Object.defineProperty(navigator, 'userAgent', {
-            value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-            configurable: false,
-            writable: false
-        });
     }
 
     function trackerBlocker() {
@@ -322,7 +310,54 @@
         observer.observe(document.documentElement, { childList: true, subtree: true });
     }
 
-    // === 12. Mensagem de Boas-Vindas ===
+    // === 12. Editar identidade do navegador ===
+    function editBrowserIdentity() {
+        const fakeUserAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) ZamCE/1.0 Safari/537.36";
+
+        Object.defineProperty(navigator, 'userAgent', {
+            value: fakeUserAgent,
+            configurable: false,
+            writable: false
+        });
+
+        Object.defineProperty(navigator, 'appVersion', {
+            value: "5.0 (X11)",
+            configurable: false,
+            writable: false
+        });
+
+        Object.defineProperty(navigator, 'platform', {
+            value: "Linux x86_64",
+            configurable: false,
+            writable: false
+        });
+
+        if ('oscpu' in navigator) {
+            Object.defineProperty(navigator, 'oscpu', {
+                value: "Linux x86_64",
+                configurable: false,
+                writable: false
+            });
+        }
+
+        if ('cpuClass' in navigator) {
+            Object.defineProperty(navigator, 'cpuClass', {
+                value: "unknown",
+                configurable: false,
+                writable: false
+            });
+        }
+
+        Object.defineProperty(navigator, 'deviceMemory', {
+            value: 8,
+            configurable: false,
+            writable: false
+        });
+
+        console.log("Identidade do navegador foi mascarada.");
+    }
+
+    // === 13. Mensagem de Boas-Vindas ===
     function showWelcomeMessage() {
         const msg = document.createElement("div");
         msg.style.position = "fixed";
@@ -352,7 +387,7 @@
         }, 4000);
     }
 
-    // === 13. Adicionar barra de busca com DuckDuckGo ===
+    // === 14. Adicionar barra de busca com DuckDuckGo ===
     function addDuckDuckGoSearchBar() {
         const wrapper = document.createElement("div");
         wrapper.style.position = "fixed";
@@ -399,17 +434,18 @@
         });
     }
 
-    // === 14. Inicialização Geral ===
+    // === 15. Inicialização Geral ===
     window.addEventListener("load", async () => {
+        editBrowserIdentity(); // <<< NOVA FUNÇÃO ADICIONADA AQUI
         toggleDoNotTrack(true); // Não rastrear ativado por padrão
         blockFingerprinting();
-        trackerBlocker(); // <<< NOVO: Bloqueio de rastreadores
+        trackerBlocker(); // Bloqueio de rastreadores
         interceptNavigation();
         enableTorrentSupport();
         enableLazyLoading();
 
         addDuckDuckGoSearchBar();
-        showWelcomeMessage(); // <<< NOVO: Mensagem de boas-vindas
+        showWelcomeMessage();
 
         await redirectToLocalDomainIfNeeded();
 
