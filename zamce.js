@@ -2,7 +2,7 @@
     'use strict';
 
     // === Variáveis Globais ===
-    const STORAGE_KEY = "lucasweb_cache";
+    const STORAGE_KEY = "zamce_cache";
     const MAX_CHUNK_SIZE = 1024 * 1024; // 1MB por parte
     const LOCAL_DOMAIN_MAP = {
         "BR": ".com.br",
@@ -11,27 +11,36 @@
         "FR": ".fr"
     };
 
-    // === Lista de Domínios Maliciosos ===
-    const DANGEROUS_DOMAINS = [
-        "malware.com",
-        "phishing.net",
-        "fake-login.org",
-        "evil-tracking.com"
-    ];
+    // === Configuração I2P ===
+    const I2P_GATEWAY = "https://i2pgate.io/i2p/ ";
 
     // === Lista de Rastreadores Conhecidos ===
     const TRACKERS = [
         "google-analytics.com",
         "googlesyndication.com",
         "doubleclick.net",
-        "facebook.com/pixel",
-        "adservice.google.com"
+        "facebook.com/pixel"
     ];
 
-    // === 1. Simular HTTP/3 (otimização de requisição) ===
+    // === Simulação de Rede P2P ===
+    const P2P_NETWORK = [];
+
+    // === Identidade do Usuário na Rede P2P ===
+    const USER_ID = Math.random().toString(36).substring(2, 15) + Date.now();
+
+    // === 1. Carregar página via I2P se for .i2p ===
+    function loadI2PSite(url) {
+        if (url.endsWith(".i2p")) {
+            console.log("Tentando carregar site I2P através do gateway:", url);
+            return I2P_GATEWAY + encodeURIComponent(url.replace(".i2p", ""));
+        }
+        return url;
+    }
+
+    // === 2. Encontrar rota mais rápida (HTTP/3-like) ===
     async function fetchWithOptimizedHeaders(url) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
 
         try {
             const response = await fetch(url, {
@@ -53,7 +62,7 @@
         }
     }
 
-    // === 2. Minificação de conteúdo ===
+    // === 3. Minificação de conteúdo ===
     function minifyHTML(html) {
         return html.replace(/<!--[\s\S]*?-->/g, '')
                   .replace(/\s+/g, ' ')
@@ -72,7 +81,7 @@
                 .trim();
     }
 
-    // === 3. Lazy Loading de Imagens e Iframes ===
+    // === 4. Lazy Loading de Imagens e Iframes ===
     function enableLazyLoading() {
         document.querySelectorAll("img").forEach(img => {
             if (!img.hasAttribute("data-src")) {
@@ -105,7 +114,7 @@
         document.querySelectorAll("img[data-src], iframe[data-src]").forEach(el => lazyObserver.observe(el));
     }
 
-    // === 4. Gerenciar "Não Rastrear" (Do Not Track) ===
+    // === 5. Gerenciar "Não Rastrear" (Do Not Track) ===
     function toggleDoNotTrack(enable = true) {
         if (enable) {
             Object.defineProperty(navigator, 'doNotTrack', {
@@ -120,37 +129,36 @@
         }
     }
 
-    // === 5. Redirecionar para versão local de qualquer site ===
-    async function redirectToLocalDomainIfNeeded() {
-        const userCountry = await detectUserCountry();
-        const targetSuffix = LOCAL_DOMAIN_MAP[userCountry] || ".com";
-
-        const currentHost = window.location.host;
-
-        if (currentHost.endsWith(targetSuffix)) return;
-
-        const newHost = currentHost.split('.').slice(0, -1).join('.') + targetSuffix;
-        const newUrl = window.location.href.replace(currentHost, newHost);
-
-        console.log(`Redirecionando para versão local: ${newUrl}`);
-        window.location.href = newUrl;
+    // === 6. Bloqueio de Sites Perigosos ===
+    function isDangerousLink(url) {
+        const DANGEROUS_DOMAINS = [
+            "malware.com",
+            "phishing.net",
+            "fake-login.org",
+            "evil-tracking.com"
+        ];
+        return DANGEROUS_DOMAINS.some(domain => url.includes(domain));
     }
 
-    // === 6. Detectar país do usuário ===
-    async function detectUserCountry() {
-        try {
-            const response = await fetch("https://ipapi.co/json/ ");
-            const data = await response.json();
-            return data.country;
-        } catch (e) {
-            console.warn("Não foi possível detectar o país. Usando padrão.");
-            return "US";
-        }
+    // === 7. Interceptação de navegação para evitar sites inseguros ===
+    function interceptNavigation() {
+        document.querySelectorAll("a").forEach(link => {
+            link.addEventListener("click", e => {
+                const href = link.getAttribute("href");
+                if (href && href.startsWith("http://")) {
+                    e.preventDefault();
+                    alert("Este site usa HTTP inseguro. Tente usar HTTPS ou IPFS.");
+                }
+                if (isDangerousLink(href)) {
+                    e.preventDefault();
+                    alert("Este site é considerado perigoso e foi bloqueado.");
+                }
+            });
+        });
     }
 
-    // === 7. Armazenamento local avançado (IndexedDB ou localStorage) ===
+    // === 8. Armazenamento local avançado (IndexedDB) ===
     function saveToStorage(key, data) {
-        const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 horas
         const payload = {
             timestamp: Date.now(),
             data: data
@@ -210,104 +218,64 @@
         });
     }
 
-    // === 8. Permitir download de arquivos .torrent ===
-    function enableTorrentSupport() {
-        document.addEventListener("click", e => {
-            const link = e.target.closest("a");
-            if (link && link.href.endsWith(".torrent")) {
-                e.preventDefault();
-                alert("Iniciando download do torrent...");
-                simulateTorrentDownload(link.href);
-            }
-        });
-    }
-
-    function simulateTorrentDownload(url) {
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += Math.random() * 10;
-            if (progress >= 100) {
-                clearInterval(interval);
-                alert("Download do torrent concluído!");
-            } else {
-                console.log(`Progresso do torrent: ${Math.min(progress, 95)}%`);
-            }
-        }, 500);
-    }
-
-    // === 9. Interceptação de navegação para evitar sites inseguros ===
-    function interceptNavigation() {
-        document.querySelectorAll("a").forEach(link => {
-            link.addEventListener("click", e => {
-                const href = link.getAttribute("href");
-                if (href && href.startsWith("http://")) {
-                    e.preventDefault();
-                    alert("Este site usa HTTP inseguro. Tente usar uma versão IPFS ou HTTPS.");
+    // === 9. Rede P2P Básica (simulada) ===
+    function connectToP2PNetwork() {
+        console.log(`Conectado à rede P2P como ${USER_ID}`);
+        window.addEventListener("storage", e => {
+            if (e.key && e.key.startsWith("p2p_")) {
+                const peerData = JSON.parse(e.newValue);
+                console.log(`Recebido conteúdo P2P de ${peerData.user}`);
+                if (peerData.url && peerData.content) {
+                    saveToStorage(peerData.url, peerData.content);
                 }
-                if (isDangerousLink(href)) {
-                    e.preventDefault();
-                    alert("Este site é considerado perigoso e foi bloqueado.");
-                }
-            });
-        });
-    }
-
-    // === 10. Verificar se link é perigoso ===
-    function isDangerousLink(url) {
-        return DANGEROUS_DOMAINS.some(domain => url.includes(domain));
-    }
-
-    // === 11. Bloquear fingerprinting e rastreadores ===
-    function blockFingerprinting() {
-        CanvasRenderingContext2D.prototype.fillText = function () {
-            console.warn("Canvas fingerprint bloqueado");
-        };
-
-        WebGLRenderingContext.prototype.getParameter = function () {
-            console.warn("WebGL fingerprint bloqueado");
-        };
-
-        Object.defineProperty(navigator, 'plugins', {
-            value: [],
-            configurable: false,
-            writable: false
-        });
-
-        Object.defineProperty(navigator, 'languages', {
-            value: ['en-US', 'en'],
-            configurable: false,
-            writable: false
-        });
-    }
-
-    function trackerBlocker() {
-        document.querySelectorAll("script").forEach(script => {
-            if (script.src) {
-                TRACKERS.forEach(tracker => {
-                    if (script.src.includes(tracker)) {
-                        script.remove();
-                        console.log("Rastreador bloqueado:", script.src);
-                    }
-                });
             }
         });
+    }
 
-        const observer = new MutationObserver(mutations => {
-            mutations.forEach(mutation => {
-                mutation.addedNodes.forEach(node => {
-                    if (node.tagName === "SCRIPT" && node.src) {
-                        TRACKERS.forEach(tracker => {
-                            if (node.src.includes(tracker)) {
-                                node.remove();
-                                console.log("Rastreador bloqueado (dinâmico):", node.src);
-                            }
-                        });
-                    }
-                });
-            });
+    function sharePageToP2P(url, content) {
+        const p2pData = JSON.stringify({
+            user: USER_ID,
+            url: url,
+            content: content
         });
+        localStorage.setItem(`p2p_${Date.now()}`, p2pData);
+        console.log("Conteúdo compartilhado na rede P2P.");
+    }
 
-        observer.observe(document.documentElement, { childList: true, subtree: true });
+    // === 10. Verificar se há conteúdo disponível na rede P2P ===
+    async function checkP2PForContent(url) {
+        const keys = Object.keys(localStorage).filter(k => k.startsWith("p2p_"));
+        for (const key of keys) {
+            const data = JSON.parse(localStorage.getItem(key));
+            if (data.url === url) {
+                console.log("Conteúdo encontrado na rede P2P!");
+                return data.content;
+            }
+        }
+        return null;
+    }
+
+    // === 11. Baixar páginas com suporte P2P ===
+    async function fetchPage(url) {
+        let html = await loadFromStorage(url);
+        if (!html) {
+            html = await fetchFromP2P(url); // Primeiro tenta P2P
+            if (!html) {
+                const finalUrl = loadI2PSite(url);
+                const response = await fetchWithOptimizedHeaders(finalUrl);
+                html = await response.text();
+                html = minifyHTML(html);
+                saveToStorage(url, html);
+                sharePageToP2P(url, html); // Compartilha na rede P2P
+            }
+        }
+        return html;
+    }
+
+    async function fetchFromP2P(url) {
+        const p2pContent = await checkP2PForContent(url);
+        if (p2pContent) return p2pContent;
+        return null;
     }
 
     // === 12. Editar identidade do navegador ===
@@ -331,22 +299,6 @@
             configurable: false,
             writable: false
         });
-
-        if ('oscpu' in navigator) {
-            Object.defineProperty(navigator, 'oscpu', {
-                value: "Linux x86_64",
-                configurable: false,
-                writable: false
-            });
-        }
-
-        if ('cpuClass' in navigator) {
-            Object.defineProperty(navigator, 'cpuClass', {
-                value: "unknown",
-                configurable: false,
-                writable: false
-            });
-        }
 
         Object.defineProperty(navigator, 'deviceMemory', {
             value: 8,
@@ -373,7 +325,7 @@
         msg.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
         msg.style.opacity = "0";
         msg.style.transition = "opacity 0.5s ease-in-out";
-        msg.textContent = "Bem-vindo ao ZamCE! Navegação segura iniciada.";
+        msg.textContent = "Bem-vindo ao ZamCE! Navegação segura e P2P ativada.";
 
         document.body.appendChild(msg);
 
@@ -387,7 +339,7 @@
         }, 4000);
     }
 
-    // === 14. Adicionar barra de busca com DuckDuckGo ===
+    // === 14. Barra de busca integrada ao DuckDuckGo ===
     function addDuckDuckGoSearchBar() {
         const wrapper = document.createElement("div");
         wrapper.style.position = "fixed";
@@ -436,21 +388,19 @@
 
     // === 15. Inicialização Geral ===
     window.addEventListener("load", async () => {
-        editBrowserIdentity(); // <<< NOVA FUNÇÃO ADICIONADA AQUI
-        toggleDoNotTrack(true); // Não rastrear ativado por padrão
-        blockFingerprinting();
-        trackerBlocker(); // Bloqueio de rastreadores
+        editBrowserIdentity(); // <<< NOVA FUNÇÃO ADICIONADA
+        toggleDoNotTrack(true);
         interceptNavigation();
-        enableTorrentSupport();
         enableLazyLoading();
+        connectToP2PNetwork(); // <<< NOVA FUNÇÃO ADICIONADA
 
         addDuckDuckGoSearchBar();
         showWelcomeMessage();
 
-        await redirectToLocalDomainIfNeeded();
-
         const pageUrl = window.location.href;
-        let html = await loadFromStorage(pageUrl);
+
+        // Exemplo: Google.com → Busca em P2P primeiro
+        let html = await fetchPage(pageUrl);
 
         if (!html) {
             const response = await fetchWithOptimizedHeaders(pageUrl);
@@ -459,19 +409,18 @@
             saveToStorage(pageUrl, html);
         }
 
-        // Reinsere conteúdo minificado na página
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, "text/html");
         document.documentElement.innerHTML = doc.documentElement.innerHTML;
 
-        // Reaplicar scripts dinâmicos se necessário
+        // Reaplicar scripts dinâmicos
         document.querySelectorAll("script").forEach(script => {
             const newScript = document.createElement("script");
             newScript.textContent = script.textContent;
             document.body.appendChild(newScript);
         });
 
-        // Botão para alerta de DNS seguro
+        // Botão para ativar DNS seguro (simulado)
         const dnsButton = document.createElement("button");
         dnsButton.textContent = "Ativar DNS Seguro";
         dnsButton.style.position = "fixed";
