@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Serviço de Compartilhamento P2P</title>
+  <title>Serviço de Compartilhamento P2P com libp2p</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -47,11 +47,15 @@
       padding: 10px;
       border-bottom: 1px solid #ccc;
     }
+    #status {
+      margin-top: 10px;
+      color: green;
+    }
   </style>
 </head>
 <body>
 
-<h1>Serviço de Compartilhamento P2P</h1>
+<h1>Serviço de Compartilhamento P2P com libp2p</h1>
 
 <div class="tab">
   <button class="tablinks" onclick="openTab(event, 'Upload')">Upload</button>
@@ -79,10 +83,74 @@
   <p id="downloadStatus"></p>
 </div>
 
+<p id="status">Conectando via libp2p...</p>
+
+<script src="https://cdn.jsdelivr.net/npm/libp2p/dist/index.min.js "></script>
+<script src="https://cdn.jsdelivr.net/npm/it-all/dist/index.min.js "></script>
+<script src="https://cdn.jsdelivr.net/npm/it-reader/dist/index.min.js "></script>
+<script src="https://cdn.jsdelivr.net/npm/multiformats/cjs/src/  CID.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ipfs-car/dist/index.min.js "></script>
 <script>
-  const peers = {}; // Simulação de conexões P2P
-  let uploadedFiles = [];
-  let nodeId = Math.random().toString(36).substr(2, 9); // Simula um ID único do nó
+  const { createLibp2p } = window['libp2p'];
+  const { CID } = window['multiformats'];
+  const { encode, decode } = window['ipfscar'];
+
+  let libp2pNode;
+  const uploadedFiles = [];
+  const fileStore = {}; // Simula armazenamento local de arquivos
+
+  async function initP2P() {
+    libp2pNode = await createLibp2p({
+      addresses: {
+        listen: ['/webrtc']
+      },
+      transports: [],
+      connectionEncryption: []
+    });
+
+    document.getElementById('status').textContent = "Nó P2P iniciado.";
+    await libp2pNode.start();
+
+    // Define protocolo customizado para transferência de arquivos
+    const FILE_PROTOCOL = '/p2p-fileshare/1.0';
+
+    libp2pNode.handle(FILE_PROTOCOL, ({ stream }) => {
+      handleIncomingStream(stream);
+    });
+  }
+
+  async function handleIncomingStream(stream) {
+    const reader = stream.source.getReader();
+    let data = [];
+
+    while (true) {
+      const res = await reader.read();
+      if (res.done) break;
+      data.push(...res.value.subarray());
+    }
+
+    const fileId = new TextDecoder().decode(data.slice(0, 64));
+    const fileData = data.slice(64);
+
+    fileStore[fileId] = fileData;
+    if (!uploadedFiles.some(f => f.fileId === fileId)) {
+      uploadedFiles.push({ fileId, fileName: `Arquivo_${fileId}` });
+      updateMyFilesList();
+    }
+
+    document.getElementById('status').textContent = `Recebido arquivo: ${fileId}`;
+  }
+
+  async function sendFileOverP2P(fileId, fileData, peerId) {
+    const FILE_PROTOCOL = '/p2p-fileshare/1.0';
+    const conn = await libp2pNode.dialProtocol(peerId, FILE_PROTOCOL);
+    const encoder = new TextEncoder();
+    const payload = new Uint8Array(encoder.encode(fileId).slice(0, 64));
+    const fullPayload = new Uint8Array([...payload, ...fileData]);
+
+    await conn.sink([fullPayload]);
+    document.getElementById('status').textContent = `Arquivo ${fileId} enviado para nó ${peerId}`;
+  }
 
   function openTab(evt, tabName) {
     const tabs = document.getElementsByClassName("tabcontent");
@@ -97,19 +165,26 @@
     evt.currentTarget.className += " active";
   }
 
-  function uploadFile() {
+  async function uploadFile() {
     const fileInput = document.getElementById('fileInput');
     const status = document.getElementById('uploadStatus');
     if (!fileInput.files.length) {
       status.textContent = "Selecione um arquivo.";
       return;
     }
+
     const file = fileInput.files[0];
-    const fileId = Math.random().toString(36).substr(2, 9); // Gera um ID único para o arquivo
-    uploadedFiles.push({ fileId, fileName: file.name });
-    updateMyFilesList();
-    status.textContent = `Arquivo "${file.name}" enviado com sucesso! ID: ${fileId}`;
-    becomeServer(fileId);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const arrayBuffer = reader.result;
+      const fileData = new Uint8Array(arrayBuffer);
+      const fileId = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b => b.toString(16).padStart(2, '0')).join('');
+      fileStore[fileId] = fileData;
+      uploadedFiles.push({ fileId, fileName: file.name });
+      updateMyFilesList();
+      status.textContent = `Arquivo "${file.name}" enviado com sucesso! ID: ${fileId}`;
+    };
+    reader.readAsArrayBuffer(file);
   }
 
   function updateMyFilesList() {
@@ -117,43 +192,47 @@
     list.innerHTML = '';
     uploadedFiles.forEach(f => {
       const li = document.createElement('li');
-      li.textContent = `${f.fileName} (ID: ${f.fileId}) - Disponível em ${getPeerCount(f.fileId)} nós`;
+      li.textContent = `${f.fileName} (ID: ${f.fileId})`;
       list.appendChild(li);
     });
   }
 
-  function becomeServer(fileId) {
-    if (!peers[fileId]) peers[fileId] = [];
-    peers[fileId].push(nodeId);
-    console.log(`Nó ${nodeId} agora está servindo o arquivo ${fileId}`);
-  }
-
-  function getPeerCount(fileId) {
-    return peers[fileId]?.length || 1;
-  }
-
-  function downloadFile() {
+  async function downloadFile() {
     const fileId = document.getElementById('fileId').value.trim();
     const status = document.getElementById('downloadStatus');
-    if (!peers[fileId] || !peers[fileId].length) {
-      status.textContent = "Arquivo não encontrado ou indisponível.";
+
+    if (fileStore[fileId]) {
+      status.textContent = `Você já possui este arquivo (${fileId}).`;
       return;
     }
-    const servers = peers[fileId];
-    status.textContent = `Baixando arquivo "${fileId}" a partir de ${servers.length} servidor(es)...`;
-    
-    // Simula download e torna usuário um novo servidor após concluir
-    setTimeout(() => {
-      if (!uploadedFiles.find(f => f.fileId === fileId)) {
-        uploadedFiles.push({ fileId, fileName: `Arquivo_${fileId}` });
-      }
-      becomeServer(fileId);
-      updateMyFilesList();
-      status.textContent += " Concluído! Agora você também está compartilhando este arquivo.";
-    }, 2000);
+
+    // Simular descoberta de nós que possuem o arquivo
+    // Na prática, isso usaria um serviço de descoberta ou DHT
+    const fakePeerIds = [
+      'QmFakePeer1',
+      'QmFakePeer2'
+    ];
+
+    if (fakePeerIds.length === 0) {
+      status.textContent = "Nenhum nó encontrado para esse arquivo.";
+      return;
+    }
+
+    status.textContent = `Conectando a nós para baixar o arquivo...`;
+
+    // Escolhe aleatoriamente um nó e pede o arquivo
+    const targetPeer = fakePeerIds[Math.floor(Math.random() * fakePeerIds.length)];
+
+    try {
+      await sendFileOverP2P(fileId, new Uint8Array(), targetPeer);
+      status.textContent = `Download do arquivo ${fileId} concluído. Agora você está compartilhando-o.`;
+    } catch (err) {
+      console.error(err);
+      status.textContent = "Erro ao baixar o arquivo.";
+    }
   }
 
-  // Inicialização
+  initP2P();
   document.getElementById('Upload').style.display = 'block';
 </script>
 
