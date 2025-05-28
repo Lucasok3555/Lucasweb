@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Serviço de Compartilhamento P2P</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f4f4f4;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    .tab {
+      overflow: hidden;
+      border: 1px solid #ccc;
+      background-color: #eee;
+    }
+    .tab button {
+      background-color: inherit;
+      float: left;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      padding: 14px 16px;
+      transition: 0.3s;
+    }
+    .tab button:hover {
+      background-color: #ddd;
+    }
+    .tab button.active {
+      background-color: #ccc;
+    }
+    .tabcontent {
+      display: none;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-top: none;
+      background: white;
+    }
+    .file-list {
+      list-style-type: none;
+      padding-left: 0;
+    }
+    .file-list li {
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Serviço de Compartilhamento P2P</h1>
+
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event, 'Upload')">Upload</button>
+  <button class="tablinks" onclick="openTab(event, 'Arquivos')">Arquivos</button>
+  <button class="tablinks" onclick="openTab(event, 'Download')">Download</button>
+</div>
+
+<div id="Upload" class="tabcontent">
+  <h2>Fazer Upload de Arquivo</h2>
+  <input type="file" id="fileInput">
+  <button onclick="uploadFile()">Enviar</button>
+  <p id="uploadStatus"></p>
+</div>
+
+<div id="Arquivos" class="tabcontent">
+  <h2>Meus Arquivos</h2>
+  <ul id="myFilesList"></ul>
+</div>
+
+<div id="Download" class="tabcontent">
+  <h2>Baixar Arquivo</h2>
+  <label for="fileId">Digite o ID do arquivo:</label>
+  <input type="text" id="fileId" placeholder="ID do arquivo">
+  <button onclick="downloadFile()">Baixar</button>
+  <p id="downloadStatus"></p>
+</div>
+
+<script>
+  const peers = {}; // Simulação de conexões P2P
+  let uploadedFiles = [];
+  let nodeId = Math.random().toString(36).substr(2, 9); // Simula um ID único do nó
+
+  function openTab(evt, tabName) {
+    const tabs = document.getElementsByClassName("tabcontent");
+    for (let i = 0; i < tabs.length; i++) {
+      tabs[i].style.display = "none";
+    }
+    const tablinks = document.getElementsByClassName("tablinks");
+    for (let i = 0; i < tablinks.length; i++) {
+      tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+  }
+
+  function uploadFile() {
+    const fileInput = document.getElementById('fileInput');
+    const status = document.getElementById('uploadStatus');
+    if (!fileInput.files.length) {
+      status.textContent = "Selecione um arquivo.";
+      return;
+    }
+    const file = fileInput.files[0];
+    const fileId = Math.random().toString(36).substr(2, 9); // Gera um ID único para o arquivo
+    uploadedFiles.push({ fileId, fileName: file.name });
+    updateMyFilesList();
+    status.textContent = `Arquivo "${file.name}" enviado com sucesso! ID: ${fileId}`;
+    becomeServer(fileId);
+  }
+
+  function updateMyFilesList() {
+    const list = document.getElementById('myFilesList');
+    list.innerHTML = '';
+    uploadedFiles.forEach(f => {
+      const li = document.createElement('li');
+      li.textContent = `${f.fileName} (ID: ${f.fileId}) - Disponível em ${getPeerCount(f.fileId)} nós`;
+      list.appendChild(li);
+    });
+  }
+
+  function becomeServer(fileId) {
+    if (!peers[fileId]) peers[fileId] = [];
+    peers[fileId].push(nodeId);
+    console.log(`Nó ${nodeId} agora está servindo o arquivo ${fileId}`);
+  }
+
+  function getPeerCount(fileId) {
+    return peers[fileId]?.length || 1;
+  }
+
+  function downloadFile() {
+    const fileId = document.getElementById('fileId').value.trim();
+    const status = document.getElementById('downloadStatus');
+    if (!peers[fileId] || !peers[fileId].length) {
+      status.textContent = "Arquivo não encontrado ou indisponível.";
+      return;
+    }
+    const servers = peers[fileId];
+    status.textContent = `Baixando arquivo "${fileId}" a partir de ${servers.length} servidor(es)...`;
+    
+    // Simula download e torna usuário um novo servidor após concluir
+    setTimeout(() => {
+      if (!uploadedFiles.find(f => f.fileId === fileId)) {
+        uploadedFiles.push({ fileId, fileName: `Arquivo_${fileId}` });
+      }
+      becomeServer(fileId);
+      updateMyFilesList();
+      status.textContent += " Concluído! Agora você também está compartilhando este arquivo.";
+    }, 2000);
+  }
+
+  // Inicialização
+  document.getElementById('Upload').style.display = 'block';
+</script>
+
+</body>
+</html>
