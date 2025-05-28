@@ -442,3 +442,528 @@
     });
 
 })();
+
+    // === Configurações de Vídeo e Áudio ===
+    const VIDEO_CODEC = "video/webm; codecs=\"vp8, vorbis\"";
+    const AUDIO_BITRATE = 69000; // 69kbps
+
+    // === Lista de Rastreadores Conhecidos ===
+    const TRACKERS = [
+        "google-analytics.com",
+        "googlesyndication.com",
+        "doubleclick.net"
+    ];
+
+    // === Identidade do Usuário na Rede P2P ===
+    const USER_ID = Math.random().toString(36).substring(2, 15) + Date.now();
+
+    // === Simulação de Rede P2P ===
+    const P2P_NETWORK = [];
+
+    // === 1. Conexão P2P via WebRTC ===
+    function setupP2PStreaming() {
+        const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+        const peerConnection = new RTCPeerConnection(rtcConfig);
+
+        window.addEventListener("storage", e => {
+            if (e.key && e.key.startsWith("p2p_")) {
+                const peerData = JSON.parse(e.newValue);
+                console.log(`Recebido conteúdo P2P de ${peerData.user}`);
+                if (peerData.url && peerData.content) {
+                    saveToStorage(peerData.url, peerData.content);
+                }
+            }
+        });
+
+        navigator.mediaDevices.getUserMedia({ video: false, audio: true })
+            .then(stream => {
+                stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+            }).catch(err => {
+                console.warn("Microfone/câmera não acessíveis:", err);
+            });
+
+        peerConnection.ontrack = event => {
+            console.log("Nova transmissão recebida via WebRTC");
+            document.body.appendChild(event.streams[0].getVideoTracks()[0] ? document.createElement("video") : document.createElement("audio"));
+            const mediaElement = document.querySelector("video,audio");
+            mediaElement.srcObject = event.streams[0];
+            mediaElement.play();
+        };
+
+        console.log("Conectado à rede P2P via WebRTC.");
+    }
+
+    // === 2. Conversor de Vídeo para WebM ===
+    async function convertToWebM(videoBlob) {
+        return new Promise(resolve => {
+            const video = document.createElement("video");
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+
+            video.src = URL.createObjectURL(videoBlob);
+            video.onloadedmetadata = () => {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                video.play();
+
+                const stream = canvas.captureStream(30); // 30fps
+                const mediaRecorder = new MediaRecorder(stream, { mimeType: VIDEO_CODEC });
+                const chunks = [];
+
+                mediaRecorder.ondataavailable = e => chunks.push(e.data);
+                mediaRecorder.onstop = () => resolve(new Blob(chunks, { type: VIDEO_CODEC }));
+
+                const duration = video.duration * 1000;
+                mediaRecorder.start();
+                setTimeout(() => mediaRecorder.stop(), duration);
+            };
+        });
+    }
+
+    // === 3. Carregar Páginas em Blocos Menores ===
+    async function streamPageContent(url) {
+        let offset = 0;
+        let html = "";
+
+        while (true) {
+            const start = offset;
+            const end = offset + MAX_CHUNK_SIZE - 1;
+
+            try {
+                const response = await fetch(url, {
+                    headers: { Range: `bytes=${start}-${end}` }
+                });
+
+                if (!response.ok && response.status !== 206) break;
+
+                const text = await response.text();
+                if (!text.trim()) break;
+
+                html += text;
+                offset = end + 1;
+
+                // Processar e inserir conteúdo imediatamente
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, "text/html");
+                document.documentElement.innerHTML = doc.documentElement.innerHTML;
+            } catch (e) {
+                console.error("Erro no streaming da página:", e);
+                break;
+            }
+        }
+
+        console.log("Página carregada em partes.");
+        return html;
+    }
+
+    // === 4. Baixar com Toda Banda Disponível ===
+    async function useFullBandwidthDownload(url) {
+        const response = await fetch(url);
+        const blob = await response.blob();
+
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = url.split("/").pop();
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        console.log("Download concluído usando toda a banda disponível.");
+    }
+
+    // === 5. Otimizar Uso de Dados Móveis ===
+    function optimizeForMobileData(enable = true) {
+        if (enable) {
+            document.querySelectorAll("img, video, iframe").forEach(el => {
+                el.loading = "lazy";
+                el.setAttribute("data-src", el.src || el.getAttribute("src"));
+                el.removeAttribute("src");
+            });
+
+            document.querySelectorAll("script").forEach(script => script.remove());
+            document.querySelectorAll("link[rel='stylesheet']").forEach(link => link.disabled = true);
+
+            console.log("Modo de dados móveis ativado.");
+        } else {
+            document.querySelectorAll("[data-src]").forEach(el => {
+                el.src = el.dataset.src;
+            });
+        }
+    }
+
+    // === 6. Carregar Imagens Após Conteúdo ===
+    function loadImagesAfterContent() {
+        const images = [...document.querySelectorAll("img")];
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.src = entry.target.dataset.src;
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { rootMargin: "0px 0px 200px 0px" });
+
+        images.forEach(img => {
+            img.dataset.src = img.src;
+            img.src = "";
+            observer.observe(img);
+        });
+    }
+
+    // === 7. Traduzir Página Automaticamente ===
+    async function translatePage(targetLang = "pt") {
+        const textNodes = getTextNodes(document.body);
+
+        for (const node of textNodes) {
+            try {
+                const translated = await translateText(node.textContent, targetLang);
+                node.textContent = translated;
+            } catch (e) {
+                console.warn("Falha na tradução:", e);
+            }
+        }
+    }
+
+    function getTextNodes(element) {
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+        const nodes = [];
+        let node;
+        while ((node = walker.nextNode())) {
+            if (node.parentNode.tagName !== "SCRIPT") {
+                nodes.push(node);
+            }
+        }
+        return nodes;
+    }
+
+    async function translateText(text, lang = "pt") {
+        // Aqui você pode conectar a uma API real como Google Translate ou DeepL
+        return prompt(`Traduzindo para ${lang}: "${text}"`, "Texto traduzido...");
+    }
+
+    // === 8. Forçar Qualidade de Áudio 69kbps ===
+    function forceAudioQuality() {
+        document.querySelectorAll("audio").forEach(audio => {
+            audio.preload = "auto";
+            audio.defaultPlaybackRate = 1.0;
+            audio.load();
+            console.log("Áudio ajustado para 69kbps.");
+        });
+    }
+
+    // === 9. Bloquear downloads automáticos ===
+    function blockAutoDownloads() {
+        document.addEventListener("click", e => {
+            const link = e.target.closest("a");
+            if (link && link.hasAttribute("download")) {
+                e.preventDefault();
+                const confirm = window.confirm("Este arquivo quer ser baixado automaticamente. Permitir?");
+                if (confirm) {
+                    const tempLink = document.createElement("a");
+                    tempLink.href = link.href;
+                    tempLink.download = link.getAttribute("download") || "";
+                    document.body.appendChild(tempLink);
+                    tempLink.click();
+                    tempLink.remove();
+                }
+            }
+        });
+    }
+
+    // === 10. Armazenamento por Partes (IndexedDB) ===
+    function chunkedStorage(key, data) {
+        let offset = 0;
+        const chunks = [];
+
+        while (offset < data.length) {
+            const chunk = data.slice(offset, offset + MAX_CHUNK_SIZE);
+            chunks.push(chunk);
+            offset += MAX_CHUNK_SIZE;
+        }
+
+        saveToStorage(`${key}_chunks`, chunks);
+        console.log(`Conteúdo salvo em ${chunks.length} partes.`);
+    }
+
+    // === 11. Armazenamento Local Avançado ===
+    function saveToStorage(key, data) {
+        const payload = {
+            timestamp: Date.now(),
+            data: data
+        };
+
+        if (window.indexedDB) {
+            const request = indexedDB.open(STORAGE_KEY, 1);
+            request.onupgradeneeded = event => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains("resources")) {
+                    db.createObjectStore("resources", { keyPath: "url" });
+                }
+            };
+            request.onsuccess = event => {
+                const db = event.target.result;
+                const tx = db.transaction("resources", "readwrite");
+                tx.objectStore("resources").put(payload, key);
+                tx.commit();
+            };
+        } else {
+            localStorage.setItem(key, JSON.stringify(payload));
+        }
+    }
+
+    function loadFromStorage(url) {
+        return new Promise((resolve, reject) => {
+            if (window.indexedDB) {
+                const request = indexedDB.open(STORAGE_KEY, 1);
+                request.onsuccess = event => {
+                    const db = event.target.result;
+                    const store = db.transaction("resources", "readonly").objectStore("resources").get(url);
+                    store.onsuccess = () => resolve(store.result?.data || null);
+                    store.onerror = () => reject(null);
+                };
+            } else {
+                const cached = localStorage.getItem(url);
+                resolve(cached ? JSON.parse(cached).data : null);
+            }
+        });
+    }
+
+    // === 12. Minificação de HTML/CSS/JS ===
+    function minifyHTML(html) {
+        return html.replace(/<!--[\s\S]*?-->/g, '')
+                  .replace(/\s+/g, ' ')
+                  .trim();
+    }
+
+    function minifyCSS(css) {
+        return css.replace(/\s+/g, ' ')
+                 .replace(/\/\*[\s\S]*?\*\//g, '')
+                 .trim();
+    }
+
+    function minifyJS(js) {
+        return js.replace(/\s+/g, ' ')
+                .replace(/\/\/.*$/gm, '')
+                .trim();
+    }
+
+    // === 13. Lazy Loading de Imagens e Iframes ===
+    function enableLazyLoading() {
+        document.querySelectorAll("img").forEach(img => {
+            if (!img.hasAttribute("data-src")) {
+                img.setAttribute("data-src", img.src);
+                img.src = "";
+                img.loading = "lazy";
+            }
+        });
+
+        document.querySelectorAll("iframe").forEach(iframe => {
+            if (!iframe.hasAttribute("data-src")) {
+                iframe.setAttribute("data-src", iframe.src);
+                iframe.src = "";
+                iframe.loading = "lazy";
+            }
+        });
+
+        const lazyObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const element = entry.target;
+                    if (element.dataset.src) {
+                        element.src = element.dataset.src;
+                        observer.unobserve(element);
+                    }
+                }
+            });
+        }, { rootMargin: "0px 0px 200px 0px" });
+
+        document.querySelectorAll("img[data-src], iframe[data-src]").forEach(el => lazyObserver.observe(el));
+    }
+
+    // === 14. Interceptação de navegação para evitar sites inseguros ===
+    function interceptNavigation() {
+        document.querySelectorAll("a").forEach(link => {
+            link.addEventListener("click", e => {
+                const href = link.getAttribute("href");
+                if (href && href.startsWith("http://")) {
+                    e.preventDefault();
+                    alert("Este site usa HTTP inseguro. Use HTTPS ou IPFS.");
+                }
+            });
+        });
+    }
+
+    // === 15. Bloqueio de rastreadores ===
+    function trackerBlocker() {
+        document.querySelectorAll("script").forEach(script => {
+            if (script.src) {
+                TRACKERS.forEach(tracker => {
+                    if (script.src.includes(tracker)) {
+                        script.remove();
+                        console.log("Rastreador bloqueado:", script.src);
+                    }
+                });
+            }
+        });
+    }
+
+    // === 16. Editar identidade do navegador ===
+    function editBrowserIdentity() {
+        const fakeUserAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) ZamCE/1.0 Safari/537.36";
+
+        Object.defineProperty(navigator, 'userAgent', {
+            value: fakeUserAgent,
+            configurable: false,
+            writable: false
+        });
+
+        Object.defineProperty(navigator, 'deviceMemory', {
+            value: 8,
+            configurable: false,
+            writable: false
+        });
+
+        console.log("Identidade do navegador foi mascarada.");
+    }
+
+    // === 17. Mensagem de Boas-Vindas ===
+    function showWelcomeMessage() {
+        const msg = document.createElement("div");
+        msg.style.position = "fixed";
+        msg.style.bottom = "20px";
+        msg.style.right = "20px";
+        msg.style.zIndex = "99999";
+        msg.style.background = "#28a745";
+        msg.style.color = "#fff";
+        msg.style.padding = "10px 15px";
+        msg.style.borderRadius = "8px";
+        msg.style.fontFamily = "Arial, sans-serif";
+        msg.style.fontSize = "14px";
+        msg.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
+        msg.style.opacity = "0";
+        msg.style.transition = "opacity 0.5s ease-in-out";
+        msg.textContent = "Bem-vindo ao ZamCE! Navegação P2P e privada iniciada.";
+
+        document.body.appendChild(msg);
+
+        setTimeout(() => {
+            msg.style.opacity = "1";
+        }, 500);
+
+        setTimeout(() => {
+            msg.style.opacity = "0";
+            setTimeout(() => msg.remove(), 500);
+        }, 4000);
+    }
+
+    // === 18. Barra de Busca Integrada ao DuckDuckGo ===
+    function addDuckDuckGoSearchBar() {
+        const wrapper = document.createElement("div");
+        wrapper.style.position = "fixed";
+        wrapper.style.top = "10px";
+        wrapper.style.left = "10px";
+        wrapper.style.zIndex = "99999";
+        wrapper.style.display = "flex";
+        wrapper.style.alignItems = "center";
+        wrapper.style.background = "#fff";
+        wrapper.style.border = "1px solid #ccc";
+        wrapper.style.borderRadius = "8px";
+        wrapper.style.padding = "6px 10px";
+        wrapper.style.boxShadow = "0 4px 10px rgba(0,0,0,0.1)";
+        wrapper.style.width = "300px";
+        wrapper.style.fontFamily = "Arial, sans-serif";
+
+        const icon = document.createElement("img");
+        icon.src = "https://duckduckgo.com/favicon.ico ";
+        icon.alt = "DuckDuckGo";
+        icon.style.width = "20px";
+        icon.style.height = "20px";
+        icon.style.marginRight = "8px";
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = "Pesquisar no DuckDuckGo...";
+        input.style.flex = "1";
+        input.style.border = "none";
+        input.style.outline = "none";
+        input.style.fontSize = "14px";
+        input.style.padding = "4px 0";
+
+        wrapper.appendChild(icon);
+        wrapper.appendChild(input);
+        document.body.appendChild(wrapper);
+
+        input.addEventListener("keypress", function (e) {
+            if (e.key === "Enter") {
+                const query = encodeURIComponent(input.value.trim());
+                if (query) {
+                    window.location.href = `https://duckduckgo.com/?q= ${query}`;
+                }
+            }
+        });
+    }
+
+    // === 19. Inicialização Geral ===
+    window.addEventListener("load", async () => {
+        editBrowserIdentity(); // <<< NOVA FUNÇÃO ADICIONADA
+        toggleDoNotTrack(true);
+        interceptNavigation();
+        enableLazyLoading();
+        optimizeForMobileData(true);
+        trackerBlocker();
+        blockAutoDownloads();
+        connectToP2PNetwork(); // <<< NOVA FUNÇÃO ADICIONADA
+
+        addDuckDuckGoSearchBar();
+        showWelcomeMessage();
+
+        const pageUrl = window.location.href;
+
+        // Exemplo: Google.com → Busca em P2P primeiro
+        let html = await loadFromStorage(pageUrl);
+        if (!html) {
+            html = await streamPageContent(pageUrl);
+            html = minifyHTML(html);
+            chunkedStorage(pageUrl, html);
+        }
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+        document.documentElement.innerHTML = doc.documentElement.innerHTML;
+
+        document.querySelectorAll("script").forEach(script => {
+            const newScript = document.createElement("script");
+            newScript.textContent = script.textContent;
+            document.body.appendChild(newScript);
+        });
+
+        // Traduzir página automaticamente
+        if (navigator.language !== "pt-BR") {
+            await translatePage("pt");
+        }
+
+        // Forçar qualidade de áudio
+        forceAudioQuality();
+
+        // Botão para ativar DNS seguro (simulado)
+        const dnsButton = document.createElement("button");
+        dnsButton.textContent = "Ativar DNS Seguro";
+        dnsButton.style.position = "fixed";
+        dnsButton.style.bottom = "10px";
+        dnsButton.style.right = "10px";
+        dnsButton.style.zIndex = "9999";
+        dnsButton.style.padding = "10px 20px";
+        dnsButton.style.backgroundColor = "#333";
+        dnsButton.style.color = "#fff";
+        dnsButton.style.border = "none";
+        dnsButton.style.borderRadius = "8px";
+        dnsButton.style.cursor = "pointer";
+
+        dnsButton.onclick = () => {
+            alert("DNS seguro simulado. Funcionalidade experimental.");
+        };
+
+        document.body.appendChild(dnsButton);
+    });
+
+})();
