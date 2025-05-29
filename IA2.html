@@ -1,139 +1,26 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat IA</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        .chat-container {
-            width: 400px;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-        .chat-box {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            border-bottom: 1px solid #ddd;
-        }
-        .chat-box .message {
-            margin: 10px 0;
-        }
-        .chat-box .user-message {
-            text-align: right;
-            color: #007bff;
-        }
-        .chat-box .bot-message {
-            text-align: left;
-            color: #333;
-        }
-        .input-area {
-            display: flex;
-            padding: 10px;
-            background: #f9f9f9;
-        }
-        .input-area input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            outline: none;
-        }
-        .input-area button {
-            padding: 10px 20px;
-            margin-left: 10px;
-            background: #007bff;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .input-area button:hover {
-            background: #0056b3;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gemini Chat App</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^0.14.0",
+    "react": "https://esm.sh/react@^19.0.0",
+    "react/jsx-runtime": "https://esm.sh/react@^19.0.0/jsx-runtime",
+    "react-dom/client": "https://esm.sh/react-dom@^19.0.0/client",
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/"
+  }
+}
+</script>
 </head>
 <body>
-
-<div class="chat-container">
-    <div class="chat-box" id="chatBox">
-        <!-- Mensagens aparecerão aqui -->
-    </div>
-    <div class="input-area">
-        <input type="text" id="userInput" placeholder="Digite sua mensagem...">
-        <button onclick="sendMessage()">Enviar</button>
-    </div>
-</div>
-
-<script>
-    const apiKey = '34dd95ca61b1455780b74eb2a9947fd3'; // Substitua pela sua chave de API
-
-    function appendMessage(sender, message) {
-        const chatBox = document.getElementById('chatBox');
-        const messageElement = document.createElement('div');
-        messageElement.classList.add('message', sender === 'user' ? 'user-message' : 'bot-message');
-        messageElement.textContent = message;
-        chatBox.appendChild(messageElement);
-        chatBox.scrollTop = chatBox.scrollHeight; // Rolar automaticamente para baixo
-    }
-
-    async function sendMessage() {
-        const userInput = document.getElementById('userInput');
-        const userMessage = userInput.value.trim();
-
-        if (!userMessage) return;
-
-        // Adiciona a mensagem do usuário ao chat
-        appendMessage('user', userMessage);
-
-        // Limpa a caixa de entrada
-        userInput.value = '';
-
-        try {
-            // Fazendo a requisição à API AIMLAPI
-            const response = await fetch('https://api.aimlapi.com/endpoint', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify({
-                    message: userMessage
-                })
-            });
-
-            const data = await response.json();
-            const botMessage = data.response || 'Desculpe, não consegui entender.';
-
-            // Adiciona a resposta do bot ao chat
-            appendMessage('bot', botMessage);
-        } catch (error) {
-            console.error('Erro ao comunicar com a API:', error);
-            appendMessage('bot', 'Ocorreu um erro ao processar sua solicitação.');
-        }
-    }
-
-    // Enviar mensagem ao pressionar Enter
-    document.getElementById('userInput').addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
-            sendMessage();
-        }
-    });
-</script>
-
+  <div id="root"></div>
+  <script type="module" src="index.tsx"></script>
 </body>
-</html>
+</html><link rel="stylesheet" href="index.css">
+<script src="index.tsx" type="module"></script>
