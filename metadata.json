@@ -1,0 +1,5 @@
+{
+  "name": "chat",
+  "description": "Example React app using Gemini",
+  "requestFramePermissions": []
+}
