@@ -6,14 +6,22 @@
   <style>
     body { font-family: Arial; padding: 20px; background: #f4f4f4; }
     input, textarea, button { width: 100%; margin: 5px 0; padding: 10px; }
-    .site-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px; margin: 5px 0; border-radius: 5px; }
+    .site-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: white;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 5px;
+    }
     .hidden { display: none; }
     iframe { width: 100%; height: 300px; border: 1px solid #ccc; margin-top: 10px; }
   </style>
 </head>
 <body>
 
-<!-- Tela inicial -->
+<!-- Tela Inicial -->
 <div id="homeScreen">
   <h3>Todos os seus sites</h3>
   <input type="text" id="idInput" placeholder="Digite o ID para acessar/editar">
@@ -22,7 +30,7 @@
   <button onclick="showCreate()">+ Novo Site</button>
 </div>
 
-<!-- Tela de edição -->
+<!-- Tela de Edição -->
 <div id="editScreen" class="hidden">
   <h3 id="editTitle">Novo Site</h3>
   <input type="text" id="siteName" placeholder="Nome do site">
@@ -32,7 +40,7 @@
   <button onclick="goHome()">Voltar</button>
 </div>
 
-<!-- Visualização -->
+<!-- Tela de Visualização -->
 <div id="viewScreen" class="hidden">
   <h3 id="viewTitle">Visualizando Site</h3>
   <iframe id="previewFrame"></iframe>
@@ -40,14 +48,24 @@
   <button onclick="goHome()">Voltar</button>
 </div>
 
+<!-- Supabase SDK -->
+<script src="https://unpkg.com/@supabase/supabase-js"></script> 
+
 <script>
-  let sites = JSON.parse(localStorage.getItem('sites') || '[]');
+  // Configuração do Supabase
+  const SUPABASE_URL = "https://vuggavgwaybjeoasyywuh.supabase.co"; 
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1Z3ZhZ3dheWJqZW9hc3l5d3VoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkwNjAyMDYsImV4cCI6MjA2NDYzNjIwNn0.amVN6bvJkemvROae981E75YErAvPkmiEKvIpY-8AtvU";
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let currentSites = [];
   let editingId = null;
 
+  // Telas
   function showCreate(id = null) {
     editingId = id;
     if (id !== null) {
-      const site = sites.find(s => s.id == id);
+      const site = currentSites.find(s => s.id == id);
       document.getElementById('siteName').value = site.name;
       document.getElementById('siteCode').value = site.code;
       document.getElementById('isPublic').checked = site.public;
@@ -58,73 +76,95 @@
       document.getElementById('isPublic').checked = false;
       document.getElementById('editTitle').innerText = 'Novo Site';
     }
-    document.getElementById('homeScreen').classList.add('hidden');
+    hideAllScreens();
     document.getElementById('editScreen').classList.remove('hidden');
   }
 
   function goHome() {
     editingId = null;
+    hideAllScreens();
     document.getElementById('homeScreen').classList.remove('hidden');
-    document.getElementById('editScreen').classList.add('hidden');
-    document.getElementById('viewScreen').classList.add('hidden');
-    renderList();
+    loadAllSites();
   }
 
-  function saveSite() {
-    const name = document.getElementById('siteName').value.trim();
-    const code = document.getElementById('siteCode').value;
-    const isPublic = document.getElementById('isPublic').checked;
+  function hideAllScreens() {
+    document.getElementById('homeScreen').classList.add('hidden');
+    document.getElementById('editScreen').classList.add('hidden');
+    document.getElementById('viewScreen').classList.add('hidden');
+  }
+
+  async function saveSite() {
+    const name = document.getElementById("siteName").value.trim();
+    const code = document.getElementById("siteCode").value;
+    const isPublic = document.getElementById("isPublic").checked;
 
     if (!name || !code) return alert("Preencha todos os campos!");
 
-    if (editingId === null) {
-      const newSite = {
-        id: Date.now(),
-        name,
-        code,
-        public: isPublic
-      };
-      sites.push(newSite);
-    } else {
-      const site = sites.find(s => s.id == editingId);
-      site.name = name;
-      site.code = code;
-      site.public = isPublic;
-    }
+    const newSite = {
+      id: editingId || Date.now(),
+      name,
+      code,
+      public: isPublic
+    };
 
-    localStorage.setItem('sites', JSON.stringify(sites));
-    goHome();
+    const { data, error } = await supabase
+      .from("sites")
+      .upsert([newSite], { onConflict: "id" });
+
+    if (error) {
+      console.error(error);
+      alert("Erro ao salvar!");
+    } else {
+      alert("Salvo com sucesso!");
+      goHome();
+    }
   }
 
-  function loadSite() {
-    const id = parseInt(document.getElementById('idInput').value);
-    const site = sites.find(s => s.id == id);
-    if (site) {
-      showPreview(id);
+  async function loadAllSites() {
+    const { data, error } = await supabase.from("sites").select("*");
+
+    if (error) {
+      console.error(error);
+      alert("Erro ao carregar sites.");
     } else {
+      currentSites = data || [];
+      renderList();
+    }
+  }
+
+  async function loadSite() {
+    const id = parseInt(document.getElementById('idInput').value);
+    const { data, error } = await supabase
+      .from("sites")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error) {
       alert("Site não encontrado!");
+    } else {
+      showPreview(id);
     }
   }
 
   function showPreview(id) {
-    const site = sites.find(s => s.id == id);
+    const site = currentSites.find(s => s.id == id);
 
-    // Criando blob com o código HTML
     const blob = new Blob([site.code], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
 
     document.getElementById('previewFrame').src = url;
     document.getElementById('viewTitle').innerText = `Visualizando: ${site.name}`;
-    document.getElementById('shareLink').innerHTML = `<a href="?id=${site.id}" target="_blank">Copiar Link</a>`;
+    document.getElementById('shareLink').innerHTML = `<a href="?id=${site.id}" target="_blank">Copiar Link Público</a>`;
     
-    document.getElementById('homeScreen').classList.add('hidden');
+    hideAllScreens();
     document.getElementById('viewScreen').classList.remove('hidden');
   }
 
   function renderList() {
     const list = document.getElementById('siteList');
     list.innerHTML = '';
-    sites.forEach(site => {
+    currentSites.forEach(site => {
       const div = document.createElement('div');
       div.className = 'site-item';
       div.innerHTML = `
@@ -138,21 +178,22 @@
     });
   }
 
-  // Carregar automaticamente se tiver ?id na URL
   window.onload = () => {
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
 
     if (id) {
-      const site = sites.find(s => s.id == id);
-      if (site) {
-        showPreview(id);
-      } else {
-        alert("ID inválido na URL.");
-      }
+      supabase.from("sites").select("*").eq("id", id).single()
+        .then(({ data, error }) => {
+          if (data) {
+            showPreview(id);
+          } else {
+            alert("ID inválido na URL.");
+          }
+        });
     }
 
-    renderList();
+    loadAllSites();
   };
 </script>
 
