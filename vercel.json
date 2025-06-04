@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/sites.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/sites",
+      "dest": "/api/sites"
+    },
+    {
+      "src": "/api/sites/(.*)",
+      "dest": "/api/sites"
+    }
+  ]
+}
