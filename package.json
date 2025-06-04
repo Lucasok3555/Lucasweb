@@ -1,0 +1,9 @@
+{
+  "name": "meu-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --experimental-specifier-resolution=node ./api/sites.js"
+  },
+  "dependencies": {}
+}
