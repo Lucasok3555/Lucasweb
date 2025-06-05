@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Mensagem Musical</title>
+</head>
+<body>
+  <h1>Envie uma Mensagem e Ouça o Som!</h1>
+  <input type="text" id="mensagemInput" placeholder="Digite sua mensagem..." />
+  <button onclick="tocarMensagem()">Enviar</button>
+
+  <script>
+    // Função para mapear letras em frequências (exemplo simples)
+    function letraParaFreq(letra) {
+      const base = 200; // Frequência base
+      const codigo = letra.toLowerCase().charCodeAt(0);
+      if (codigo >= 97 && codigo <= 122) { // Apenas letras a-z
+        return base + (codigo - 97) * 30;
+      }
+      return base; // Espaços ou outros caracteres usam a base
+    }
+
+    // Função para tocar um tom específico
+    function tocarTone(freq, duracao = 0.3) {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      oscillator.start();
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duracao);
+      oscillator.stop(audioCtx.currentTime + duracao);
+    }
+
+    // Função principal para tocar toda a mensagem
+    function tocarMensagem() {
+      const texto = document.getElementById("mensagemInput").value;
+      let delay = 0;
+      const intervalo = 0.4;
+
+      for (let i = 0; i < texto.length; i++) {
+        const letra = texto[i];
+        const freq = letraParaFreq(letra);
+
+        setTimeout(() => {
+          tocarTone(freq);
+        }, delay * 1000);
+
+        delay += intervalo;
+      }
+    }
+  </script>
+</body>
+</html>
