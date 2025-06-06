@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Inaudível</title>
+  <title>Som Inaudível em Loop com Upload</title>
   <style>
     body {
       background-color: black;
@@ -14,38 +14,65 @@
       height: 100vh;
       margin: 0;
       flex-direction: column;
+      text-align: center;
     }
-    button {
+    button, input[type="file"] {
+      margin: 10px;
       padding: 10px 20px;
       font-size: 16px;
       cursor: pointer;
+    }
+    #status {
       margin-top: 20px;
+      font-size: 14px;
+      color: #ccc;
     }
   </style>
 </head>
 <body>
-  <h1>Som Inaudível em Loop</h1>
+  <h1>Som Inaudível em Loop com Upload</h1>
   <p>Este som está fora da faixa de audição humana.</p>
+  
+  <input type="file" id="audioFile" accept="audio/*">
   <button id="toggleBtn">Iniciar Som (Inaudível)</button>
+  <div id="status"></div>
 
   <script>
     const toggleBtn = document.getElementById('toggleBtn');
-    let audioContext, oscillator;
+    const audioFileInput = document.getElementById('audioFile');
+    const statusDiv = document.getElementById('status');
+
+    let audioContext = null;
+    let oscillator = null;
+    let sourceBuffer = null;
+
+    // Frequência inaudível para humanos (ex: 25kHz)
+    const frequenciaInaudivel = 25000;
 
     function iniciarSom() {
-      // Cria um novo contexto de áudio
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
 
-      // Frequência inaudível para humanos (ex: 25kHz)
-      const frequenciaInaudivel = 25000;
+      // Se um arquivo foi carregado, toca ele
+      if (sourceBuffer) {
+        const source = audioContext.createBufferSource();
+        source.buffer = sourceBuffer;
+        source.loop = true;
+        source.connect(audioContext.destination);
+        source.start();
+        statusDiv.textContent = "Tocando arquivo carregado (loop infinito).";
+        toggleBtn.textContent = 'Parar Som';
+        return;
+      }
 
+      // Caso contrário, gera o som inaudível
       oscillator = audioContext.createOscillator();
       oscillator.type = 'sine';
       oscillator.frequency.value = frequenciaInaudivel;
-
       oscillator.connect(audioContext.destination);
       oscillator.start();
-
+      statusDiv.textContent = "Som inaudível em execução.";
       toggleBtn.textContent = 'Parar Som';
     }
 
@@ -55,18 +82,37 @@
         oscillator.disconnect();
         oscillator = null;
       }
-      if (audioContext) {
+      if (audioContext && !sourceBuffer) {
         audioContext.close();
         audioContext = null;
       }
+      statusDiv.textContent = "Som parado.";
       toggleBtn.textContent = 'Iniciar Som (Inaudível)';
     }
 
+    audioFileInput.addEventListener('change', async function () {
+      const file = this.files[0];
+      if (!file) return;
+
+      statusDiv.textContent = `Arquivo selecionado: ${file.name}`;
+
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      const arrayBuffer = await file.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      sourceBuffer = audioBuffer;
+
+      statusDiv.textContent = `Arquivo carregado. Pronto para tocar.`;
+    });
+
     toggleBtn.addEventListener('click', () => {
-      if (!oscillator) {
+      if (!oscillator && !sourceBuffer) {
         iniciarSom();
       } else {
         pararSom();
+        sourceBuffer = null;
       }
     });
   </script>
