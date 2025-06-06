@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Reprodução de Áudio em Loop</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #111;
+      color: #fff;
+      text-align: center;
+      padding-top: 50px;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    audio {
+      width: 300px;
+      margin-top: 20px;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #e74c3c;
+      border: none;
+      color: white;
+      border-radius: 5px;
+    }
+    button:hover {
+      background-color: #c0392b;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Reprodução de Áudio em Loop</h1>
+  <p>Selecione um arquivo de áudio para iniciar a reprodução em loop.</p>
+  
+  <input type="file" id="audioInput" accept="audio/*">
+  <br><br>
+  <audio id="audioPlayer" controls></audio>
+  <br>
+  <button onclick="toggleLoop()">Alternar Repetição (Loop)</button>
+
+  <script>
+    const audioInput = document.getElementById('audioInput');
+    const audioPlayer = document.getElementById('audioPlayer');
+    let loopEnabled = true;
+
+    audioInput.addEventListener('change', function () {
+      const file = this.files[0];
+      if (file) {
+        const url = URL.createObjectURL(file);
+        audioPlayer.src = url;
+        audioPlayer.loop = loopEnabled;
+        audioPlayer.play();
+      }
+    });
+
+    function toggleLoop() {
+      loopEnabled = !loopEnabled;
+      audioPlayer.loop = loopEnabled;
+      alert(loopEnabled ? "Loop ativado!" : "Loop desativado!");
+    }
+  </script>
+
+</body>
+</html>
