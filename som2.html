@@ -1,0 +1,143 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Transmissão de Áudio com Frequência</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+    }
+    input[type="file"], input[type="number"] {
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px 15px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    audio {
+      width: 100%;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Escolher Frequência e Transmitir Áudio</h1>
+
+<label for="audioFile">Carregar Áudio:</label>
+<input type="file" id="audioFile" accept="audio/*">
+
+<label for="frequency">Frequência do Som (Hz):</label>
+<input type="number" id="frequency" value="440" min="20" max="20000">
+
+<button onclick="playCustomTone()">Tocar Frequência</button>
+<button onclick="playUploadedAudioWithFrequency()">Tocar Áudio com Frequência</button>
+<button onclick="stopAudio()">Parar Áudio</button>
+
+<audio id="audioPlayer" controls loop></audio>
+
+<script>
+  let audioContext = null;
+  let currentSource = null;
+  let selectedAudioBuffer = null;
+
+  const audioPlayer = document.getElementById('audioPlayer');
+
+  function playCustomTone() {
+    stopAudio();
+
+    const frequency = parseFloat(document.getElementById('frequency').value);
+
+    if (isNaN(frequency) || frequency <= 0) {
+      alert("Por favor, insira uma frequência válida.");
+      return;
+    }
+
+    if (!audioContext) {
+      audioContext = new AudioContext();
+    }
+
+    const oscillator = audioContext.createOscillator();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+    oscillator.connect(audioContext.destination);
+    oscillator.start();
+    currentSource = oscillator;
+  }
+
+  function playUploadedAudioWithFrequency() {
+    if (!selectedAudioBuffer) {
+      alert("Nenhum áudio foi carregado.");
+      return;
+    }
+
+    stopAudio();
+
+    const frequency = parseFloat(document.getElementById('frequency').value);
+
+    if (!audioContext) {
+      audioContext = new AudioContext();
+    }
+
+    // Cria o buffer source
+    const source = audioContext.createBufferSource();
+    source.buffer = selectedAudioBuffer;
+    source.loop = true;
+
+    // Cria o filtro para simular a frequência escolhida (exemplo simples com BPF)
+    const filter = audioContext.createBiquadFilter();
+    filter.type = "peaking";
+    filter.frequency.value = frequency;
+    filter.gain.value = 20; // Destaque da frequência
+
+    source.connect(filter);
+    filter.connect(audioContext.destination);
+
+    source.start(0);
+    currentSource = source;
+  }
+
+  function stopAudio() {
+    if (currentSource) {
+      currentSource.stop();
+      currentSource.disconnect();
+      currentSource = null;
+    }
+  }
+
+  document.getElementById('audioFile').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const fileURL = URL.createObjectURL(file);
+      audioPlayer.src = fileURL;
+      audioPlayer.load();
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        if (!audioContext) {
+          audioContext = new AudioContext();
+        }
+
+        audioContext.decodeAudioData(e.target.result, function(buffer) {
+          selectedAudioBuffer = buffer;
+        });
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  });
+</script>
+
+</body>
+</html>
