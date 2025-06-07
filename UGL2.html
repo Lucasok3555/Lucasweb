@@ -15,7 +15,7 @@
                 extend: {
                     colors: {
                         primary: "#4F46E5",
-                        dark: "#1E1E2D",
+                        dark: "#1E1E1E",
                         light: "#F8FAFC"
                     }
                 }
@@ -133,6 +133,29 @@
             debug: 3
         };
         
+        // Generate random node ID
+        function generateNodeId() {
+            return 'zuar-node-' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // Synchronization function
+        function syncPostsWithPeer(conn) {
+            console.log('Synchronizing posts with:', conn.peer);
+            
+            // Get all local posts that were not received from this peer
+            const postsToSync = posts.filter(post => post.nodeId !== conn.peer);
+            
+            if (postsToSync.length > 0) {
+                conn.send({
+                    type: 'sync',
+                    posts: postsToSync
+                });
+                console.log(`Sent ${postsToSync.length} posts during synchronization`);
+            } else {
+                console.log('No new posts to synchronize');
+            }
+        }
+
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
             // DOM elements
@@ -154,24 +177,12 @@
             const closeNodeInfo = document.getElementById('closeNodeInfo');
 
             // Application state
-            let currentNodeId = localStorage.getItem('zuar_node_id') || null;
-            if (!currentNodeId) {
-                currentNodeId = generateNodeId();
-            } else {
-                nodeIdInput.value = currentNodeId;
-            }
-
+            let currentNodeId = generateNodeId();
+            nodeIdInput.value = currentNodeId;
+            
             let peer = null;
             let connections = {};
             let posts = [];
-            
-            // Generate random node ID
-            function generateNodeId() {
-                const newId = 'zuar-node-' + Math.random().toString(36).substr(2, 9);
-                nodeIdInput.value = newId;
-                localStorage.setItem('zuar_node_id', newId);
-                return newId;
-            }
 
             // Initialize PeerJS connection
             function initializePeer() {
@@ -211,6 +222,7 @@
             // Set up a data connection
             function setupConnection(conn) {
                 const peerId = conn.peer;
+                
                 // Store the connection
                 connections[peerId] = conn;
                 
@@ -224,23 +236,26 @@
                     updatePeerCount();
                     
                     // Automatically send all local posts to new peer
-                    posts.forEach(post => {
-                        if (conn.open) {
-                            conn.send({
-                                type: 'post',
-                                post: post
-                            });
-                        }
-                    });
+                    syncPostsWithPeer(conn);
                 });
                 
                 conn.on('data', function(data) {
                     console.log('Received data from', peerId, ':', data);
+                    
                     if (data.type === 'post') {
                         // Add received post to feed
                         addPostToFeed(data.post);
                         posts.push(data.post);
                         updatePostsReceivedCount();
+                    } else if (data.type === 'sync') {
+                        // Handle synchronized posts
+                        data.posts.forEach(post => {
+                            if (!posts.some(p => p.id === post.id)) {
+                                addPostToFeed(post);
+                                posts.push(post);
+                                updatePostsReceivedCount();
+                            }
+                        });
                     }
                 });
                 
@@ -354,7 +369,6 @@
                     
                     // Generate new ID and reinitialize
                     currentNodeId = generateNodeId();
-                    localStorage.setItem('zuar_node_id', currentNodeId);
                     initializePeer();
                     updatePeerCount();
                 }
