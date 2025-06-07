@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vídeo Torrent Feed</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: white;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background-color: #1f1f1f;
+      padding: 15px 20px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .tabs {
+      display: flex;
+      justify-content: center;
+      background-color: #2a2a2a;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 15px;
+      text-align: center;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+    }
+
+    .tab.active {
+      border-bottom: 3px solid #00ffff;
+      color: #00ffff;
+    }
+
+    .tab-content {
+      display: none;
+      padding: 20px;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    input[type="file"], textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      background-color: #1e1e1e;
+      color: white;
+      border: 1px solid #444;
+      border-radius: 4px;
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #00ffff;
+      color: black;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .feed {
+      padding: 20px;
+    }
+
+    .video-card {
+      background-color: #1e1e1e;
+      margin-bottom: 20px;
+      padding: 15px;
+      border-radius: 8px;
+    }
+
+    .video-card video {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+
+    .video-card p {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>Vídeo Torrent App</header>
+
+  <div class="tabs">
+    <div class="tab active" onclick="openTab(event, 'upload')">Upload de Vídeo</div>
+    <div class="tab" onclick="openTab(event, 'feed')">Feed de Vídeos</div>
+  </div>
+
+  <div id="upload" class="tab-content active">
+    <h2>Fazer Upload de Vídeo</h2>
+    <input type="file" id="videoFile" accept="video/*" />
+    <textarea id="videoDescription" placeholder="Descrição do vídeo..."></textarea>
+    <button onclick="uploadToTorrent()">Enviar para Rede Torrent</button>
+  </div>
+
+  <div id="feed" class="tab-content">
+    <h2>Feed de Vídeos</h2>
+    <div class="feed" id="videoFeed"></div>
+  </div>
+
+  <script>
+    let uploadedVideos = [];
+
+    function openTab(evt, tabName) {
+      const tabs = document.getElementsByClassName("tab");
+      const contents = document.getElementsByClassName("tab-content");
+
+      for (let i = 0; i < tabs.length; i++) {
+        tabs[i].classList.remove("active");
+        contents[i].classList.remove("active");
+      }
+
+      document.querySelector(`[onclick="openTab(event, '${tabName}')"]`).classList.add("active");
+      document.getElementById(tabName).classList.add("active");
+    }
+
+    function uploadToTorrent() {
+      const fileInput = document.getElementById('videoFile');
+      const description = document.getElementById('videoDescription').value;
+
+      if (!fileInput.files.length || !description.trim()) {
+        alert("Por favor, selecione um vídeo e adicione uma descrição.");
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const videoURL = URL.createObjectURL(file);
+
+      uploadedVideos.push({ url: videoURL, description });
+
+      alert("Vídeo enviado para a rede torrent com sucesso!");
+
+      // Reset form
+      fileInput.value = '';
+      document.getElementById('videoDescription').value = '';
+
+      renderFeed();
+    }
+
+    function renderFeed() {
+      const feed = document.getElementById('videoFeed');
+      feed.innerHTML = '';
+
+      uploadedVideos.forEach(video => {
+        const card = document.createElement('div');
+        card.className = 'video-card';
+
+        card.innerHTML = `
+          <video controls><source src="${video.url}" type="video/mp4">Seu navegador não suporta vídeo.</video>
+          <p>${video.description}</p>
+        `;
+
+        feed.appendChild(card);
+      });
+    }
+  </script>
+
+</body>
+</html>
