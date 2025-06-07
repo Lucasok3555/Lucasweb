@@ -1,129 +1,167 @@
+```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Prima - Vídeos via Torrent</title>
-  <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Plataforma de Vídeos com WebRTC</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #121212;
-      color: #fff;
+      margin: 0;
+      padding: 0;
+    }
+    nav {
+      background-color: #333;
+      color: white;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      height: 60px;
+    }
+    nav button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    section {
+      display: none;
       padding: 20px;
     }
-    h1, h2 {
-      color: #ff4081;
-    }
-    input, textarea, button {
+    section.active {
       display: block;
-      margin: 10px 0;
-      padding: 8px;
-      width: 100%;
-      max-width: 500px;
-    }
-    .video-card {
-      background: #1e1e1e;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 5px;
     }
     video {
-      max-width: 100%;
-      height: auto;
+      width: 100%;
+      max-width: 600px;
+      margin-top: 20px;
+    }
+    input[type="file"] {
+      margin-top: 10px;
     }
     #feed {
       margin-top: 20px;
     }
-    .id-box {
-      background: #333;
-      padding: 10px;
-      border-radius: 4px;
-      display: inline-block;
-      margin-top: 10px;
+    .video-card {
+      margin-bottom: 20px;
+    }
+    #connectionSection input {
+      margin-right: 10px;
+      padding: 5px;
+    }
+    #connectionSection button {
+      padding: 5px 10px;
     }
   </style>
 </head>
 <body>
 
-  <h1>Prima 🎥</h1>
+  <nav>
+    <button onclick="showTab('upload')">Upload</button>
+    <button onclick="showTab('feed')">Feed</button>
+    <button onclick="showTab('connect')">Conectar</button>
+  </nav>
 
-  <h2>Upload de Vídeo</h2>
-  <input type="file" id="videoInput" accept="video/*">
-  <textarea id="videoDesc" placeholder="Descrição do vídeo..."></textarea>
-  <button onclick="uploadVideo()">Fazer Upload</button>
+  <section id="upload" class="active">
+    <h2>Fazer Upload do Vídeo</h2>
+    <input type="file" accept="video/*" id="videoInput"/>
+    <button onclick="saveVideo()">Salvar Vídeo</button>
+    <video id="previewVideo" controls></video>
+  </section>
 
-  <h2>Conexão de Usuário</h2>
-  <div class="id-box">Seu ID: <span id="userId"></span></div>
-  <input type="text" id="connectIdInput" placeholder="Coloque o ID para conectar (se necessário)">
-  <button onclick="connectById()">Conectar</button>
-  <div>Status: <span id="connectStatus">Conectando...</span></div>
+  <section id="feed">
+    <h2>Feed de Vídeos</h2>
+    <div id="feedContainer"></div>
+  </section>
 
-  <h2>Feed de Vídeos</h2>
-  <div id="feed"></div>
+  <section id="connect">
+    <h2>Conexão WebRTC</h2>
+    <div id="connectionSection">
+      <p><strong>ID da Conexão:</strong> <span id="peerIdDisplay">-</span></p>
+      <input type="text" id="remotePeerId" placeholder="ID do parceiro"/>
+      <button onclick="connectToPeer()">Conectar</button>
+    </div>
+  </section>
 
+  <script src="https://cdn.jsdelivr.net/npm/simple-peer@9/index.js"></script>
   <script>
-    const client = new WebTorrent();
-    const feed = document.getElementById('feed');
-    const userIdSpan = document.getElementById('userId');
-    const connectStatus = document.getElementById('connectStatus');
+    const sections = document.querySelectorAll("section");
+    const feedContainer = document.getElementById("feedContainer");
 
-    // Gerar ID aleatório
-    const userId = 'user-' + Math.random().toString(36).substring(2, 8);
-    userIdSpan.innerText = userId;
-
-    const videoList = []; // Lista de vídeos (local)
-
-    function uploadVideo() {
-      const file = document.getElementById('videoInput').files[0];
-      const desc = document.getElementById('videoDesc').value;
-
-      if (!file) return alert("Escolha um vídeo!");
-
-      client.seed(file, torrent => {
-        const videoData = {
-          magnetURI: torrent.magnetURI,
-          description: desc,
-          userId: userId
-        };
-
-        videoList.push(videoData);
-        renderVideo(videoData);
-        alert("Vídeo enviado! Magnet URI: " + torrent.magnetURI);
-      });
+    function showTab(tabId) {
+      sections.forEach(sec => sec.classList.remove("active"));
+      document.getElementById(tabId).classList.add("active");
     }
 
-    function renderVideo(data) {
-      const card = document.createElement('div');
-      card.className = 'video-card';
+    let localStream;
+    let peers = {};
 
-      const info = document.createElement('p');
-      info.innerHTML = `<strong>${data.userId}</strong>: ${data.description}`;
-      card.appendChild(info);
-
-      const video = document.createElement('video');
-      video.controls = true;
-      card.appendChild(video);
-
-      client.add(data.magnetURI, torrent => {
-        torrent.files.forEach(file => {
-          file.renderTo(video);
-        });
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then(stream => {
+        localStream = stream;
       });
 
-      feed.appendChild(card);
+    function saveVideo() {
+      const fileInput = document.getElementById("videoInput");
+      const previewVideo = document.getElementById("previewVideo");
+
+      if (fileInput.files.length === 0) return alert("Selecione um vídeo.");
+
+      const file = fileInput.files[0];
+      const videoURL = URL.createObjectURL(file);
+      previewVideo.src = videoURL;
+
+      // Salva no localStorage como Blob
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        localStorage.setItem("savedVideo", event.target.result);
+        addVideoToFeed(event.target.result);
+      };
+      reader.readAsDataURL(file);
     }
 
-    function connectById() {
-      const connectId = document.getElementById('connectIdInput').value;
-      if (connectId.trim() === "") return alert("Insira um ID para conectar.");
-      connectStatus.innerText = "Conectado ao ID: " + connectId;
+    function addVideoToFeed(dataUrl) {
+      const div = document.createElement("div");
+      div.className = "video-card";
+      div.innerHTML = `
+        <video src="${dataUrl}" controls></video>
+      `;
+      feedContainer.appendChild(div);
     }
 
-    // Simula conexão automática
-    setTimeout(() => {
-      connectStatus.innerText = "Conectado automaticamente!";
-    }, 1000);
+    // Carregar vídeos salvos ao iniciar
+    window.onload = () => {
+      const saved = localStorage.getItem("savedVideo");
+      if (saved) {
+        addVideoToFeed(saved);
+      }
+    };
+
+    // WebRTC Setup
+    const peer = new Peer({ initiator: true, stream: localStream });
+    peer.on('signal', data => {
+      document.getElementById("peerIdDisplay").textContent = JSON.stringify(data);
+    });
+
+    function connectToPeer() {
+      const remoteId = document.getElementById("remotePeerId").value;
+      if (!remoteId) return alert("Insira o ID do parceiro.");
+      const otherPeer = new Peer({ initiator: false, stream: localStream });
+      otherPeer.signal(JSON.parse(remoteId));
+      setupCall(otherPeer);
+    }
+
+    function setupCall(p) {
+      p.on('stream', remoteStream => {
+        const video = document.createElement('video');
+        video.srcObject = remoteStream;
+        video.autoplay = true;
+        document.body.appendChild(video);
+      });
+    }
   </script>
-
 </body>
 </html>
+```
