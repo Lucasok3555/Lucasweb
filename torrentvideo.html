@@ -70,35 +70,6 @@
       border-radius: 4px;
     }
 
-    .feed {
-      padding: 20px;
-    }
-
-    .video-card {
-      background-color: #1e1e1e;
-      margin-bottom: 20px;
-      padding: 15px;
-      border-radius: 8px;
-    }
-
-    .video-card video {
-      width: 100%;
-      height: auto;
-      border-radius: 8px;
-    }
-
-    .video-card p {
-      margin-top: 10px;
-    }
-
-    #connectionStatus {
-      padding: 10px;
-      background-color: #333;
-      margin: 10px 0;
-      border-radius: 4px;
-      font-style: italic;
-    }
-
     ul {
       list-style: none;
       padding-left: 0;
@@ -125,15 +96,39 @@
       border-radius: 4px;
       font-size: 14px;
     }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 8px;
+    }
+
+    .online {
+      background-color: #00aa00;
+    }
+
+    .offline {
+      background-color: #999;
+    }
+
+    #connectionStatus {
+      padding: 10px;
+      background-color: #333;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
 
-  <header>Vídeo Torrent + WebRTC</title></header>
+  <header>Vídeo Torrent + WebRTC</header>
 
   <div class="tabs">
     <div class="tab active" onclick="openTab(event, 'upload')">Upload de Vídeo</div>
-    <div class="tab" onclick="openTab(event, 'connections')">Usuários Online</div>
+    <div class="tab" onclick="openTab(event, 'connections')">Conexões</div>
     <div class="tab" onclick="openTab(event, 'feed')">Feed de Vídeos</div>
   </div>
 
@@ -145,26 +140,28 @@
   </div>
 
   <div id="connections" class="tab-content">
-    <h2>Usuários Online</h2>
+    <h2>Gerenciar Conexões</h2>
     <p><strong>Seu ID:</strong> <span id="myId">Carregando...</span></p>
-    <div id="connectionStatus">Conectando aos usuários...</div>
-    <h3>Lista de Usuários Conectados:</h3>
+    <input type="text" id="remoteIdInput" placeholder="Digite o ID do usuário para conectar..." />
+    <button onclick="addManualUser()">Adicionar à Lista</button>
+    <div id="connectionStatus">Aguardando conexão...</div>
+    <h3>Usuários Disponíveis:</h3>
     <ul id="connectedUsersList"></ul>
   </div>
 
   <div id="feed" class="tab-content">
     <h2>Feed de Vídeos</h2>
-    <div id="connectionStatus">Carregando vídeos dos usuários conectados...</div>
+    <div id="connectionStatus">Carregando feed via WebRTC...</div>
     <div class="feed" id="videoFeed"></div>
   </div>
 
   <script>
-    let uploadedVideos = [];
     const myId = `User_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
     document.getElementById("myId").textContent = myId;
 
     const connectedUsers = new Map(); // { userId -> peerConnection }
-    const signalingServer = "wss://echo.websocket.org"; // Simulação WebSocket público
+    const manualUsers = new Set();
+    const signalingServer = "wss://echo.websocket.org"; // WebSocket público
     let ws;
 
     function openTab(evt, tabName) {
@@ -179,52 +176,28 @@
       evt.currentTarget.classList.add("active");
       document.getElementById(tabName).classList.add("active");
 
-      if (tabName === "feed") {
-        renderFeed();
-      }
-
       if (tabName === "connections") {
         updateConnectedUsersList();
       }
     }
 
-    function uploadToTorrent() {
-      const fileInput = document.getElementById('videoFile');
-      const description = document.getElementById('videoDescription').value;
+    function addManualUser() {
+      const input = document.getElementById("remoteIdInput");
+      const id = input.value.trim();
 
-      if (!fileInput.files.length || !description.trim()) {
-        alert("Por favor, selecione um vídeo e adicione uma descrição.");
+      if (!id || id === myId) {
+        alert("ID inválido ou igual ao seu.");
         return;
       }
 
-      const file = fileInput.files[0];
-      const videoURL = URL.createObjectURL(file);
+      if (manualUsers.has(id)) {
+        alert("Este ID já foi adicionado.");
+        return;
+      }
 
-      uploadedVideos.push({ url: videoURL, description });
-
-      alert("Vídeo enviado para a rede torrent com sucesso!");
-
-      fileInput.value = '';
-      document.getElementById('videoDescription').value = '';
-
-      renderFeed();
-    }
-
-    function renderFeed() {
-      const feed = document.getElementById('videoFeed');
-      feed.innerHTML = '';
-
-      uploadedVideos.forEach(video => {
-        const card = document.createElement('div');
-        card.className = 'video-card';
-
-        card.innerHTML = `
-          <video controls><source src="${video.url}" type="video/mp4">Seu navegador não suporta vídeo.</video>
-          <p>${video.description}</p>
-        `;
-
-        feed.appendChild(card);
-      });
+      manualUsers.add(id);
+      input.value = '';
+      updateConnectedUsersList();
     }
 
     function connectToUser(userId) {
@@ -236,7 +209,6 @@
       const peerConnection = new RTCPeerConnection();
 
       peerConnection.ontrack = event => {
-        console.log("Recebendo vídeo remoto...");
         const remoteVideo = document.createElement("video");
         remoteVideo.srcObject = new MediaStream([event.track]);
         remoteVideo.autoplay = true;
@@ -251,14 +223,12 @@
       };
 
       peerConnection.onicecandidate = event => {
-        if (event.candidate) {
-          setTimeout(() => {
-            ws.send(JSON.stringify({
-              type: "ice-candidate",
-              target: userId,
-              candidate: event.candidate
-            }));
-          }, 500);
+        if (event.candidate && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: "ice-candidate",
+            target: userId,
+            candidate: event.candidate
+          }));
         }
       };
 
@@ -295,7 +265,7 @@
       };
 
       peerConnection.onicecandidate = event => {
-        if (event.candidate) {
+        if (event.candidate && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
             type: "ice-candidate",
             target: fromId,
@@ -340,47 +310,48 @@
       };
 
       ws.onmessage = msg => {
-        const data = JSON.parse(msg.data);
-        switch (data.type) {
-          case "users":
-            updateOnlineUsers(data.users.filter(u => u !== myId));
-            break;
-          case "offer":
-            handleOffer(data.sdp, data.from);
-            break;
-          case "answer":
-            handleAnswer(data.sdp, data.from);
-            break;
-          case "ice-candidate":
-            handleCandidate(data.candidate, data.from);
-            break;
+        try {
+          const data = JSON.parse(msg.data);
+          switch (data.type) {
+            case "users":
+              updateOnlineUsers(data.users.filter(u => u !== myId));
+              break;
+            case "offer":
+              handleOffer(data.sdp, data.from);
+              break;
+            case "answer":
+              handleAnswer(data.sdp, data.from);
+              break;
+            case "ice-candidate":
+              handleCandidate(data.candidate, data.from);
+              break;
+          }
+        } catch (e) {
+          console.error("Erro ao processar mensagem:", e);
         }
       };
     }
 
     function updateOnlineUsers(users) {
-      const onlineList = users.map(id => ({
-        id,
-        connect: () => connectToUser(id)
-      }));
-
-      const list = document.getElementById("connectedUsersList");
-      list.innerHTML = "";
-      onlineList.forEach(user => {
-        const item = document.createElement("li");
-        item.innerHTML = `<span class="user-id">${user.id}</span> 
-                          <button class="connect-btn" onclick="connectToUser('${user.id}')">Conectar</button>`;
-        list.appendChild(item);
+      users.forEach(id => {
+        if (!manualUsers.has(id)) manualUsers.add(id);
       });
+      updateConnectedUsersList();
     }
 
     function updateConnectedUsersList() {
       const list = document.getElementById("connectedUsersList");
       list.innerHTML = "";
-      connectedUsers.forEach((_, userId) => {
+
+      [...manualUsers].forEach(userId => {
         const item = document.createElement("li");
-        item.innerHTML = `<span class="user-id">${userId}</span> 
-                          <small style="color:#00aa00;">(Conectado)</small>`;
+        const isConnected = connectedUsers.has(userId);
+        item.innerHTML = `
+          <span class="user-id">${userId}</span>
+          <span class="status-dot ${isConnected ? 'online' : 'offline'}"></span>
+          ${isConnected ? '<small style="color:#00aa00;">(Conectado)</small>' : ''}
+          ${!isConnected ? `<button class="connect-btn" onclick="connectToUser('${userId}')">Conectar</button>` : ''}
+        `;
         list.appendChild(item);
       });
     }
