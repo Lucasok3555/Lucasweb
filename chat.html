@@ -1,146 +1,54 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Chat P2P</title>
+  <title>Chat WebSocket</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 40px;
-      background-color: #f7f7f7;
-    }
-    h1 {
-      text-align: center;
-    }
-    #chat-container {
-      max-width: 600px;
-      margin: auto;
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    .message {
-      border-bottom: 1px solid #ddd;
-      padding: 10px 0;
-    }
-    .message:last-child {
-      border-bottom: none;
-    }
-    label {
-      display: block;
-      margin-top: 15px;
-      font-weight: bold;
-    }
-    input[type="text"], textarea {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
-      box-sizing: border-box;
-    }
-    button {
-      margin-top: 10px;
-      padding: 10px 15px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      cursor: pointer;
-      border-radius: 4px;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    #messages {
-      margin-top: 20px;
-      max-height: 300px;
-      overflow-y: auto;
-    }
+    body { font-family: Arial; padding: 20px; }
+    #chat { height: 300px; border: 1px solid #ccc; overflow-y: scroll; padding: 10px; }
+    #mensagem { width: 80%; padding: 10px; }
+    #btnEnviar { padding: 10px; }
   </style>
 </head>
 <body>
-  <div id="chat-container">
-    <h1>Chat P2P</h1>
-    <label for="peer-id">Seu ID (gerado automaticamente):</label>
-    <input type="text" id="peer-id" readonly />
 
-    <label for="target-id">ID do Destino:</label>
-    <input type="text" id="target-id" placeholder="Digite o ID do destinatário"/>
+  <h2>Chat em Tempo Real</h2>
+  <div id="chat"></div>
+  <input type="text" id="mensagem" placeholder="Digite sua mensagem..." />
+  <button id="btnEnviar">Enviar</button>
 
-    <label for="message-input">Mensagem:</label>
-    <textarea id="message-input" rows="3" placeholder="Escreva sua mensagem aqui..."></textarea>
-
-    <button onclick="sendMessage()">Enviar Mensagem</button>
-
-    <h3>Mensagens Recebidas:</h3>
-    <div id="messages"></div>
-  </div>
-
-  <!-- Carregando a biblioteca PeerJS -->
-  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
   <script>
-    const peerIdInput = document.getElementById('peer-id');
-    const messagesDiv = document.getElementById('messages');
+    const ws = new WebSocket('ws://localhost:8080');
 
-    // Gerar um ID aleatório para o usuário
-    function generateRandomId() {
-      return Math.random().toString(36).substr(2, 10);
-    }
+    const chat = document.getElementById('chat');
+    const input = document.getElementById('mensagem');
+    const btnEnviar = document.getElementById('btnEnviar');
 
-    const localPeerId = generateRandomId();
-    peerIdInput.value = localPeerId;
+    // Receber mensagens do servidor
+    ws.onmessage = function(event) {
+      const msg = document.createElement('div');
+      msg.textContent = event.data;
+      chat.appendChild(msg);
+      chat.scrollTop = chat.scrollHeight;
+    };
 
-    // Inicializar PeerJS
-    const peer = new Peer(localPeerId);
-
-    let connections = {};
-
-    peer.on('open', () => {
-      console.log('Meu ID:', peer.id);
-    });
-
-    peer.on('connection', conn => {
-      connections[conn.peer] = conn;
-      conn.on('data', data => {
-        addMessage(`De ${conn.peer}: ${data.text}`);
-      });
-    });
-
-    function sendMessage() {
-      const targetId = document.getElementById('target-id').value.trim();
-      const messageText = document.getElementById('message-input').value.trim();
-
-      if (!targetId || !messageText) {
-        alert("Por favor, preencha o ID do destino e a mensagem.");
-        return;
+    // Enviar mensagem ao pressionar Enter ou clicar no botão
+    function enviarMensagem() {
+      const texto = input.value.trim();
+      if (texto !== '') {
+        ws.send(texto);
+        input.value = '';
       }
+    }
 
-      if (!connections[targetId]) {
-        connections[targetId] = peer.connect(targetId);
-        connections[targetId].on('open', () => {
-          connections[targetId].send({ text: messageText });
-          addMessage(`Para ${targetId}: ${messageText}`);
-        });
-        connections[targetId].on('error', err => {
-          console.error('Erro de conexão:', err);
-          alert('Erro ao conectar ao destinatário.');
-        });
-      } else {
-        connections[targetId].send({ text: messageText });
-        addMessage(`Para ${targetId}: ${messageText}`);
+    btnEnviar.addEventListener('click', enviarMensagem);
+
+    input.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        enviarMensagem();
       }
-
-      document.getElementById('message-input').value = '';
-    }
-
-    function addMessage(text) {
-      const msgElem = document.createElement('div');
-      msgElem.className = 'message';
-      msgElem.textContent = text;
-      messagesDiv.appendChild(msgElem);
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
+    });
   </script>
+
 </body>
 </html>
