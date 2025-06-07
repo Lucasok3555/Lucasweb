@@ -1,80 +1,38 @@
-```html
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>WebTorrent - Baixar Arquivos</title>
+  <meta charset="UTF-8">
+  <title>Criar Arquivo .torrent</title>
+  <style>
+    body { font-family: Arial; margin: 40px; }
+    input, button { margin-top: 10px; display: block; }
+  </style>
 </head>
 <body>
-  <h2>Baixar via .torrent</h2>
-  <input type="file" id="torrentFileInput" accept=".torrent" />
-  <button onclick="baixarTorrent()">Baixar Arquivo</button>
+  <h1>Gerador de Arquivo .torrent</h1>
+  <input type="file" id="fileInput" />
+  <button onclick="criarTorrent()">Criar .torrent</button>
+  <a id="downloadLink" style="display:none" download="arquivo.torrent">Baixar .torrent</a>
 
-  <div id="progressBarContainer" style="width: 100%; background-color: #ddd; margin-top: 20px; display: none;">
-    <div id="progressBar" style="width: 0%; height: 30px; background-color: #4caf50;"></div>
-  </div>
-
-  <ul id="arquivosBaixados" style="margin-top: 20px;"></ul>
-
-  <!-- Incluindo a biblioteca WebTorrent -->
-  <script src="https://unpkg.com/webtorrent@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/create-torrent@5.0.0/browser.js"></script>
   <script>
-    async function baixarTorrent() {
-      const input = document.getElementById('torrentFileInput');
+    function criarTorrent() {
+      const input = document.getElementById('fileInput');
       const file = input.files[0];
+      if (!file) return alert("Escolha um arquivo!");
 
-      if (!file) {
-        alert("Selecione um arquivo .torrent.");
-        return;
-      }
+      createTorrent(file, (err, torrent) => {
+        if (err) return console.error(err);
 
-      const client = new WebTorrent();
+        const blob = new Blob([torrent], { type: 'application/x-bittorrent' });
+        const url = URL.createObjectURL(blob);
 
-      // Lendo o arquivo .torrent
-      const reader = new FileReader();
-      reader.onload = function () {
-        const torrentFile = reader.result;
-
-        client.add(torrentFile, { path: './downloads' }, function (torrent) {
-          // Quando o torrent é carregado
-          const progressBarContainer = document.getElementById('progressBarContainer');
-          const progressBar = document.getElementById('progressBar');
-          progressBarContainer.style.display = 'block';
-
-          // Atualizando progresso
-          torrent.on('download', () => {
-            const percent = Math.round(torrent.progress * 100 * 100) / 100;
-            progressBar.style.width = percent + '%';
-            progressBar.textContent = percent + '%';
-          });
-
-          // Ao finalizar download
-          torrent.on('done', () => {
-            progressBar.style.backgroundColor = '#2196f3';
-            progressBar.textContent = 'Completo!';
-
-            // Exibindo os arquivos baixados com links para salvar
-            const filesList = document.getElementById('arquivosBaixados');
-            torrent.files.forEach(file => {
-              const blob = file.getBlob();
-              const url = URL.createObjectURL(blob);
-
-              const li = document.createElement('li');
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = file.name;
-              a.textContent = `Salvar: ${file.name}`;
-              li.appendChild(a);
-              filesList.appendChild(li);
-            });
-          });
-        });
-      };
-
-      reader.readAsArrayBuffer(file);
+        const a = document.getElementById('downloadLink');
+        a.href = url;
+        a.style.display = 'block';
+        a.click(); // faz o download automático
+      });
     }
   </script>
 </body>
 </html>
-```
