@@ -1,416 +1,193 @@
+```html
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zuar - Anonymous P2P Network</title>
-    <meta name="description" content="Fully anonymous peer-to-peer social network">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: "#4F46E5",
-                        dark: "#1E1E2D",
-                        light: "#F8FAFC"
-                    }
-                }
-            }
-        }
-    </script>
+  <meta charset="UTF-8">
+  <title>Rede Social Anônima com Nós</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #1f1f1f;
+      padding: 15px 20px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      border-bottom: 2px solid #333;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      padding: 20px;
+    }
+    .node-id {
+      background-color: #1e1e1e;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      font-family: monospace;
+      color: #00ffcc;
+    }
+    .post-form {
+      background-color: #1e1e1e;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .post-form textarea,
+    .post-form input[type="text"] {
+      width: 100%;
+      background-color: #2c2c2c;
+      color: #fff;
+      border: none;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      resize: none;
+    }
+    .post-form textarea {
+      height: 60px;
+    }
+    .post-form input[type="file"] {
+      margin-top: 10px;
+    }
+    .post-form button {
+      background-color: #00aaff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .feed {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .post {
+      background-color: #1e1e1e;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #333;
+    }
+    .post-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #aaa;
+    }
+    .post-content {
+      margin-top: 10px;
+    }
+    .post-content img,
+    .post-content video {
+      max-width: 100%;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <div class="container mx-auto px-4 py-6 max-w-6xl">
-        <!-- Header -->
-        <header class="bg-white rounded-lg shadow-md p-4 mb-6">
-            <div class="flex justify-between items-center">
-                <h1 class="text-2xl font-bold text-primary">Zuar</h1>
-                <div class="flex space-x-4">
-                    <button id="nodeInfoBtn" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg">
-                        <i class="fas fa-network-wired mr-2"></i>Node Info
-                    </button>
-                </div>
-            </div>
-        </header>
+<body>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Left sidebar - Node connections -->
-            <div class="bg-white rounded-lg shadow-md p-4">
-                <h2 class="text-xl font-semibold mb-4">Your Node</h2>
-                
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Your Node ID</label>
-                    <div class="flex">
-                        <input type="text" id="nodeId" readonly 
-                            class="flex-grow bg-gray-100 border border-gray-300 rounded-l-lg px-4 py-2">
-                        <button id="copyNodeId" class="bg-primary text-white px-3 rounded-r-lg">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                    </div>
-                    <button id="generateNodeId" class="mt-2 w-full bg-gray-200 hover:bg-gray-300 py-2 rounded-lg">
-                        Generate New ID
-                    </button>
-                </div>
+<header>Rede Social Totalmente Anônima com Nós</header>
 
-                <div class="mb-6">
-                    <h3 class="font-medium mb-2">Connect to Other Nodes</h3>
-                    <div class="flex mb-2">
-                        <input type="text" id="connectNodeId" placeholder="Enter Node ID" 
-                            class="flex-grow border border-gray-300 rounded-l-lg px-4 py-2">
-                        <button id="connectBtn" class="bg-primary text-white px-4 rounded-r-lg">
-                            Connect
-                        </button>
-                    </div>
-                </div>
+<div class="container">
+  <div class="node-id" id="myNodeId">Seu ID de Nó: Carregando...</div>
 
-                <div>
-                    <h3 class="font-medium mb-2">Connected Nodes</h3>
-                    <ul id="connectedNodes" class="space-y-2">
-                        <!-- Connected nodes will appear here -->
-                    </ul>
-                </div>
-            </div>
+  <div class="post-form">
+    <input type="text" id="targetNodeId" placeholder="ID do Nó de Destino (opcional)">
+    <textarea id="textPost" placeholder="Escreva algo anônimo..."></textarea><br>
+    <input type="file" id="mediaPost" accept="image/*,video/*"><br>
+    <button onclick="submitPost()">Publicar Zueira</button>
+  </div>
 
-            <!-- Main content - Feed -->
-            <div class="lg:col-span-2">
-                <!-- Post creation -->
-                <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-                    <h2 class="text-xl font-semibold mb-4">Create Post</h2>
-                    <textarea id="postContent" placeholder="What's happening?" 
-                        class="w-full border border-gray-300 rounded-lg p-3 mb-3 h-24"></textarea>
-                    
-                    <div class="flex items-center space-x-4 mb-4">
-                        <button id="addImage" class="text-gray-500 hover:text-primary">
-                            <i class="fas fa-image fa-lg"></i>
-                        </button>
-                        <button id="addVideo" class="text-gray-500 hover:text-primary">
-                            <i class="fas fa-video fa-lg"></i>
-                        </button>
-                        <input type="file" id="mediaUpload" class="hidden" accept="image/*,video/*">
-                    </div>
-                    
-                    <div id="mediaPreview" class="mb-4 hidden">
-                        <!-- Media preview will appear here -->
-                    </div>
-                    
-                    <button id="postBtn" class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg">
-                        Post Anonymously
-                    </button>
-                </div>
+  <div class="feed" id="feed">
+    <!-- Posts aparecerão aqui -->
+  </div>
+</div>
 
-                <!-- Live feed -->
-                <div class="bg-white rounded-lg shadow-md p-4">
-                    <h2 class="text-xl font-semibold mb-4">Live Feed</h2>
-                    <div id="feed" class="space-y-4">
-                        <!-- Posts will appear here -->
-                        <div class="text-center py-8 text-gray-500">
-                            <i class="fas fa-rss fa-3x mb-2"></i>
-                            <p>Your live feed will appear here as you connect to nodes</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+<script>
+  const feed = document.getElementById('feed');
+  const myNodeIdElement = document.getElementById('myNodeId');
 
-    <!-- Node Info Modal -->
-    <div id="nodeInfoModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-lg p-6 max-w-md w-full">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold">Node Information</h3>
-                <button id="closeNodeInfo" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="space-y-3">
-                <p><strong>Status:</strong> <span id="nodeStatus" class="text-green-500">Connected</span></p>
-                <p><strong>Peers:</strong> <span id="peerCount">0</span></p>
-                <p><strong>Posts Shared:</strong> <span id="postsShared">0</span></p>
-                <p><strong>Posts Received:</strong> <span id="postsReceived">0</span></p>
-            </div>
-        </div>
-    </div>
+  // Gera um ID único para o nó local
+  function generateNodeId() {
+    return 'node-' + Math.random().toString(36).substr(2, 9);
+  }
 
-    <script>
-        // Generate random node ID
-        function generateNodeId() {
-            return 'node-' + Math.random().toString(36).substr(2, 9);
+  const nodeId = generateNodeId();
+  myNodeIdElement.textContent = 'Seu ID de Nó: ' + nodeId;
+
+  function submitPost() {
+    const targetId = document.getElementById('targetNodeId').value.trim();
+    const text = document.getElementById('textPost').value.trim();
+    const file = document.getElementById('mediaPost').files[0];
+
+    if (!text && !file) {
+      alert("Você precisa escrever algo ou selecionar um arquivo para postar.");
+      return;
+    }
+
+    const postDiv = document.createElement('div');
+    postDiv.className = 'post';
+
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'post-header';
+    headerDiv.innerHTML = `<span>De: ${nodeId}</span><span>Para: ${targetId || 'Público'}</span>`;
+    postDiv.appendChild(headerDiv);
+
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'post-content';
+
+    if (text) {
+      contentDiv.innerHTML += `<p>${escapeHTML(text)}</p>`;
+    }
+
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        let mediaElement = '';
+        if (file.type.startsWith('image/')) {
+          mediaElement = `<img src="${e.target.result}" alt="Imagem do post">`;
+        } else if (file.type.startsWith('video/')) {
+          mediaElement = `<video controls><source src="${e.target.result}" type="${file.type}">Seu navegador não suporta vídeo.</video>`;
         }
+        contentDiv.innerHTML += mediaElement;
+        postDiv.appendChild(contentDiv);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      postDiv.appendChild(contentDiv);
+    }
 
-        // Initialize app
-        document.addEventListener('DOMContentLoaded', function() {
-            // Generate initial node ID
-            let currentNodeId = generateNodeId();
-            document.getElementById('nodeId').value = currentNodeId;
-            
-            // Connected nodes storage
-            let connectedNodes = [];
-            let posts = [];
+    feed.prepend(postDiv);
 
-            // DOM elements
-            const nodeIdInput = document.getElementById('nodeId');
-            const copyNodeIdBtn = document.getElementById('copyNodeId');
-            const generateNodeIdBtn = document.getElementById('generateNodeId');
-            const connectNodeIdInput = document.getElementById('connectNodeId');
-            const connectBtn = document.getElementById('connectBtn');
-            const connectedNodesList = document.getElementById('connectedNodes');
-            const postContent = document.getElementById('postContent');
-            const addImageBtn = document.getElementById('addImage');
-            const addVideoBtn = document.getElementById('addVideo');
-            const mediaUpload = document.getElementById('mediaUpload');
-            const mediaPreview = document.getElementById('mediaPreview');
-            const postBtn = document.getElementById('postBtn');
-            const feed = document.getElementById('feed');
-            const nodeInfoBtn = document.getElementById('nodeInfoBtn');
-            const nodeInfoModal = document.getElementById('nodeInfoModal');
-            const closeNodeInfo = document.getElementById('closeNodeInfo');
+    // Limpar campos
+    document.getElementById('targetNodeId').value = '';
+    document.getElementById('textPost').value = '';
+    document.getElementById('mediaPost').value = '';
+  }
 
-            // Generate new node ID
-            generateNodeIdBtn.addEventListener('click', function() {
-                currentNodeId = generateNodeId();
-                nodeIdInput.value = currentNodeId;
-            });
+  function escapeHTML(str) {
+    return str.replace(/[&<>"']/g, (match) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    })[match]);
+  }
+</script>
 
-            // Copy node ID
-            copyNodeIdBtn.addEventListener('click', function() {
-                nodeIdInput.select();
-                document.execCommand('copy');
-                alert('Node ID copied to clipboard!');
-            });
-
-            // Connect to another node
-            connectBtn.addEventListener('click', function() {
-                const nodeId = connectNodeIdInput.value.trim();
-                if (nodeId && !connectedNodes.includes(nodeId)) {
-                    connectedNodes.push(nodeId);
-                    updateConnectedNodesList();
-                    connectNodeIdInput.value = '';
-                    // Simulate receiving posts from new node
-                    simulateNodeConnection(nodeId);
-                }
-            });
-
-            // Update connected nodes list
-            function updateConnectedNodesList() {
-                connectedNodesList.innerHTML = '';
-                if (connectedNodes.length === 0) {
-                    connectedNodesList.innerHTML = '<li class="text-gray-500">No connected nodes</li>';
-                } else {
-                    connectedNodes.forEach(node => {
-                        const li = document.createElement('li');
-                        li.className = 'flex justify-between items-center bg-gray-100 p-2 rounded';
-                        li.innerHTML = `
-                            <span>${node}</span>
-                            <button class="text-red-500 hover:text-red-700 remove-node" data-node="${node}">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        `;
-                        connectedNodesList.appendChild(li);
-                    });
-
-                    // Add event listeners to remove buttons
-                    document.querySelectorAll('.remove-node').forEach(btn => {
-                        btn.addEventListener('click', function() {
-                            const nodeToRemove = this.getAttribute('data-node');
-                            connectedNodes = connectedNodes.filter(node => node !== nodeToRemove);
-                            updateConnectedNodesList();
-                        });
-                    });
-                }
-            }
-
-            // Simulate node connection and receiving posts
-            function simulateNodeConnection(nodeId) {
-                // Simulate receiving some posts from the new node
-                setTimeout(() => {
-                    const newPosts = [
-                        {
-                            id: 'post-' + Math.random().toString(36).substr(2, 6),
-                            nodeId: nodeId,
-                            content: 'Hello from another node!',
-                            timestamp: new Date().toLocaleTimeString(),
-                            media: null
-                        },
-                        {
-                            id: 'post-' + Math.random().toString(36).substr(2, 6),
-                            nodeId: nodeId,
-                            content: 'Check out this cool image!',
-                            timestamp: new Date().toLocaleTimeString(),
-                            media: {
-                                type: 'image',
-                                url: 'https://picsum.photos/600/400?random=' + Math.floor(Math.random() * 100)
-                            }
-                        }
-                    ];
-
-                    newPosts.forEach(post => {
-                        addPostToFeed(post);
-                        posts.push(post);
-                    });
-                }, 1000);
-            }
-
-            // Handle media upload
-            addImageBtn.addEventListener('click', function() {
-                mediaUpload.setAttribute('accept', 'image/*');
-                mediaUpload.click();
-            });
-
-            addVideoBtn.addEventListener('click', function() {
-                mediaUpload.setAttribute('accept', 'video/*');
-                mediaUpload.click();
-            });
-
-            mediaUpload.addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                if (!file) return;
-
-                mediaPreview.innerHTML = '';
-                mediaPreview.classList.remove('hidden');
-
-                if (file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        mediaPreview.innerHTML = `
-                            <div class="relative">
-                                <img src="${e.target.result}" alt="Preview" class="w-full rounded-lg">
-                                <button class="absolute top-2 right-2 bg-white rounded-full p-1 remove-media">
-                                    <i class="fas fa-times text-red-500"></i>
-                                </button>
-                            </div>
-                        `;
-                        document.querySelector('.remove-media').addEventListener('click', function() {
-                            mediaPreview.classList.add('hidden');
-                            mediaPreview.innerHTML = '';
-                            mediaUpload.value = '';
-                        });
-                    };
-                    reader.readAsDataURL(file);
-                } else if (file.type.startsWith('video/')) {
-                    const videoUrl = URL.createObjectURL(file);
-                    mediaPreview.innerHTML = `
-                        <div class="relative">
-                            <video controls class="w-full rounded-lg">
-                                <source src="${videoUrl}" type="${file.type}">
-                            </video>
-                            <button class="absolute top-2 right-2 bg-white rounded-full p-1 remove-media">
-                                <i class="fas fa-times text-red-500"></i>
-                            </button>
-                        </div>
-                    `;
-                    document.querySelector('.remove-media').addEventListener('click', function() {
-                        mediaPreview.classList.add('hidden');
-                        mediaPreview.innerHTML = '';
-                        mediaUpload.value = '';
-                        URL.revokeObjectURL(videoUrl);
-                    });
-                }
-            });
-
-            // Create new post
-            postBtn.addEventListener('click', function() {
-                const content = postContent.value.trim();
-                if (!content && mediaPreview.classList.contains('hidden')) return;
-
-                let media = null;
-                if (!mediaPreview.classList.contains('hidden')) {
-                    const mediaElement = mediaPreview.querySelector('img, video');
-                    if (mediaElement) {
-                        media = {
-                            type: mediaElement.tagName.toLowerCase(),
-                            url: mediaElement.tagName === 'IMG' ? 
-                                mediaElement.src : 
-                                mediaElement.querySelector('source').src
-                        };
-                    }
-                }
-
-                const newPost = {
-                    id: 'post-' + Math.random().toString(36).substr(2, 6),
-                    nodeId: currentNodeId,
-                    content: content,
-                    timestamp: new Date().toLocaleTimeString(),
-                    media: media
-                };
-
-                addPostToFeed(newPost);
-                posts.push(newPost);
-
-                // Simulate broadcasting to connected nodes
-                if (connectedNodes.length > 0) {
-                    setTimeout(() => {
-                        connectedNodes.forEach(nodeId => {
-                            // In a real P2P app, this would send the post to the connected node
-                            console.log(`Post broadcasted to node: ${nodeId}`);
-                        });
-                    }, 500);
-                }
-
-                // Reset form
-                postContent.value = '';
-                mediaPreview.classList.add('hidden');
-                mediaPreview.innerHTML = '';
-                mediaUpload.value = '';
-            });
-
-            // Add post to feed
-            function addPostToFeed(post) {
-                const postElement = document.createElement('div');
-                postElement.className = 'border border-gray-200 rounded-lg p-4';
-                
-                let mediaHtml = '';
-                if (post.media) {
-                    if (post.media.type === 'image') {
-                        mediaHtml = `
-                            <div class="mt-3">
-                                <img src="${post.media.url}" alt="Post media" class="w-full rounded-lg">
-                            </div>
-                        `;
-                    } else if (post.media.type === 'video') {
-                        mediaHtml = `
-                            <div class="mt-3">
-                                <video controls class="w-full rounded-lg">
-                                    <source src="${post.media.url}" type="video/mp4">
-                                </video>
-                            </div>
-                        `;
-                    }
-                }
-
-                postElement.innerHTML = `
-                    <div class="flex items-start mb-2">
-                        <div class="bg-gray-300 rounded-full w-10 h-10 flex items-center justify-center mr-3">
-                            <i class="fas fa-user-secret text-gray-600"></i>
-                        </div>
-                        <div>
-                            <p class="font-medium">Anonymous Node</p>
-                            <p class="text-xs text-gray-500">${post.timestamp} • Node: ${post.nodeId.substr(0, 8)}...</p>
-                        </div>
-                    </div>
-                    <p class="mb-3">${post.content}</p>
-                    ${mediaHtml}
-                `;
-                
-                feed.insertBefore(postElement, feed.firstChild);
-            }
-
-            // Node info modal
-            nodeInfoBtn.addEventListener('click', function() {
-                document.getElementById('peerCount').textContent = connectedNodes.length;
-                document.getElementById('postsShared').textContent = posts.filter(p => p.nodeId === currentNodeId).length;
-                document.getElementById('postsReceived').textContent = posts.filter(p => p.nodeId !== currentNodeId).length;
-                nodeInfoModal.classList.remove('hidden');
-            });
-
-            closeNodeInfo.addEventListener('click', function() {
-                nodeInfoModal.classList.add('hidden');
-            });
-
-            // Initial empty state
-            updateConnectedNodesList();
-        });
-    </script>
 </body>
 </html>
+```
