@@ -1,167 +1,161 @@
-```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Plataforma de Vídeos com WebRTC</title>
+  <meta charset="UTF-8">
+  <title>WebRTC Feed</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-    }
-    nav {
-      background-color: #333;
-      color: white;
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      height: 60px;
-    }
-    nav button {
-      background: none;
-      border: none;
-      color: white;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    section {
-      display: none;
-      padding: 20px;
-    }
-    section.active {
-      display: block;
-    }
-    video {
-      width: 100%;
-      max-width: 600px;
-      margin-top: 20px;
-    }
-    input[type="file"] {
-      margin-top: 10px;
-    }
-    #feed {
-      margin-top: 20px;
-    }
-    .video-card {
-      margin-bottom: 20px;
-    }
-    #connectionSection input {
-      margin-right: 10px;
-      padding: 5px;
-    }
-    #connectionSection button {
-      padding: 5px 10px;
-    }
+    body { font-family: sans-serif; margin: 0; padding: 0; }
+    nav { background: #333; color: #fff; display: flex; padding: 10px; }
+    nav button { background: none; border: none; color: white; margin-right: 10px; cursor: pointer; }
+    .tab { display: none; padding: 20px; }
+    .active { display: block; }
+    video { max-width: 100%; margin-top: 10px; }
+    #feed video { border: 2px solid #ccc; margin-top: 10px; }
   </style>
 </head>
 <body>
 
-  <nav>
-    <button onclick="showTab('upload')">Upload</button>
-    <button onclick="showTab('feed')">Feed</button>
-    <button onclick="showTab('connect')">Conectar</button>
-  </nav>
+<nav>
+  <button onclick="openTab('upload')">Upload</button>
+  <button onclick="openTab('feed')">Feed</button>
+  <button onclick="openTab('connect')">Conectar</button>
+</nav>
 
-  <section id="upload" class="active">
-    <h2>Fazer Upload do Vídeo</h2>
-    <input type="file" accept="video/*" id="videoInput"/>
-    <button onclick="saveVideo()">Salvar Vídeo</button>
-    <video id="previewVideo" controls></video>
-  </section>
+<div id="upload" class="tab active">
+  <h2>Upload de Vídeo</h2>
+  <input type="file" id="videoUpload" accept="video/*">
+  <video id="localVideo" controls></video>
+  <br>
+  <button onclick="adicionarAoFeed()">Adicionar ao Feed</button>
+</div>
 
-  <section id="feed">
-    <h2>Feed de Vídeos</h2>
-    <div id="feedContainer"></div>
-  </section>
+<div id="feed" class="tab">
+  <h2>Feed de Vídeos</h2>
+  <div id="videoFeed"></div>
+</div>
 
-  <section id="connect">
-    <h2>Conexão WebRTC</h2>
-    <div id="connectionSection">
-      <p><strong>ID da Conexão:</strong> <span id="peerIdDisplay">-</span></p>
-      <input type="text" id="remotePeerId" placeholder="ID do parceiro"/>
-      <button onclick="connectToPeer()">Conectar</button>
-    </div>
-  </section>
+<div id="connect" class="tab">
+  <h2>Conexão WebRTC</h2>
+  <button onclick="generateId()">Gerar ID</button>
+  <p>Seu ID: <span id="myId"></span></p>
+  <input type="text" id="remoteId" placeholder="ID remoto">
+  <button onclick="connectToPeer()">Conectar</button>
+  <div id="status"></div>
+</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/simple-peer@9/index.js"></script>
-  <script>
-    const sections = document.querySelectorAll("section");
-    const feedContainer = document.getElementById("feedContainer");
+<script>
+  // Troca de abas
+  function openTab(tabId) {
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+  }
 
-    function showTab(tabId) {
-      sections.forEach(sec => sec.classList.remove("active"));
-      document.getElementById(tabId).classList.add("active");
+  // Upload e exibição local
+  let videoFileBlob = null;
+  document.getElementById('videoUpload').addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    if (file) {
+      videoFileBlob = URL.createObjectURL(file);
+      document.getElementById('localVideo').src = videoFileBlob;
     }
+  });
 
-    let localStream;
-    let peers = {};
+  function adicionarAoFeed() {
+    if (!videoFileBlob) return alert("Selecione um vídeo primeiro.");
+    const video = document.createElement('video');
+    video.src = videoFileBlob;
+    video.controls = true;
+    document.getElementById('videoFeed').appendChild(video);
+    sendVideoToPeer(videoFileBlob); // Envia via WebRTC se conectado
+  }
 
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then(stream => {
-        localStream = stream;
-      });
+  // --- WebRTC Simplificado ---
+  let localConnection, remoteConnection;
+  let sendChannel, receiveChannel;
+  let peerId = Math.random().toString(36).substring(2, 8);
+  document.getElementById('myId').textContent = peerId;
 
-    function saveVideo() {
-      const fileInput = document.getElementById("videoInput");
-      const previewVideo = document.getElementById("previewVideo");
+  const connections = {}; // Fake sinalização entre abas
 
-      if (fileInput.files.length === 0) return alert("Selecione um vídeo.");
+  function generateId() {
+    alert("Seu ID: " + peerId);
+  }
 
-      const file = fileInput.files[0];
-      const videoURL = URL.createObjectURL(file);
-      previewVideo.src = videoURL;
+  function connectToPeer() {
+    const targetId = document.getElementById('remoteId').value;
+    if (!targetId) return alert("Digite um ID remoto.");
 
-      // Salva no localStorage como Blob
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        localStorage.setItem("savedVideo", event.target.result);
-        addVideoToFeed(event.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
+    // Criando a conexão
+    localConnection = new RTCPeerConnection();
+    sendChannel = localConnection.createDataChannel("video");
 
-    function addVideoToFeed(dataUrl) {
-      const div = document.createElement("div");
-      div.className = "video-card";
-      div.innerHTML = `
-        <video src="${dataUrl}" controls></video>
-      `;
-      feedContainer.appendChild(div);
-    }
-
-    // Carregar vídeos salvos ao iniciar
-    window.onload = () => {
-      const saved = localStorage.getItem("savedVideo");
-      if (saved) {
-        addVideoToFeed(saved);
-      }
+    sendChannel.onopen = () => {
+      document.getElementById('status').textContent = "Conectado a " + targetId;
     };
 
-    // WebRTC Setup
-    const peer = new Peer({ initiator: true, stream: localStream });
-    peer.on('signal', data => {
-      document.getElementById("peerIdDisplay").textContent = JSON.stringify(data);
+    sendChannel.onclose = () => {
+      document.getElementById('status').textContent = "Canal fechado.";
+    };
+
+    localConnection.createOffer().then(offer => {
+      return localConnection.setLocalDescription(offer);
+    }).then(() => {
+      connections[targetId] = {
+        offer: localConnection.localDescription,
+        onAnswer: function(answer) {
+          localConnection.setRemoteDescription(answer);
+        }
+      };
+      listenForAnswer(targetId);
     });
 
-    function connectToPeer() {
-      const remoteId = document.getElementById("remotePeerId").value;
-      if (!remoteId) return alert("Insira o ID do parceiro.");
-      const otherPeer = new Peer({ initiator: false, stream: localStream });
-      otherPeer.signal(JSON.parse(remoteId));
-      setupCall(otherPeer);
-    }
+    // Fake signal
+    window.setTimeout(() => {
+      const other = connections[peerId];
+      if (other) {
+        remoteConnection = new RTCPeerConnection();
+        remoteConnection.ondatachannel = event => {
+          receiveChannel = event.channel;
+          receiveChannel.onmessage = (e) => receiveVideo(e.data);
+        };
 
-    function setupCall(p) {
-      p.on('stream', remoteStream => {
-        const video = document.createElement('video');
-        video.srcObject = remoteStream;
-        video.autoplay = true;
-        document.body.appendChild(video);
-      });
+        remoteConnection.setRemoteDescription(other.offer).then(() => {
+          return remoteConnection.createAnswer();
+        }).then(answer => {
+          return remoteConnection.setLocalDescription(answer);
+        }).then(() => {
+          other.onAnswer(remoteConnection.localDescription);
+        });
+      }
+    }, 500);
+  }
+
+  function listenForAnswer(targetId) {
+    // Simulação de escuta de resposta do par
+    console.log("Aguardando resposta de " + targetId);
+  }
+
+  function sendVideoToPeer(blobUrl) {
+    if (sendChannel && sendChannel.readyState === "open") {
+      fetch(blobUrl)
+        .then(res => res.blob())
+        .then(blob => {
+          const reader = new FileReader();
+          reader.onload = function () {
+            sendChannel.send(reader.result);
+          };
+          reader.readAsDataURL(blob);
+        });
     }
-  </script>
+  }
+
+  function receiveVideo(dataUrl) {
+    const video = document.createElement('video');
+    video.src = dataUrl;
+    video.controls = true;
+    document.getElementById('videoFeed').appendChild(video);
+  }
+</script>
+
 </body>
 </html>
-```
