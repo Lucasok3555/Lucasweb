@@ -1,506 +1,129 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Torrent Video Share</title>
-    <style>
-        :root {
-            --primary-color: #4285f4;
-            --secondary-color: #34a853;
-            --dark-color: #202124;
-            --light-color: #f8f9fa;
-            --danger-color: #ea4335;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        body {
-            background-color: #f1f3f4;
-            color: var(--dark-color);
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 0;
-            border-bottom: 1px solid #ddd;
-            margin-bottom: 30px;
-        }
-
-        .logo {
-            font-size: 24px;
-            font-weight: bold;
-            color: var(--primary-color);
-        }
-
-        .nav-tabs {
-            display: flex;
-            list-style: none;
-            margin-bottom: -1px;
-        }
-
-        .nav-tabs li {
-            margin-right: 10px;
-        }
-
-        .nav-tabs button {
-            background: none;
-            border: none;
-            padding: 10px 20px;
-            cursor: pointer;
-            border-radius: 5px 5px 0 0;
-            font-weight: 500;
-            color: #555;
-        }
-
-        .nav-tabs button.active {
-            background-color: var(--light-color);
-            color: var(--primary-color);
-            border: 1px solid #ddd;
-            border-bottom: 1px solid var(--light-color);
-        }
-
-        .tab-content {
-            display: none;
-            background-color: var(--light-color);
-            padding: 30px;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-
-        textarea.form-control {
-            min-height: 120px;
-            resize: vertical;
-        }
-
-        .btn {
-            padding: 12px 24px;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 500;
-            transition: background-color 0.3s;
-        }
-
-        .btn:hover {
-            background-color: #3367d6;
-        }
-
-        .btn-secondary {
-            background-color: var(--secondary-color);
-        }
-
-        .btn-secondary:hover {
-            background-color: #2d9249;
-        }
-
-        .video-feed {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
-        }
-
-        .video-card {
-            background-color: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s;
-        }
-
-        .video-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .video-thumbnail {
-            width: 100%;
-            height: 180px;
-            background-color: #eee;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #999;
-            font-size: 14px;
-        }
-
-        .video-info {
-            padding: 15px;
-        }
-
-        .video-title {
-            font-weight: 600;
-            margin-bottom: 8px;
-            font-size: 16px;
-        }
-
-        .video-description {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 12px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        .video-user {
-            font-size: 12px;
-            color: #999;
-        }
-
-        .connection-status {
-            padding: 15px;
-            background-color: #e8f0fe;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .connected {
-            background-color: #e6f4ea;
-        }
-
-        .user-id {
-            font-family: monospace;
-            background-color: #f1f3f4;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .connection-form {
-            display: flex;
-            gap: 10px;
-        }
-
-        .connection-form input {
-            flex-grow: 1;
-        }
-
-        .alert {
-            padding: 15px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-        }
-
-        .alert-success {
-            background-color: #e6f4ea;
-            color: var(--secondary-color);
-        }
-
-        .alert-danger {
-            background-color: #fce8e6;
-            color: var(--danger-color);
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Prima - Vídeos via Torrent</title>
+  <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #121212;
+      color: #fff;
+      padding: 20px;
+    }
+    h1, h2 {
+      color: #ff4081;
+    }
+    input, textarea, button {
+      display: block;
+      margin: 10px 0;
+      padding: 8px;
+      width: 100%;
+      max-width: 500px;
+    }
+    .video-card {
+      background: #1e1e1e;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 5px;
+    }
+    video {
+      max-width: 100%;
+      height: auto;
+    }
+    #feed {
+      margin-top: 20px;
+    }
+    .id-box {
+      background: #333;
+      padding: 10px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="logo">Torrent Video Share</div>
-            <ul class="nav-tabs">
-                <li><button class="active" data-tab="upload">Upload</button></li>
-                <li><button data-tab="feed">Feed</button></li>
-                <li><button data-tab="connect">Conectar</button></li>
-            </ul>
-        </header>
 
-        <!-- Upload Tab -->
-        <div id="upload" class="tab-content active">
-            <h2>Enviar Vídeo via Torrent</h2>
-            <form id="uploadForm">
-                <div class="form-group">
-                    <label for="videoFile">Arquivo de Vídeo</label>
-                    <input type="file" id="videoFile" class="form-control" accept="video/*" required>
-                </div>
-                <div class="form-group">
-                    <label for="videoTitle">Título do Vídeo</label>
-                    <input type="text" id="videoTitle" class="form-control" placeholder="Digite o título do vídeo" required>
-                </div>
-                <div class="form-group">
-                    <label for="videoDescription">Descrição</label>
-                    <textarea id="videoDescription" class="form-control" placeholder="Digite a descrição do vídeo"></textarea>
-                </div>
-                <button type="submit" class="btn">Enviar via Torrent</button>
-            </form>
-        </div>
+  <h1>Prima 🎥</h1>
 
-        <!-- Feed Tab -->
-        <div id="feed" class="tab-content">
-            <h2>Feed de Vídeos</h2>
-            <div id="videoFeed" class="video-feed">
-                <!-- Videos will be loaded here -->
-                <div class="empty-state">
-                    <p>Nenhum vídeo disponível. Conecte-se à rede ou faça upload de vídeos.</p>
-                </div>
-            </div>
-        </div>
+  <h2>Upload de Vídeo</h2>
+  <input type="file" id="videoInput" accept="video/*">
+  <textarea id="videoDesc" placeholder="Descrição do vídeo..."></textarea>
+  <button onclick="uploadVideo()">Fazer Upload</button>
 
-        <!-- Connect Tab -->
-        <div id="connect" class="tab-content">
-            <h2>Conexão com a Rede</h2>
-            <div id="connectionStatus" class="connection-status">
-                <div>
-                    <strong>Status:</strong> <span id="statusText">Não conectado</span>
-                </div>
-                <div class="user-id" id="userIdDisplay">ID: Não disponível</div>
-            </div>
+  <h2>Conexão de Usuário</h2>
+  <div class="id-box">Seu ID: <span id="userId"></span></div>
+  <input type="text" id="connectIdInput" placeholder="Coloque o ID para conectar (se necessário)">
+  <button onclick="connectById()">Conectar</button>
+  <div>Status: <span id="connectStatus">Conectando...</span></div>
 
-            <div id="connectionAlert" class="alert" style="display: none;"></div>
+  <h2>Feed de Vídeos</h2>
+  <div id="feed"></div>
 
-            <div class="form-group">
-                <label>Conectar automaticamente</label>
-                <div>
-                    <button id="autoConnectBtn" class="btn btn-secondary">Conectar Agora</button>
-                </div>
-            </div>
+  <script>
+    const client = new WebTorrent();
+    const feed = document.getElementById('feed');
+    const userIdSpan = document.getElementById('userId');
+    const connectStatus = document.getElementById('connectStatus');
 
-            <div class="form-group">
-                <label for="peerId">Ou conectar manualmente a outro usuário</label>
-                <div class="connection-form">
-                    <input type="text" id="peerId" class="form-control" placeholder="Cole o ID do usuário aqui">
-                    <button id="manualConnectBtn" class="btn">Conectar</button>
-                </div>
-            </div>
+    // Gerar ID aleatório
+    const userId = 'user-' + Math.random().toString(36).substring(2, 8);
+    userIdSpan.innerText = userId;
 
-            <div class="form-group">
-                <label>Seu ID para compartilhar</label>
-                <div class="connection-form">
-                    <input type="text" id="yourPeerId" class="form-control" readonly>
-                    <button id="copyIdBtn" class="btn">Copiar ID</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    const videoList = []; // Lista de vídeos (local)
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Tab switching functionality
-            const tabButtons = document.querySelectorAll('.nav-tabs button');
-            const tabContents = document.querySelectorAll('.tab-content');
+    function uploadVideo() {
+      const file = document.getElementById('videoInput').files[0];
+      const desc = document.getElementById('videoDesc').value;
 
-            tabButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    // Remove active class from all buttons and contents
-                    tabButtons.forEach(btn => btn.classList.remove('active'));
-                    tabContents.forEach(content => content.classList.remove('active'));
+      if (!file) return alert("Escolha um vídeo!");
 
-                    // Add active class to clicked button and corresponding content
-                    button.classList.add('active');
-                    const tabId = button.getAttribute('data-tab');
-                    document.getElementById(tabId).classList.add('active');
-                });
-            });
+      client.seed(file, torrent => {
+        const videoData = {
+          magnetURI: torrent.magnetURI,
+          description: desc,
+          userId: userId
+        };
 
-            // Simulated user ID (in a real app, this would be generated by WebRTC or similar)
-            const userId = generateUserId();
-            document.getElementById('yourPeerId').value = userId;
-            document.getElementById('userIdDisplay').textContent = `ID: ${userId}`;
+        videoList.push(videoData);
+        renderVideo(videoData);
+        alert("Vídeo enviado! Magnet URI: " + torrent.magnetURI);
+      });
+    }
 
-            // Connection status
-            let isConnected = false;
-            const statusText = document.getElementById('statusText');
-            const connectionStatus = document.getElementById('connectionStatus');
-            const connectionAlert = document.getElementById('connectionAlert');
+    function renderVideo(data) {
+      const card = document.createElement('div');
+      card.className = 'video-card';
 
-            // Auto connect button
-            document.getElementById('autoConnectBtn').addEventListener('click', function() {
-                simulateConnection(true);
-            });
+      const info = document.createElement('p');
+      info.innerHTML = `<strong>${data.userId}</strong>: ${data.description}`;
+      card.appendChild(info);
 
-            // Manual connect button
-            document.getElementById('manualConnectBtn').addEventListener('click', function() {
-                const peerId = document.getElementById('peerId').value.trim();
-                if (peerId) {
-                    simulateConnection(false, peerId);
-                } else {
-                    showAlert('Por favor, insira um ID de usuário válido', 'danger');
-                }
-            });
+      const video = document.createElement('video');
+      video.controls = true;
+      card.appendChild(video);
 
-            // Copy ID button
-            document.getElementById('copyIdBtn').addEventListener('click', function() {
-                const idInput = document.getElementById('yourPeerId');
-                idInput.select();
-                document.execCommand('copy');
-                showAlert('ID copiado para a área de transferência!', 'success');
-            });
-
-            // Upload form
-            document.getElementById('uploadForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const fileInput = document.getElementById('videoFile');
-                const title = document.getElementById('videoTitle').value;
-                const description = document.getElementById('videoDescription').value;
-                
-                if (fileInput.files.length === 0) {
-                    alert('Por favor, selecione um arquivo de vídeo');
-                    return;
-                }
-                
-                const file = fileInput.files[0];
-                
-                // Simulate torrent upload
-                console.log('Uploading via torrent:', {
-                    filename: file.name,
-                    size: file.size,
-                    title,
-                    description
-                });
-                
-                // Add to feed (in a real app, this would be distributed via torrent)
-                addVideoToFeed({
-                    title,
-                    description,
-                    user: `Você (${userId})`,
-                    timestamp: new Date()
-                });
-                
-                // Reset form
-                this.reset();
-                
-                showAlert('Vídeo enviado com sucesso e está sendo compartilhado via torrent!', 'success');
-            });
-
-            // Helper functions
-            function generateUserId() {
-                return 'user-' + Math.random().toString(36).substr(2, 8);
-            }
-
-            function simulateConnection(auto = true, peerId = null) {
-                isConnected = !isConnected;
-                
-                if (isConnected) {
-                    statusText.textContent = auto ? 'Conectado à rede' : `Conectado a ${peerId || 'usuário'}`;
-                    connectionStatus.classList.add('connected');
-                    showAlert(auto ? 
-                        'Conexão estabelecida com a rede torrent. Você pode agora compartilhar e assistir vídeos.' : 
-                        `Conexão estabelecida com o usuário ${peerId}.`, 'success');
-                    
-                    // Simulate loading some videos when connected
-                    if (auto) {
-                        setTimeout(() => {
-                            loadSampleVideos();
-                        }, 1000);
-                    }
-                } else {
-                    statusText.textContent = 'Não conectado';
-                    connectionStatus.classList.remove('connected');
-                    showAlert('Desconectado da rede', 'danger');
-                }
-            }
-
-            function showAlert(message, type) {
-                connectionAlert.textContent = message;
-                connectionAlert.className = `alert alert-${type}`;
-                connectionAlert.style.display = 'block';
-                
-                setTimeout(() => {
-                    connectionAlert.style.display = 'none';
-                }, 5000);
-            }
-
-            function addVideoToFeed(video) {
-                const videoFeed = document.getElementById('videoFeed');
-                
-                // Remove empty state if it exists
-                const emptyState = videoFeed.querySelector('.empty-state');
-                if (emptyState) {
-                    videoFeed.removeChild(emptyState);
-                }
-                
-                const videoCard = document.createElement('div');
-                videoCard.className = 'video-card';
-                
-                videoCard.innerHTML = `
-                    <div class="video-thumbnail">Miniatura do Vídeo</div>
-                    <div class="video-info">
-                        <h3 class="video-title">${video.title}</h3>
-                        <p class="video-description">${video.description}</p>
-                        <p class="video-user">Enviado por ${video.user} • ${formatDate(video.timestamp)}</p>
-                    </div>
-                `;
-                
-                videoFeed.prepend(videoCard);
-            }
-
-            function loadSampleVideos() {
-                const sampleVideos = [
-                    {
-                        title: 'Vídeo de Demonstração 1',
-                        description: 'Este é um vídeo de exemplo compartilhado via rede torrent.',
-                        user: 'user-demo1',
-                        timestamp: new Date(Date.now() - 3600000)
-                    },
-                    {
-                        title: 'Tutorial de Uso',
-                        description: 'Aprenda como usar a plataforma de compartilhamento de vídeos via torrent.',
-                        user: 'user-demo2',
-                        timestamp: new Date(Date.now() - 86400000)
-                    },
-                    {
-                        title: 'Natureza em 4K',
-                        description: 'Cenas incríveis da natureza capturadas em alta qualidade.',
-                        user: 'user-nature',
-                        timestamp: new Date(Date.now() - 172800000)
-                    }
-                ];
-                
-                sampleVideos.forEach(video => addVideoToFeed(video));
-            }
-
-            function formatDate(date) {
-                return new Intl.DateTimeFormat('pt-BR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                }).format(date);
-            }
+      client.add(data.magnetURI, torrent => {
+        torrent.files.forEach(file => {
+          file.renderTo(video);
         });
-    </script>
+      });
+
+      feed.appendChild(card);
+    }
+
+    function connectById() {
+      const connectId = document.getElementById('connectIdInput').value;
+      if (connectId.trim() === "") return alert("Insira um ID para conectar.");
+      connectStatus.innerText = "Conectado ao ID: " + connectId;
+    }
+
+    // Simula conexão automática
+    setTimeout(() => {
+      connectStatus.innerText = "Conectado automaticamente!";
+    }, 1000);
+  </script>
+
 </body>
 </html>
