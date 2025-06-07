@@ -1,0 +1,43 @@
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Criar Arquivo .torrent</title>
+</head>
+<body>
+  <h2>Criar Arquivo .torrent</h2>
+  <input type="file" id="fileInput" webkitdirectory directory multiple />
+  <button onclick="criarTorrent()">Criar .torrent</button>
+  <a id="downloadLink" style="display: none;">Baixar Arquivo .torrent</a>
+
+  <!-- Incluindo a biblioteca WebTorrent -->
+  <script src="https://unpkg.com/webtorrent@latest"></script>
+  <script>
+    async function criarTorrent() {
+      const input = document.getElementById('fileInput');
+      const files = Array.from(input.files);
+
+      if (files.length === 0) {
+        alert("Selecione uma pasta com arquivos.");
+        return;
+      }
+
+      const client = new WebTorrent();
+
+      // Criando o torrent
+      client.seed(files, { name: 'pasta_selecionada' }, function (torrent) {
+        const torrentFileURL = torrent.torrentFileBlobURL;
+
+        const downloadLink = document.getElementById('downloadLink');
+        downloadLink.href = torrentFileURL;
+        downloadLink.download = torrent.name + '.torrent';
+        downloadLink.style.display = 'inline-block';
+        downloadLink.textContent = 'Baixar ' + torrent.name + '.torrent';
+      });
+    }
+  </script>
+</body>
+</html>
+```
