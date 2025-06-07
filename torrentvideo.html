@@ -60,7 +60,7 @@
     }
 
     button {
-      margin-top: 15px;
+      margin-top: 10px;
       padding: 10px 20px;
       background-color: #00ffff;
       color: black;
@@ -87,7 +87,7 @@
       color: #00ffff;
     }
 
-    .connect-btn {
+    .connect-btn, .search-btn {
       background-color: #ff6600;
       border: none;
       color: white;
@@ -120,6 +120,23 @@
       border-radius: 4px;
       font-style: italic;
     }
+
+    .video-card {
+      background-color: #1e1e1e;
+      margin-bottom: 20px;
+      padding: 15px;
+      border-radius: 8px;
+    }
+
+    .video-card video {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+    }
+
+    .video-card p {
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -142,8 +159,7 @@
   <div id="connections" class="tab-content">
     <h2>Gerenciar Conexões</h2>
     <p><strong>Seu ID:</strong> <span id="myId">Carregando...</span></p>
-    <input type="text" id="remoteIdInput" placeholder="Digite o ID do usuário para conectar..." />
-    <button onclick="addManualUser()">Adicionar à Lista</button>
+    <button class="search-btn" onclick="requestUserList()">Buscar Usuários Online</button>
     <div id="connectionStatus">Aguardando conexão...</div>
     <h3>Usuários Disponíveis:</h3>
     <ul id="connectedUsersList"></ul>
@@ -151,7 +167,7 @@
 
   <div id="feed" class="tab-content">
     <h2>Feed de Vídeos</h2>
-    <div id="connectionStatus">Carregando feed via WebRTC...</div>
+    <div id="connectionStatus">Carregando feed...</div>
     <div class="feed" id="videoFeed"></div>
   </div>
 
@@ -160,9 +176,9 @@
     document.getElementById("myId").textContent = myId;
 
     const connectedUsers = new Map(); // { userId -> peerConnection }
-    const manualUsers = new Set();
-    const signalingServer = "wss://echo.websocket.org"; // WebSocket público
+    const signalingServer = "wss://echo.websocket.org"; // Simulação WebSocket
     let ws;
+    let localVideos = [];
 
     function openTab(evt, tabName) {
       const tabs = document.getElementsByClassName("tab");
@@ -176,28 +192,66 @@
       evt.currentTarget.classList.add("active");
       document.getElementById(tabName).classList.add("active");
 
+      if (tabName === "feed") {
+        renderFeed();
+      }
+
       if (tabName === "connections") {
         updateConnectedUsersList();
       }
     }
 
-    function addManualUser() {
-      const input = document.getElementById("remoteIdInput");
-      const id = input.value.trim();
+    function uploadToTorrent() {
+      const fileInput = document.getElementById('videoFile');
+      const description = document.getElementById('videoDescription').value.trim();
 
-      if (!id || id === myId) {
-        alert("ID inválido ou igual ao seu.");
+      if (!fileInput.files.length || !description) {
+        alert("Por favor, selecione um vídeo e adicione uma descrição.");
         return;
       }
 
-      if (manualUsers.has(id)) {
-        alert("Este ID já foi adicionado.");
-        return;
-      }
+      const file = fileInput.files[0];
+      const videoURL = URL.createObjectURL(file);
 
-      manualUsers.add(id);
-      input.value = '';
-      updateConnectedUsersList();
+      const videoData = {
+        url: videoURL,
+        description,
+        uploader: myId
+      };
+
+      localVideos.push(videoData);
+      broadcastVideo(videoData);
+
+      alert("Vídeo enviado para rede torrent!");
+      fileInput.value = '';
+      document.getElementById('videoDescription').value = '';
+    }
+
+    function broadcastVideo(video) {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: "new-video",
+          from: myId,
+          video
+        }));
+      }
+    }
+
+    function renderFeed() {
+      const feed = document.getElementById('videoFeed');
+      feed.innerHTML = '';
+
+      [...localVideos].forEach(video => {
+        const card = document.createElement('div');
+        card.className = 'video-card';
+
+        card.innerHTML = `
+          <video controls><source src="${video.url}" type="video/mp4">Seu navegador não suporta vídeo.</video>
+          <p>${video.description} <small>(Enviado por ${video.uploader})</small></p>
+        `;
+
+        feed.appendChild(card);
+      });
     }
 
     function connectToUser(userId) {
@@ -325,11 +379,23 @@
             case "ice-candidate":
               handleCandidate(data.candidate, data.from);
               break;
+            case "new-video":
+              localVideos.push(data.video);
+              renderFeed();
+              break;
           }
         } catch (e) {
           console.error("Erro ao processar mensagem:", e);
         }
       };
+    }
+
+    function requestUserList() {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "get-users" }));
+      } else {
+        alert("Não há conexão ativa com o servidor.");
+      }
     }
 
     function updateOnlineUsers(users) {
@@ -338,6 +404,8 @@
       });
       updateConnectedUsersList();
     }
+
+    const manualUsers = new Set();
 
     function updateConnectedUsersList() {
       const list = document.getElementById("connectedUsersList");
