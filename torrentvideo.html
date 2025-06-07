@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Vídeo Torrent Feed</title>
+  <title>Vídeo Torrent com WebRTC</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -90,11 +90,19 @@
     .video-card p {
       margin-top: 10px;
     }
+
+    #connectionStatus {
+      padding: 10px;
+      background-color: #333;
+      margin: 10px;
+      border-radius: 4px;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
 
-  <header>Vídeo Torrent App</header>
+  <header>Vídeo Torrent + WebRTC</header>
 
   <div class="tabs">
     <div class="tab active" onclick="openTab(event, 'upload')">Upload de Vídeo</div>
@@ -110,6 +118,7 @@
 
   <div id="feed" class="tab-content">
     <h2>Feed de Vídeos</h2>
+    <div id="connectionStatus">Conectando via WebRTC...</div>
     <div class="feed" id="videoFeed"></div>
   </div>
 
@@ -168,6 +177,41 @@
         feed.appendChild(card);
       });
     }
+
+    // Simulando conexão WebRTC para compartilhar vídeos entre usuários
+    function connectWebRTC() {
+      const statusDiv = document.getElementById("connectionStatus");
+      statusDiv.innerText = "Iniciando conexão WebRTC...";
+
+      // Simular sinalização e conexão
+      setTimeout(() => {
+        statusDiv.innerText = "Conectado via WebRTC - Recebendo vídeos...";
+        simulateRemoteVideoFeeds();
+      }, 2000);
+    }
+
+    function simulateRemoteVideoFeeds() {
+      // Exemplo de vídeos recebidos de outros usuários
+      const remoteVideos = [
+        { url: "https://www.w3schools.com/html/mov_bbb.mp4",  description: "Vídeo exemplo de outro usuário - Big Buck Bunny" },
+        { url: "https://www.w3schools.com/html/movie.mp4",  description: "Filme curto de demonstração" }
+      ];
+
+      setTimeout(() => {
+        remoteVideos.forEach(video => {
+          uploadedVideos.push(video);
+        });
+        renderFeed();
+      }, 1000);
+    }
+
+    // Conectar ao carregar a aba Feed
+    document.addEventListener("DOMContentLoaded", () => {
+      const feedTab = document.querySelector('[onclick="openTab(event, \'feed\']');
+      feedTab.addEventListener("click", () => {
+        connectWebRTC();
+      });
+    });
   </script>
 
 </body>
