@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Vídeo Torrent com WebRTC</title>
+  <title>Vídeo Torrent + WebRTC</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -49,7 +49,7 @@
       display: block;
     }
 
-    input[type="file"], textarea {
+    input[type="text"], textarea {
       width: 100%;
       padding: 10px;
       margin-top: 10px;
@@ -94,18 +94,46 @@
     #connectionStatus {
       padding: 10px;
       background-color: #333;
-      margin: 10px;
+      margin: 10px 0;
       border-radius: 4px;
       font-style: italic;
+    }
+
+    ul {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    ul li {
+      padding: 8px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .user-id {
+      font-weight: bold;
+      color: #00ffff;
+    }
+
+    .connect-btn {
+      background-color: #ff6600;
+      border: none;
+      color: white;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
 
-  <header>Vídeo Torrent + WebRTC</header>
+  <header>Vídeo Torrent + WebRTC</title></header>
 
   <div class="tabs">
     <div class="tab active" onclick="openTab(event, 'upload')">Upload de Vídeo</div>
+    <div class="tab" onclick="openTab(event, 'connections')">Usuários Online</div>
     <div class="tab" onclick="openTab(event, 'feed')">Feed de Vídeos</div>
   </div>
 
@@ -116,14 +144,28 @@
     <button onclick="uploadToTorrent()">Enviar para Rede Torrent</button>
   </div>
 
+  <div id="connections" class="tab-content">
+    <h2>Usuários Online</h2>
+    <p><strong>Seu ID:</strong> <span id="myId">Carregando...</span></p>
+    <div id="connectionStatus">Conectando aos usuários...</div>
+    <h3>Lista de Usuários Conectados:</h3>
+    <ul id="connectedUsersList"></ul>
+  </div>
+
   <div id="feed" class="tab-content">
     <h2>Feed de Vídeos</h2>
-    <div id="connectionStatus">Conectando via WebRTC...</div>
+    <div id="connectionStatus">Carregando vídeos dos usuários conectados...</div>
     <div class="feed" id="videoFeed"></div>
   </div>
 
   <script>
     let uploadedVideos = [];
+    const myId = `User_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    document.getElementById("myId").textContent = myId;
+
+    const connectedUsers = new Map(); // { userId -> peerConnection }
+    const signalingServer = "wss://echo.websocket.org"; // Simulação WebSocket público
+    let ws;
 
     function openTab(evt, tabName) {
       const tabs = document.getElementsByClassName("tab");
@@ -134,8 +176,16 @@
         contents[i].classList.remove("active");
       }
 
-      document.querySelector(`[onclick="openTab(event, '${tabName}')"]`).classList.add("active");
+      evt.currentTarget.classList.add("active");
       document.getElementById(tabName).classList.add("active");
+
+      if (tabName === "feed") {
+        renderFeed();
+      }
+
+      if (tabName === "connections") {
+        updateConnectedUsersList();
+      }
     }
 
     function uploadToTorrent() {
@@ -154,7 +204,6 @@
 
       alert("Vídeo enviado para a rede torrent com sucesso!");
 
-      // Reset form
       fileInput.value = '';
       document.getElementById('videoDescription').value = '';
 
@@ -178,40 +227,167 @@
       });
     }
 
-    // Simulando conexão WebRTC para compartilhar vídeos entre usuários
-    function connectWebRTC() {
+    function connectToUser(userId) {
+      if (userId === myId || connectedUsers.has(userId)) return;
+
       const statusDiv = document.getElementById("connectionStatus");
-      statusDiv.innerText = "Iniciando conexão WebRTC...";
+      statusDiv.innerText = `Conectando a ${userId} via WebRTC...`;
 
-      // Simular sinalização e conexão
-      setTimeout(() => {
-        statusDiv.innerText = "Conectado via WebRTC - Recebendo vídeos...";
-        simulateRemoteVideoFeeds();
-      }, 2000);
-    }
+      const peerConnection = new RTCPeerConnection();
 
-    function simulateRemoteVideoFeeds() {
-      // Exemplo de vídeos recebidos de outros usuários
-      const remoteVideos = [
-        { url: "https://www.w3schools.com/html/mov_bbb.mp4",  description: "Vídeo exemplo de outro usuário - Big Buck Bunny" },
-        { url: "https://www.w3schools.com/html/movie.mp4",  description: "Filme curto de demonstração" }
-      ];
+      peerConnection.ontrack = event => {
+        console.log("Recebendo vídeo remoto...");
+        const remoteVideo = document.createElement("video");
+        remoteVideo.srcObject = new MediaStream([event.track]);
+        remoteVideo.autoplay = true;
+        remoteVideo.controls = true;
 
-      setTimeout(() => {
-        remoteVideos.forEach(video => {
-          uploadedVideos.push(video);
+        const videoCard = document.createElement("div");
+        videoCard.className = "video-card";
+        videoCard.innerHTML = `<p>Vídeo ao vivo de <strong>${userId}</strong></p>`;
+        videoCard.prepend(remoteVideo);
+
+        document.getElementById("videoFeed").prepend(videoCard);
+      };
+
+      peerConnection.onicecandidate = event => {
+        if (event.candidate) {
+          setTimeout(() => {
+            ws.send(JSON.stringify({
+              type: "ice-candidate",
+              target: userId,
+              candidate: event.candidate
+            }));
+          }, 500);
+        }
+      };
+
+      peerConnection.addTransceiver("video");
+      peerConnection.createOffer()
+        .then(offer => peerConnection.setLocalDescription(offer))
+        .then(() => {
+          ws.send(JSON.stringify({
+            type: "offer",
+            target: userId,
+            sdp: peerConnection.localDescription
+          }));
         });
-        renderFeed();
-      }, 1000);
+
+      connectedUsers.set(userId, peerConnection);
+      updateConnectedUsersList();
     }
 
-    // Conectar ao carregar a aba Feed
-    document.addEventListener("DOMContentLoaded", () => {
-      const feedTab = document.querySelector('[onclick="openTab(event, \'feed\']');
-      feedTab.addEventListener("click", () => {
-        connectWebRTC();
+    function handleOffer(offer, fromId) {
+      const peerConnection = new RTCPeerConnection();
+
+      peerConnection.ontrack = event => {
+        const remoteVideo = document.createElement("video");
+        remoteVideo.srcObject = new MediaStream([event.track]);
+        remoteVideo.autoplay = true;
+        remoteVideo.controls = true;
+
+        const videoCard = document.createElement("div");
+        videoCard.className = "video-card";
+        videoCard.innerHTML = `<p>Vídeo ao vivo de <strong>${fromId}</strong></p>`;
+        videoCard.prepend(remoteVideo);
+
+        document.getElementById("videoFeed").prepend(videoCard);
+      };
+
+      peerConnection.onicecandidate = event => {
+        if (event.candidate) {
+          ws.send(JSON.stringify({
+            type: "ice-candidate",
+            target: fromId,
+            candidate: event.candidate
+          }));
+        }
+      };
+
+      peerConnection.setRemoteDescription(new RTCSessionDescription(offer))
+        .then(() => peerConnection.createAnswer())
+        .then(answer => peerConnection.setLocalDescription(answer))
+        .then(() => {
+          ws.send(JSON.stringify({
+            type: "answer",
+            target: fromId,
+            sdp: peerConnection.localDescription
+          }));
+        });
+
+      connectedUsers.set(fromId, peerConnection);
+      updateConnectedUsersList();
+    }
+
+    function handleAnswer(answer, fromId) {
+      const peer = connectedUsers.get(fromId);
+      if (!peer) return;
+      peer.setRemoteDescription(new RTCSessionDescription(answer));
+    }
+
+    function handleCandidate(candidate, fromId) {
+      const peer = connectedUsers.get(fromId);
+      if (!peer) return;
+      peer.addIceCandidate(new RTCIceCandidate(candidate));
+    }
+
+    function setupWebSocket() {
+      ws = new WebSocket(signalingServer);
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: "register", id: myId }));
+        document.getElementById("connectionStatus").innerText = "Conectado à rede.";
+      };
+
+      ws.onmessage = msg => {
+        const data = JSON.parse(msg.data);
+        switch (data.type) {
+          case "users":
+            updateOnlineUsers(data.users.filter(u => u !== myId));
+            break;
+          case "offer":
+            handleOffer(data.sdp, data.from);
+            break;
+          case "answer":
+            handleAnswer(data.sdp, data.from);
+            break;
+          case "ice-candidate":
+            handleCandidate(data.candidate, data.from);
+            break;
+        }
+      };
+    }
+
+    function updateOnlineUsers(users) {
+      const onlineList = users.map(id => ({
+        id,
+        connect: () => connectToUser(id)
+      }));
+
+      const list = document.getElementById("connectedUsersList");
+      list.innerHTML = "";
+      onlineList.forEach(user => {
+        const item = document.createElement("li");
+        item.innerHTML = `<span class="user-id">${user.id}</span> 
+                          <button class="connect-btn" onclick="connectToUser('${user.id}')">Conectar</button>`;
+        list.appendChild(item);
       });
-    });
+    }
+
+    function updateConnectedUsersList() {
+      const list = document.getElementById("connectedUsersList");
+      list.innerHTML = "";
+      connectedUsers.forEach((_, userId) => {
+        const item = document.createElement("li");
+        item.innerHTML = `<span class="user-id">${userId}</span> 
+                          <small style="color:#00aa00;">(Conectado)</small>`;
+        list.appendChild(item);
+      });
+    }
+
+    window.connectToUser = connectToUser;
+
+    setupWebSocket();
   </script>
 
 </body>
