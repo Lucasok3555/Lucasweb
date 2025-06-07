@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -35,12 +36,10 @@
                 </div>
             </div>
         </header>
-
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Left sidebar - Node connections -->
             <div class="bg-white rounded-lg shadow-md p-4">
                 <h2 class="text-xl font-semibold mb-4">Your Node</h2>
-                
                 <div class="mb-6">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Your Node ID</label>
                     <div class="flex">
@@ -54,7 +53,6 @@
                         Generate New ID
                     </button>
                 </div>
-
                 <div class="mb-6">
                     <h3 class="font-medium mb-2">Connect to Other Nodes</h3>
                     <div class="flex mb-2">
@@ -65,7 +63,6 @@
                         </button>
                     </div>
                 </div>
-
                 <div>
                     <h3 class="font-medium mb-2">Connected Nodes</h3>
                     <ul id="connectedNodes" class="space-y-2">
@@ -73,7 +70,6 @@
                     </ul>
                 </div>
             </div>
-
             <!-- Main content - Feed -->
             <div class="lg:col-span-2">
                 <!-- Post creation -->
@@ -81,7 +77,6 @@
                     <h2 class="text-xl font-semibold mb-4">Create Post</h2>
                     <textarea id="postContent" placeholder="What's happening?" 
                         class="w-full border border-gray-300 rounded-lg p-3 mb-3 h-24"></textarea>
-                    
                     <div class="flex items-center space-x-4 mb-4">
                         <button id="addImage" class="text-gray-500 hover:text-primary">
                             <i class="fas fa-image fa-lg"></i>
@@ -91,16 +86,13 @@
                         </button>
                         <input type="file" id="mediaUpload" class="hidden" accept="image/*,video/*">
                     </div>
-                    
                     <div id="mediaPreview" class="mb-4 hidden">
                         <!-- Media preview will appear here -->
                     </div>
-                    
                     <button id="postBtn" class="w-full bg-primary hover:bg-primary-dark text-white py-2 rounded-lg">
                         Post Anonymously
                     </button>
                 </div>
-
                 <!-- Live feed -->
                 <div class="bg-white rounded-lg shadow-md p-4">
                     <h2 class="text-xl font-semibold mb-4">Live Feed</h2>
@@ -115,7 +107,6 @@
             </div>
         </div>
     </div>
-
     <!-- Node Info Modal -->
     <div id="nodeInfoModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-lg p-6 max-w-md w-full">
@@ -133,7 +124,6 @@
             </div>
         </div>
     </div>
-
     <script>
         // WebRTC configuration
         const PEERJS_CONFIG = {
@@ -142,23 +132,9 @@
             secure: true,
             debug: 3
         };
-
-        // Generate random node ID
-        function generateNodeId() {
-            return 'zuar-node-' + Math.random().toString(36).substr(2, 9);
-        }
-
+        
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
-            // Generate initial node ID
-            let currentNodeId = generateNodeId();
-            document.getElementById('nodeId').value = currentNodeId;
-            
-            // Initialize PeerJS
-            let peer = null;
-            let connections = {};
-            let posts = [];
-
             // DOM elements
             const nodeIdInput = document.getElementById('nodeId');
             const copyNodeIdBtn = document.getElementById('copyNodeId');
@@ -177,10 +153,29 @@
             const nodeInfoModal = document.getElementById('nodeInfoModal');
             const closeNodeInfo = document.getElementById('closeNodeInfo');
 
+            // Application state
+            let currentNodeId = localStorage.getItem('zuar_node_id') || null;
+            if (!currentNodeId) {
+                currentNodeId = generateNodeId();
+            } else {
+                nodeIdInput.value = currentNodeId;
+            }
+
+            let peer = null;
+            let connections = {};
+            let posts = [];
+            
+            // Generate random node ID
+            function generateNodeId() {
+                const newId = 'zuar-node-' + Math.random().toString(36).substr(2, 9);
+                nodeIdInput.value = newId;
+                localStorage.setItem('zuar_node_id', newId);
+                return newId;
+            }
+
             // Initialize PeerJS connection
             function initializePeer() {
                 peer = new Peer(currentNodeId, PEERJS_CONFIG);
-
                 peer.on('open', function(id) {
                     console.log('PeerJS connected with ID:', id);
                     currentNodeId = id;
@@ -188,40 +183,34 @@
                     document.getElementById('nodeStatus').textContent = 'Connected';
                     document.getElementById('nodeStatus').className = 'text-green-500';
                 });
-
                 peer.on('error', function(err) {
                     console.error('PeerJS error:', err);
                     document.getElementById('nodeStatus').textContent = 'Error: ' + err.type;
                     document.getElementById('nodeStatus').className = 'text-red-500';
                 });
-
                 peer.on('connection', function(conn) {
                     console.log('Incoming connection from:', conn.peer);
                     setupConnection(conn);
                 });
-
                 peer.on('disconnected', function() {
                     console.log('Connection lost. Attempting to reconnect...');
                     document.getElementById('nodeStatus').textContent = 'Reconnecting...';
                     document.getElementById('nodeStatus').className = 'text-yellow-500';
-                    
                     // Attempt to reconnect
                     setTimeout(() => {
                         peer.reconnect();
                     }, 5000);
                 });
-
                 peer.on('close', function() {
                     console.log('Connection closed');
                     document.getElementById('nodeStatus').textContent = 'Disconnected';
                     document.getElementById('nodeStatus').className = 'text-red-500';
                 });
             }
-
+            
             // Set up a data connection
             function setupConnection(conn) {
                 const peerId = conn.peer;
-                
                 // Store the connection
                 connections[peerId] = conn;
                 
@@ -229,15 +218,24 @@
                 if (!document.querySelector(`[data-node="${peerId}"]`)) {
                     addConnectedNode(peerId);
                 }
-
+                
                 conn.on('open', function() {
                     console.log('Connected to:', peerId);
                     updatePeerCount();
+                    
+                    // Automatically send all local posts to new peer
+                    posts.forEach(post => {
+                        if (conn.open) {
+                            conn.send({
+                                type: 'post',
+                                post: post
+                            });
+                        }
+                    });
                 });
-
+                
                 conn.on('data', function(data) {
                     console.log('Received data from', peerId, ':', data);
-                    
                     if (data.type === 'post') {
                         // Add received post to feed
                         addPostToFeed(data.post);
@@ -245,14 +243,14 @@
                         updatePostsReceivedCount();
                     }
                 });
-
+                
                 conn.on('close', function() {
                     console.log('Connection closed with:', peerId);
                     removeConnectedNode(peerId);
                     delete connections[peerId];
                     updatePeerCount();
                 });
-
+                
                 conn.on('error', function(err) {
                     console.error('Connection error with', peerId, ':', err);
                     removeConnectedNode(peerId);
@@ -260,28 +258,25 @@
                     updatePeerCount();
                 });
             }
-
+            
             // Connect to another peer
             function connectToPeer(peerId) {
                 if (peerId === currentNodeId) {
                     alert("You can't connect to yourself!");
                     return;
                 }
-
                 if (connections[peerId]) {
                     alert("Already connected to this node!");
                     return;
                 }
-
                 console.log('Attempting to connect to:', peerId);
                 const conn = peer.connect(peerId, {
                     reliable: true,
                     serialization: 'json'
                 });
-
                 setupConnection(conn);
             }
-
+            
             // Add connected node to UI
             function addConnectedNode(peerId) {
                 const li = document.createElement('li');
@@ -294,7 +289,6 @@
                     </button>
                 `;
                 connectedNodesList.appendChild(li);
-
                 // Add event listener to remove button
                 li.querySelector('.remove-node').addEventListener('click', function() {
                     const nodeToRemove = this.getAttribute('data-node');
@@ -303,7 +297,7 @@
                     }
                 });
             }
-
+            
             // Remove connected node from UI
             function removeConnectedNode(peerId) {
                 const nodeElement = document.querySelector(`[data-node="${peerId}"]`);
@@ -311,32 +305,31 @@
                     nodeElement.remove();
                 }
             }
-
+            
             // Update peer count in UI
             function updatePeerCount() {
                 const count = Object.keys(connections).length;
                 document.getElementById('peerCount').textContent = count;
             }
-
+            
             // Update posts shared count in UI
             function updatePostsSharedCount() {
                 const count = posts.filter(p => p.nodeId === currentNodeId).length;
                 document.getElementById('postsShared').textContent = count;
             }
-
+            
             // Update posts received count in UI
             function updatePostsReceivedCount() {
                 const count = posts.filter(p => p.nodeId !== currentNodeId).length;
                 document.getElementById('postsReceived').textContent = count;
             }
-
+            
             // Broadcast post to all connected peers
             function broadcastPost(post) {
                 const postData = {
                     type: 'post',
                     post: post
                 };
-
                 Object.values(connections).forEach(conn => {
                     if (conn.open) {
                         conn.send(postData);
@@ -344,7 +337,7 @@
                     }
                 });
             }
-
+            
             // Generate new node ID
             generateNodeIdBtn.addEventListener('click', function() {
                 if (confirm("Generating a new ID will disconnect you from all peers. Continue?")) {
@@ -361,18 +354,19 @@
                     
                     // Generate new ID and reinitialize
                     currentNodeId = generateNodeId();
+                    localStorage.setItem('zuar_node_id', currentNodeId);
                     initializePeer();
                     updatePeerCount();
                 }
             });
-
+            
             // Copy node ID
             copyNodeIdBtn.addEventListener('click', function() {
                 nodeIdInput.select();
                 document.execCommand('copy');
                 alert('Node ID copied to clipboard!');
             });
-
+            
             // Connect to another node
             connectBtn.addEventListener('click', function() {
                 const nodeId = connectNodeIdInput.value.trim();
@@ -381,25 +375,23 @@
                     connectNodeIdInput.value = '';
                 }
             });
-
+            
             // Handle media upload
             addImageBtn.addEventListener('click', function() {
                 mediaUpload.setAttribute('accept', 'image/*');
                 mediaUpload.click();
             });
-
+            
             addVideoBtn.addEventListener('click', function() {
                 mediaUpload.setAttribute('accept', 'video/*');
                 mediaUpload.click();
             });
-
+            
             mediaUpload.addEventListener('change', function(e) {
                 const file = e.target.files[0];
                 if (!file) return;
-
                 mediaPreview.innerHTML = '';
                 mediaPreview.classList.remove('hidden');
-
                 if (file.type.startsWith('image/')) {
                     const reader = new FileReader();
                     reader.onload = function(e) {
@@ -438,12 +430,12 @@
                     });
                 }
             });
-
+            
             // Create new post
             postBtn.addEventListener('click', function() {
                 const content = postContent.value.trim();
                 if (!content && mediaPreview.classList.contains('hidden')) return;
-
+                
                 let media = null;
                 if (!mediaPreview.classList.contains('hidden')) {
                     const mediaElement = mediaPreview.querySelector('img, video');
@@ -456,7 +448,7 @@
                         };
                     }
                 }
-
+                
                 const newPost = {
                     id: 'post-' + Math.random().toString(36).substr(2, 6),
                     nodeId: currentNodeId,
@@ -464,24 +456,23 @@
                     timestamp: new Date().toLocaleTimeString(),
                     media: media
                 };
-
+                
                 addPostToFeed(newPost);
                 posts.push(newPost);
                 updatePostsSharedCount();
                 broadcastPost(newPost);
-
+                
                 // Reset form
                 postContent.value = '';
                 mediaPreview.classList.add('hidden');
                 mediaPreview.innerHTML = '';
                 mediaUpload.value = '';
             });
-
+            
             // Add post to feed
             function addPostToFeed(post) {
                 const postElement = document.createElement('div');
                 postElement.className = 'border border-gray-200 rounded-lg p-4';
-                
                 let mediaHtml = '';
                 if (post.media) {
                     if (post.media.type === 'image') {
@@ -500,7 +491,6 @@
                         `;
                     }
                 }
-
                 postElement.innerHTML = `
                     <div class="flex items-start mb-2">
                         <div class="bg-gray-300 rounded-full w-10 h-10 flex items-center justify-center mr-3">
@@ -514,10 +504,9 @@
                     <p class="mb-3">${post.content}</p>
                     ${mediaHtml}
                 `;
-                
                 feed.insertBefore(postElement, feed.firstChild);
             }
-
+            
             // Node info modal
             nodeInfoBtn.addEventListener('click', function() {
                 updatePeerCount();
@@ -525,14 +514,15 @@
                 updatePostsReceivedCount();
                 nodeInfoModal.classList.remove('hidden');
             });
-
+            
             closeNodeInfo.addEventListener('click', function() {
                 nodeInfoModal.classList.add('hidden');
             });
-
+            
             // Initialize the app
             initializePeer();
         });
     </script>
 </body>
 </html>
+```
