@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Aplicativo P2P com WebRTC</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #333;
+      color: white;
+      padding: 10px;
+      text-align: center;
+    }
+    nav {
+      display: flex;
+      justify-content: center;
+      background-color: #444;
+    }
+    nav button {
+      background-color: #555;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+    nav button.active {
+      background-color: #777;
+    }
+    section {
+      display: none;
+      padding: 20px;
+    }
+    section.active {
+      display: block;
+    }
+    .chat-box {
+      height: 300px;
+      border: 1px solid #ccc;
+      overflow-y: scroll;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .message {
+      margin-bottom: 5px;
+    }
+    input[type="text"] {
+      width: 80%;
+      padding: 5px;
+    }
+    button {
+      padding: 5px 10px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Aplicativo P2P com WebRTC</h1>
+</header>
+
+<nav>
+  <button class="tab active" data-tab="chat">Chat P2P</button>
+  <button class="tab" data-tab="call">Chamada de Voz</button>
+  <button class="tab" data-tab="id">Gerar ID</button>
+</nav>
+
+<main>
+  <!-- Chat -->
+  <section id="chat" class="content active">
+    <h2>Chat P2P</h2>
+    <div class="chat-box" id="chatBox"></div>
+    <input type="text" id="messageInput" placeholder="Digite sua mensagem..." />
+    <button onclick="sendMessage()">Enviar</button>
+  </section>
+
+  <!-- Chamada de Voz -->
+  <section id="call" class="content">
+    <h2>Chamada de Voz P2P</h2>
+    <input type="text" id="peerIdInput" placeholder="ID do usuário" />
+    <button onclick="startCall()">Iniciar Chamada</button>
+    <button onclick="endCall()">Encerrar Chamada</button>
+    <br/><br/>
+    <audio id="localAudio" autoplay muted></audio>
+    <audio id="remoteAudio" autoplay></audio>
+  </section>
+
+  <!-- Gerar ID -->
+  <section id="id" class="content">
+    <h2>Seu ID Único</h2>
+    <p><strong>ID:</strong> <span id="userId"></span></p>
+    <button onclick="generateId()">Gerar Novo ID</button>
+  </section>
+</main>
+
+<script>
+  const tabs = document.querySelectorAll('.tab');
+  const contents = document.querySelectorAll('.content');
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      contents.forEach(c => c.classList.remove('active'));
+
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  // Gera um ID único para o usuário
+  function generateId() {
+    const id = Math.random().toString(36).substr(2, 10);
+    document.getElementById('userId').textContent = id;
+  }
+
+  // Simula envio de mensagens no chat
+  function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const message = input.value.trim();
+    if (message) {
+      const chatBox = document.getElementById('chatBox');
+      const div = document.createElement('div');
+      div.className = 'message';
+      div.textContent = `Você: ${message}`;
+      chatBox.appendChild(div);
+      input.value = '';
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  }
+
+  // Inicia chamada de voz via WebRTC (simulação básica)
+  let localStream;
+  let peerConnection;
+
+  async function startCall() {
+    const remoteId = document.getElementById('peerIdInput').value.trim();
+    if (!remoteId) {
+      alert("Por favor, insira o ID do destinatário.");
+      return;
+    }
+
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const localAudio = document.getElementById('localAudio');
+      localAudio.srcObject = localStream;
+
+      // Configuração básica do WebRTC
+      const configuration = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+      peerConnection = new RTCPeerConnection(configuration);
+
+      localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+      peerConnection.ontrack = event => {
+        const remoteAudio = document.getElementById('remoteAudio');
+        if (!remoteAudio.srcObject) {
+          remoteAudio.srcObject = event.streams[0];
+        }
+      };
+
+      // Cria offer e seta como descrição local
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+
+      // Aqui, normalmente você enviaria a oferta para o outro usuário via signaling
+      console.log("Conexão iniciada. Oferta criada:", offer);
+
+    } catch (err) {
+      console.error("Erro ao iniciar chamada:", err);
+      alert("Não foi possível acessar o microfone ou estabelecer conexão.");
+    }
+  }
+
+  function endCall() {
+    if (peerConnection) {
+      peerConnection.close();
+      peerConnection = null;
+    }
+    const localAudio = document.getElementById('localAudio');
+    const remoteAudio = document.getElementById('remoteAudio');
+    localAudio.srcObject = null;
+    remoteAudio.srcObject = null;
+    alert("Chamada encerrada.");
+  }
+
+  // Gera ID inicial
+  generateId();
+</script>
+
+</body>
+</html>
