@@ -189,11 +189,23 @@
     }
   }
 
-  // Chamada de voz via WebRTC
+  // Funções WebRTC
+
   let localStream;
   let peerConnection;
   let callStartTime = null;
   let callInterval = null;
+
+  async function getLocalStream() {
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      document.getElementById('localAudio').srcObject = localStream;
+      logMessage("Microfone acessado com sucesso.");
+    } catch (err) {
+      console.error("Erro ao acessar o microfone:", err);
+      alert("Não foi possível acessar o microfone.");
+    }
+  }
 
   async function startCall() {
     const remoteId = document.getElementById('peerIdCall').value.trim();
@@ -202,34 +214,52 @@
       return;
     }
 
+    if (!localStream) await getLocalStream();
+
+    const configuration = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+    peerConnection = new RTCPeerConnection(configuration);
+
+    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+    setupCallListeners();
+
     try {
-      localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const localAudio = document.getElementById('localAudio');
-      localAudio.srcObject = localStream;
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      logMessage("Chamada iniciada. Oferta criada.");
 
-      const configuration = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
-      peerConnection = new RTCPeerConnection(configuration);
-
-      localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-      peerConnection.ontrack = event => {
-        const remoteAudio = document.getElementById('remoteAudio');
-        if (!remoteAudio.srcObject) {
-          remoteAudio.srcObject = event.streams[0];
-        }
-      };
-
-      // Inicia temporizador de ligação
-      callStartTime = Date.now();
-      document.getElementById('callStatus').textContent = `Estado da ligação: Em andamento...`;
-      if (!callInterval) {
-        callInterval = setInterval(updateCallTimer, 1000);
-      }
-
+      // Aqui você normalmente enviaria a oferta via signaling para o outro peer
     } catch (err) {
-      console.error("Erro ao iniciar chamada:", err);
-      alert("Não foi possível acessar o microfone ou estabelecer conexão.");
+      console.error("Erro ao criar oferta:", err);
     }
+  }
+
+  function setupCallListeners() {
+    peerConnection.onicecandidate = event => {
+      if (event.candidate) {
+        // Envia o candidato ICE para o outro peer via signaling
+        console.log("Novo candidato ICE:", event.candidate);
+      }
+    };
+
+    peerConnection.ontrack = event => {
+      const remoteAudio = document.getElementById('remoteAudio');
+      if (!remoteAudio.srcObject) {
+        remoteAudio.srcObject = event.streams[0];
+        logMessage("Recebendo áudio remoto.");
+      }
+    };
+
+    peerConnection.onconnectionstatechange = () => {
+      const state = peerConnection.connectionState;
+      document.getElementById('callStatus').textContent = `Estado da ligação: ${state}`;
+      if (state === 'connected') {
+        callStartTime = Date.now();
+        if (!callInterval) callInterval = setInterval(updateCallTimer, 1000);
+      } else if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+        endCall();
+      }
+    };
   }
 
   function endCall() {
@@ -237,10 +267,9 @@
       peerConnection.close();
       peerConnection = null;
     }
-    const localAudio = document.getElementById('localAudio');
-    const remoteAudio = document.getElementById('remoteAudio');
-    localAudio.srcObject = null;
-    remoteAudio.srcObject = null;
+
+    document.getElementById('localAudio').srcObject = null;
+    document.getElementById('remoteAudio').srcObject = null;
 
     if (callInterval) {
       clearInterval(callInterval);
