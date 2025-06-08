@@ -5,20 +5,19 @@
   <title>App P2P WebRTC</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #111;
-      color: #fff;
+      font-family: sans-serif;
+      background-color: #1a1a1a;
+      color: white;
       margin: 0;
-      padding: 0;
     }
     header {
-      background: #222;
+      background-color: #111;
       padding: 10px;
       display: flex;
       gap: 10px;
     }
     button {
-      background: #444;
+      background: #333;
       color: white;
       border: none;
       padding: 10px;
@@ -31,127 +30,119 @@
     .tab.active {
       display: block;
     }
-    textarea {
+    input, textarea {
       width: 100%;
-      height: 100px;
-      background: #222;
-      color: #0f0;
-      border: 1px solid #555;
-    }
-    input {
+      margin: 5px 0;
       background: #222;
       color: white;
       border: 1px solid #555;
-      padding: 5px;
+      padding: 10px;
     }
   </style>
 </head>
 <body>
   <header>
-    <button onclick="showTab('mensagens')">Mensagens</button>
-    <button onclick="showTab('chamada')">Chamada de Voz</button>
-    <button onclick="showTab('conectar')">Conectar ID</button>
+    <button onclick="showTab('tab-chat')">Chat</button>
+    <button onclick="showTab('tab-voice')">Chamada</button>
+    <button onclick="showTab('tab-connect')">Conexão</button>
   </header>
 
-  <div id="mensagens" class="tab">
+  <div id="tab-chat" class="tab">
     <h2>Chat P2P</h2>
-    <textarea id="chatLog" readonly></textarea><br>
+    <textarea id="chatLog" readonly></textarea>
     <input id="msgInput" placeholder="Digite a mensagem" />
     <button onclick="sendMessage()">Enviar</button>
   </div>
 
-  <div id="chamada" class="tab">
+  <div id="tab-voice" class="tab">
     <h2>Chamada de Voz</h2>
-    <input id="callTargetId" placeholder="ID do usuário para chamar" />
-    <button onclick="startCall()">Ligar</button>
-    <p id="callStatus">Estado: desconectado</p>
-    <p id="callTimer">Minutos: 0</p>
+    <button onclick="startVoiceCall()">Ligar</button>
+    <p id="callStatus">Desconectado</p>
+    <p id="callTimer">0 min</p>
   </div>
 
-  <div id="conectar" class="tab active">
-    <h2>Seu ID</h2>
+  <div id="tab-connect" class="tab active">
+    <h2>Conectar</h2>
+    <p>Seu ID (copie e envie para outro usuário):</p>
     <textarea id="myId" readonly></textarea>
-    <h3>Conectar a um ID remoto</h3>
-    <textarea id="remoteIdInput"></textarea><br>
-    <button onclick="connectToPeer()">Conectar</button>
+    <p>Colar ID do outro usuário abaixo:</p>
+    <textarea id="remoteIdInput"></textarea>
+    <button onclick="connectToRemote()">Conectar</button>
   </div>
 
   <script>
-    // Abas
-    function showTab(tabId) {
-      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-      document.getElementById(tabId).classList.add('active');
+    function showTab(id) {
+      document.querySelectorAll(".tab").forEach(el => el.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
     }
 
-    // WebRTC base
     let pc = new RTCPeerConnection();
-    let dataChannel;
-    let localStream;
-    let callStartTime;
-    let timerInterval;
+    let dataChannel = pc.createDataChannel("chat");
+    let callTimer, callStartTime;
 
-    // Criar canal de dados
-    dataChannel = pc.createDataChannel("chat");
-    dataChannel.onmessage = (e) => {
-      document.getElementById('chatLog').value += "Recebido: " + e.data + "\n";
-    };
+    // Gera o seu ID
+    dataChannel.onopen = () => logChat('Canal aberto.');
+    dataChannel.onmessage = e => logChat("Recebido: " + e.data);
 
     pc.ondatachannel = event => {
-      event.channel.onmessage = (e) => {
-        document.getElementById('chatLog').value += "Recebido: " + e.data + "\n";
-      };
+      event.channel.onmessage = e => logChat("Recebido: " + e.data);
+      dataChannel = event.channel;
     };
 
-    // ICE
-    pc.onicecandidate = (e) => {
-      if (e.candidate === null) {
+    pc.onicecandidate = e => {
+      if (!e.candidate) {
         document.getElementById("myId").value = JSON.stringify(pc.localDescription);
       }
     };
 
-    // Áudio
-    pc.ontrack = (e) => {
-      const audio = new Audio();
-      audio.srcObject = e.streams[0];
-      audio.play();
-      document.getElementById('callStatus').innerText = 'Estado: conectado';
-      callStartTime = Date.now();
-      timerInterval = setInterval(() => {
-        const mins = Math.floor((Date.now() - callStartTime) / 60000);
-        document.getElementById('callTimer').innerText = 'Minutos: ' + mins;
-      }, 1000);
-    };
+    pc.createOffer().then(offer => pc.setLocalDescription(offer));
 
-    // Criar oferta
-    pc.createOffer().then(d => pc.setLocalDescription(d));
+    async function connectToRemote() {
+      const remoteSDP = JSON.parse(document.getElementById("remoteIdInput").value);
+      await pc.setRemoteDescription(remoteSDP);
 
-    // Enviar mensagem
-    function sendMessage() {
-      const msg = document.getElementById("msgInput").value;
-      if (dataChannel && dataChannel.readyState === "open") {
-        dataChannel.send(msg);
-        document.getElementById('chatLog').value += "Enviado: " + msg + "\n";
-      }
-    }
-
-    // Conectar a outro peer
-    async function connectToPeer() {
-      const remote = JSON.parse(document.getElementById('remoteIdInput').value);
-      await pc.setRemoteDescription(remote);
-      if (remote.type === "offer") {
+      if (remoteSDP.type === "offer") {
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-        setTimeout(() => {
-          document.getElementById("myId").value = JSON.stringify(pc.localDescription);
-        }, 1000);
+        pc.onicecandidate = e => {
+          if (!e.candidate) {
+            document.getElementById("myId").value = JSON.stringify(pc.localDescription);
+          }
+        };
       }
     }
 
-    // Iniciar chamada
-    async function startCall() {
-      localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
-      document.getElementById('callStatus').innerText = "Estado: chamando...";
+    function sendMessage() {
+      const msg = document.getElementById("msgInput").value;
+      dataChannel.send(msg);
+      logChat("Enviado: " + msg);
+      document.getElementById("msgInput").value = "";
+    }
+
+    function logChat(msg) {
+      const log = document.getElementById("chatLog");
+      log.value += msg + "\n";
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // Chamada de voz
+    async function startVoiceCall() {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+      document.getElementById("callStatus").innerText = "Chamando...";
+
+      pc.ontrack = (e) => {
+        const remoteStream = e.streams[0];
+        const audio = new Audio();
+        audio.srcObject = remoteStream;
+        audio.play();
+        document.getElementById("callStatus").innerText = "Conectado";
+        callStartTime = Date.now();
+        callTimer = setInterval(() => {
+          const mins = Math.floor((Date.now() - callStartTime) / 60000);
+          document.getElementById("callTimer").innerText = `${mins} min`;
+        }, 1000);
+      };
     }
   </script>
 </body>
