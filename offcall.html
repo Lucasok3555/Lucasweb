@@ -1,558 +1,158 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplicativo P2P WebRTC</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            background-color: #f5f5f5;
-            color: #333;
-            line-height: 1.6;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        header {
-            background-color: #2c3e50;
-            color: white;
-            padding: 20px 0;
-            text-align: center;
-            margin-bottom: 30px;
-            border-radius: 5px;
-        }
-        
-        .tabs {
-            display: flex;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #ddd;
-        }
-        
-        .tab {
-            padding: 10px 20px;
-            cursor: pointer;
-            background-color: #f1f1f1;
-            border: 1px solid #ddd;
-            border-bottom: none;
-            border-radius: 5px 5px 0 0;
-            margin-right: 5px;
-        }
-        
-        .tab.active {
-            background-color: #2c3e50;
-            color: white;
-        }
-        
-        .tab-content {
-            display: none;
-            padding: 20px;
-            background-color: white;
-            border-radius: 0 5px 5px 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        .form-group {
-            margin-bottom: 15px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        
-        input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        
-        button {
-            background-color: #2c3e50;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        
-        button:hover {
-            background-color: #1a252f;
-        }
-        
-        #chat-messages {
-            height: 300px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 4px;
-        }
-        
-        .message {
-            margin-bottom: 10px;
-            padding: 8px;
-            border-radius: 4px;
-            background-color: #f9f9f9;
-        }
-        
-        .message.sent {
-            background-color: #e3f2fd;
-            text-align: right;
-        }
-        
-        .message.received {
-            background-color: #f1f1f1;
-        }
-        
-        #call-status {
-            margin-top: 15px;
-            padding: 10px;
-            border-radius: 4px;
-            background-color: #e8f5e9;
-            display: none;
-        }
-        
-        #connected-peers {
-            margin-top: 15px;
-        }
-        
-        .peer-list {
-            list-style-type: none;
-        }
-        
-        .peer-list li {
-            padding: 8px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        #local-video, #remote-video {
-            width: 100%;
-            max-width: 400px;
-            background-color: #000;
-            margin-bottom: 15px;
-        }
-        
-        .video-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>App P2P WebRTC</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #222;
+      padding: 10px;
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      background: #444;
+      color: white;
+      border: none;
+      padding: 10px;
+      cursor: pointer;
+    }
+    .tab {
+      display: none;
+      padding: 20px;
+    }
+    .tab.active {
+      display: block;
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
+      background: #222;
+      color: #0f0;
+      border: 1px solid #555;
+    }
+    input {
+      background: #222;
+      color: white;
+      border: 1px solid #555;
+      padding: 5px;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Aplicativo P2P WebRTC</h1>
-            <p id="my-id">Seu ID: <span id="display-id">Gerando...</span></p>
-        </header>
-        
-        <div class="tabs">
-            <div class="tab active" data-tab="chat">Chat P2P</div>
-            <div class="tab" data-tab="call">Chamada de Voz</div>
-            <div class="tab" data-tab="connect">Conexão P2P</div>
-        </div>
-        
-        <!-- Aba de Chat -->
-        <div id="chat" class="tab-content active">
-            <div class="form-group">
-                <label for="peer-id-chat">ID do Destinatário:</label>
-                <input type="text" id="peer-id-chat" placeholder="Digite o ID do destinatário">
-            </div>
-            <div id="chat-messages"></div>
-            <div class="form-group">
-                <label for="message-input">Mensagem:</label>
-                <input type="text" id="message-input" placeholder="Digite sua mensagem">
-            </div>
-            <button id="send-message">Enviar Mensagem</button>
-        </div>
-        
-        <!-- Aba de Chamada de Voz -->
-        <div id="call" class="tab-content">
-            <div class="form-group">
-                <label for="peer-id-call">ID do Destinatário:</label>
-                <input type="text" id="peer-id-call" placeholder="Digite o ID para chamar">
-            </div>
-            <button id="start-call">Iniciar Chamada</button>
-            <button id="end-call" disabled>Encerrar Chamada</button>
-            <div id="call-status">
-                <p>Estado: <span id="call-state">desconectado</span></p>
-                <p>Duração: <span id="call-duration">00:00</span></p>
-            </div>
-            <div class="video-container">
-                <audio id="local-audio" muted></audio>
-                <audio id="remote-audio"></audio>
-            </div>
-        </div>
-        
-        <!-- Aba de Conexão P2P -->
-        <div id="connect" class="tab-content">
-            <div class="form-group">
-                <label for="peer-id-connect">ID para Conectar:</label>
-                <input type="text" id="peer-id-connect" placeholder="Digite o ID para conectar">
-            </div>
-            <button id="connect-peer">Conectar</button>
-            <button id="disconnect-peer" disabled>Desconectar</button>
-            
-            <div id="connected-peers">
-                <h3>Nós Conectados:</h3>
-                <ul class="peer-list" id="peer-list">
-                    <li>Nenhum nó conectado</li>
-                </ul>
-            </div>
-        </div>
-    </div>
+  <header>
+    <button onclick="showTab('mensagens')">Mensagens</button>
+    <button onclick="showTab('chamada')">Chamada de Voz</button>
+    <button onclick="showTab('conectar')">Conectar ID</button>
+  </header>
 
-    <script>
-        // Variáveis globais
-        let myId;
-        let peer;
-        let connections = {};
-        let activeCall = null;
-        let callStartTime;
-        let callDurationInterval;
-        
-        // Inicializar PeerJS quando a página carregar
-        document.addEventListener('DOMContentLoaded', function() {
-            // Gerar um ID aleatório se não estiver na URL
-            const urlParams = new URLSearchParams(window.location.search);
-            myId = urlParams.get('id') || generateRandomId();
-            
-            // Atualizar o ID exibido
-            document.getElementById('display-id').textContent = myId;
-            
-            // Inicializar PeerJS
-            initializePeerJS();
-            
-            // Configurar troca de abas
-            setupTabs();
-            
-            // Configurar eventos dos botões
-            document.getElementById('send-message').addEventListener('click', sendMessage);
-            document.getElementById('message-input').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') sendMessage();
-            });
-            
-            document.getElementById('start-call').addEventListener('click', startCall);
-            document.getElementById('end-call').addEventListener('click', endCall);
-            
-            document.getElementById('connect-peer').addEventListener('click', connectToPeer);
-            document.getElementById('disconnect-peer').addEventListener('click', disconnectFromPeer);
-        });
-        
-        // Inicializar PeerJS
-        function initializePeerJS() {
-            // Usando PeerJS para WebRTC
-            peer = new Peer(myId);
-            
-            peer.on('open', function(id) {
-                console.log('Conectado ao servidor PeerJS com ID:', id);
-                myId = id;
-                document.getElementById('display-id').textContent = id;
-                
-                // Atualizar URL com o ID
-                const newUrl = window.location.pathname + '?id=' + id;
-                window.history.replaceState({}, '', newUrl);
-            });
-            
-            peer.on('error', function(err) {
-                console.error('Erro no PeerJS:', err);
-            });
-            
-            // Lidar com conexões de entrada
-            peer.on('connection', function(conn) {
-                console.log('Nova conexão de entrada de:', conn.peer);
-                setupConnection(conn);
-            });
-            
-            // Lidar com chamadas de entrada
-            peer.on('call', function(call) {
-                console.log('Chamada recebida de:', call.peer);
-                answerCall(call);
-            });
-        }
-        
-        // Configurar troca de abas
-        function setupTabs() {
-            const tabs = document.querySelectorAll('.tab');
-            tabs.forEach(tab => {
-                tab.addEventListener('click', function() {
-                    // Remover classe active de todas as abas e conteúdos
-                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                    
-                    // Adicionar classe active à aba clicada
-                    this.classList.add('active');
-                    
-                    // Mostrar o conteúdo correspondente
-                    const tabId = this.getAttribute('data-tab');
-                    document.getElementById(tabId).classList.add('active');
-                });
-            });
-        }
-        
-        // Funções para o Chat
-        function sendMessage() {
-            const peerId = document.getElementById('peer-id-chat').value;
-            const messageInput = document.getElementById('message-input');
-            const message = messageInput.value.trim();
-            
-            if (!peerId) {
-                alert('Por favor, insira o ID do destinatário');
-                return;
-            }
-            
-            if (!message) {
-                alert('Por favor, digite uma mensagem');
-                return;
-            }
-            
-            // Verificar se já temos uma conexão com este peer
-            if (!connections[peerId]) {
-                // Criar nova conexão
-                const conn = peer.connect(peerId);
-                setupConnection(conn);
-            }
-            
-            // Enviar mensagem
-            connections[peerId].send({
-                type: 'message',
-                content: message
-            });
-            
-            // Adicionar mensagem ao chat
-            addMessageToChat(message, peerId, 'sent');
-            
-            // Limpar campo de mensagem
-            messageInput.value = '';
-        }
-        
-        function setupConnection(conn) {
-            const peerId = conn.peer;
-            
-            conn.on('open', function() {
-                console.log('Conexão estabelecida com:', peerId);
-                connections[peerId] = conn;
-                updatePeerList();
-            });
-            
-            conn.on('data', function(data) {
-                console.log('Dados recebidos de:', peerId, data);
-                
-                if (data.type === 'message') {
-                    addMessageToChat(data.content, peerId, 'received');
-                }
-            });
-            
-            conn.on('close', function() {
-                console.log('Conexão fechada com:', peerId);
-                delete connections[peerId];
-                updatePeerList();
-            });
-            
-            conn.on('error', function(err) {
-                console.error('Erro na conexão com', peerId, err);
-            });
-        }
-        
-        function addMessageToChat(message, peerId, direction) {
-            const chatMessages = document.getElementById('chat-messages');
-            const messageElement = document.createElement('div');
-            messageElement.classList.add('message', direction);
-            
-            const senderInfo = direction === 'received' ? `De ${peerId}: ` : 'Você: ';
-            messageElement.textContent = senderInfo + message;
-            
-            chatMessages.appendChild(messageElement);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-        
-        // Funções para Chamadas de Voz
-        function startCall() {
-            const peerId = document.getElementById('peer-id-call').value;
-            
-            if (!peerId) {
-                alert('Por favor, insira o ID do destinatário');
-                return;
-            }
-            
-            // Obter stream de áudio do usuário
-            navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-                .then(function(stream) {
-                    // Fazer a chamada
-                    const call = peer.call(peerId, stream);
-                    activeCall = call;
-                    
-                    // Configurar eventos da chamada
-                    call.on('stream', function(remoteStream) {
-                        // Configurar áudio remoto
-                        const remoteAudio = document.getElementById('remote-audio');
-                        remoteAudio.srcObject = remoteStream;
-                        
-                        // Configurar áudio local (muted)
-                        const localAudio = document.getElementById('local-audio');
-                        localAudio.srcObject = stream;
-                        
-                        // Atualizar UI
-                        document.getElementById('start-call').disabled = true;
-                        document.getElementById('end-call').disabled = false;
-                        document.getElementById('call-status').style.display = 'block';
-                        document.getElementById('call-state').textContent = 'conectado';
-                        
-                        // Iniciar contador de duração
-                        callStartTime = new Date();
-                        updateCallDuration();
-                        callDurationInterval = setInterval(updateCallDuration, 1000);
-                    });
-                    
-                    call.on('close', function() {
-                        endCall();
-                    });
-                    
-                    call.on('error', function(err) {
-                        console.error('Erro na chamada:', err);
-                        endCall();
-                    });
-                })
-                .catch(function(err) {
-                    console.error('Erro ao obter stream de mídia:', err);
-                    alert('Erro ao acessar o microfone. Por favor, verifique as permissões.');
-                });
-        }
-        
-        function answerCall(call) {
-            // Obter stream de áudio do usuário
-            navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-                .then(function(stream) {
-                    // Responder à chamada
-                    call.answer(stream);
-                    activeCall = call;
-                    
-                    // Configurar eventos da chamada
-                    call.on('stream', function(remoteStream) {
-                        // Configurar áudio remoto
-                        const remoteAudio = document.getElementById('remote-audio');
-                        remoteAudio.srcObject = remoteStream;
-                        
-                        // Configurar áudio local (muted)
-                        const localAudio = document.getElementById('local-audio');
-                        localAudio.srcObject = stream;
-                        
-                        // Atualizar UI
-                        document.getElementById('start-call').disabled = true;
-                        document.getElementById('end-call').disabled = false;
-                        document.getElementById('call-status').style.display = 'block';
-                        document.getElementById('call-state').textContent = 'conectado';
-                        
-                        // Iniciar contador de duração
-                        callStartTime = new Date();
-                        updateCallDuration();
-                        callDurationInterval = setInterval(updateCallDuration, 1000);
-                    });
-                    
-                    call.on('close', function() {
-                        endCall();
-                    });
-                    
-                    call.on('error', function(err) {
-                        console.error('Erro na chamada:', err);
-                        endCall();
-                    });
-                })
-                .catch(function(err) {
-                    console.error('Erro ao obter stream de mídia:', err);
-                    call.close();
-                });
-        }
-        
-        function endCall() {
-            if (activeCall) {
-                activeCall.close();
-                activeCall = null;
-            }
-            
-            // Parar streams de mídia
-            const localAudio = document.getElementById('local-audio');
-            const remoteAudio = document.getElementById('remote-audio');
-            
-            if (localAudio.srcObject) {
-                localAudio.srcObject.getTracks().forEach(track => track.stop());
-                localAudio.srcObject = null;
-            }
-            
-            if (remoteAudio.srcObject) {
-                remoteAudio.srcObject.getTracks().forEach(track => track.stop());
-                remoteAudio.srcObject = null;
-            }
-            
-            // Atualizar UI
-            document.getElementById('start-call').disabled = false;
-            document.getElementById('end-call').disabled = true;
-            document.getElementById('call-state').textContent = 'desconectado';
-            clearInterval(callDurationInterval);
-        }
-        
-        function updateCallDuration() {
-            if (!callStartTime) return;
-            
-            const now = new Date();
-            const duration = Math.floor((now - callStartTime) / 1000);
-            const minutes = Math.floor(duration / 60);
-            const seconds = duration % 60;
-            
-            document.getElementById('call-duration').textContent = 
-                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        }
-        
-        // Funções para Conexão P2P
-        function connectToPeer() {
-            const peerId = document.getElementById('peer-id-connect').value;
-            
-            if (!peerId) {
-                alert('Por favor, insira o ID para conectar');
-                return;
-            }
-            
-            // Verificar se já estamos conectados
-            if (connections[peerId]) {
-                alert('Já conectado a este peer');
-                return;
-            }
-            
-            // Criar conexão
-            const conn = peer.connect(peerId);
-            setupConnection(conn);
-            
-            // Atualizar UI
-            document.getElementById('connect-peer').disabled = true;
-            document.getElementById('disconnect-peer').disabled = false;
-        }
-        
-        function disconnectFromPeer() {
-            const peerId = document.getElementById('peer-id-connect').value;
-            
-            if (connections[peerId]) {
-                connections[peerId].close();
-            }
-            
-            // Atualizar UI
-            document.getElementById('connect-peer').disabled = false;
-            document.
+  <div id="mensagens" class="tab">
+    <h2>Chat P2P</h2>
+    <textarea id="chatLog" readonly></textarea><br>
+    <input id="msgInput" placeholder="Digite a mensagem" />
+    <button onclick="sendMessage()">Enviar</button>
+  </div>
+
+  <div id="chamada" class="tab">
+    <h2>Chamada de Voz</h2>
+    <input id="callTargetId" placeholder="ID do usuário para chamar" />
+    <button onclick="startCall()">Ligar</button>
+    <p id="callStatus">Estado: desconectado</p>
+    <p id="callTimer">Minutos: 0</p>
+  </div>
+
+  <div id="conectar" class="tab active">
+    <h2>Seu ID</h2>
+    <textarea id="myId" readonly></textarea>
+    <h3>Conectar a um ID remoto</h3>
+    <textarea id="remoteIdInput"></textarea><br>
+    <button onclick="connectToPeer()">Conectar</button>
+  </div>
+
+  <script>
+    // Abas
+    function showTab(tabId) {
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+    }
+
+    // WebRTC base
+    let pc = new RTCPeerConnection();
+    let dataChannel;
+    let localStream;
+    let callStartTime;
+    let timerInterval;
+
+    // Criar canal de dados
+    dataChannel = pc.createDataChannel("chat");
+    dataChannel.onmessage = (e) => {
+      document.getElementById('chatLog').value += "Recebido: " + e.data + "\n";
+    };
+
+    pc.ondatachannel = event => {
+      event.channel.onmessage = (e) => {
+        document.getElementById('chatLog').value += "Recebido: " + e.data + "\n";
+      };
+    };
+
+    // ICE
+    pc.onicecandidate = (e) => {
+      if (e.candidate === null) {
+        document.getElementById("myId").value = JSON.stringify(pc.localDescription);
+      }
+    };
+
+    // Áudio
+    pc.ontrack = (e) => {
+      const audio = new Audio();
+      audio.srcObject = e.streams[0];
+      audio.play();
+      document.getElementById('callStatus').innerText = 'Estado: conectado';
+      callStartTime = Date.now();
+      timerInterval = setInterval(() => {
+        const mins = Math.floor((Date.now() - callStartTime) / 60000);
+        document.getElementById('callTimer').innerText = 'Minutos: ' + mins;
+      }, 1000);
+    };
+
+    // Criar oferta
+    pc.createOffer().then(d => pc.setLocalDescription(d));
+
+    // Enviar mensagem
+    function sendMessage() {
+      const msg = document.getElementById("msgInput").value;
+      if (dataChannel && dataChannel.readyState === "open") {
+        dataChannel.send(msg);
+        document.getElementById('chatLog').value += "Enviado: " + msg + "\n";
+      }
+    }
+
+    // Conectar a outro peer
+    async function connectToPeer() {
+      const remote = JSON.parse(document.getElementById('remoteIdInput').value);
+      await pc.setRemoteDescription(remote);
+      if (remote.type === "offer") {
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        setTimeout(() => {
+          document.getElementById("myId").value = JSON.stringify(pc.localDescription);
+        }, 1000);
+      }
+    }
+
+    // Iniciar chamada
+    async function startCall() {
+      localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+      document.getElementById('callStatus').innerText = "Estado: chamando...";
+    }
+  </script>
+</body>
+</html>
