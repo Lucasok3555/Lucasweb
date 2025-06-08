@@ -59,6 +59,13 @@
     audio {
       margin-top: 10px;
     }
+    ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+    li {
+      margin-bottom: 5px;
+    }
   </style>
 </head>
 <body>
@@ -100,6 +107,12 @@
     <p><strong>Seu ID:</strong> <span id="userIdDisplay"></span></p>
     <input type="text" id="connectToId" placeholder="ID do nó para conectar" />
     <button onclick="connectToPeer()">Conectar</button>
+    <h3>Usuários Disponíveis (Simulados)</h3>
+    <ul id="availablePeers">
+      <li><button onclick="connectToPeer('node1')">node1</button></li>
+      <li><button onclick="connectToPeer('node2')">node2</button></li>
+      <li><button onclick="connectToPeer('node3')">node3</button></li>
+    </ul>
     <div class="connections-box" id="connectionsList">
       <p>Nenhum nó conectado ainda.</p>
     </div>
@@ -131,13 +144,15 @@
   // Simulação de conexões P2P (nós)
   const connectedPeers = new Set();
 
-  function connectToPeer() {
-    const targetId = document.getElementById('connectToId').value.trim();
-    if (!targetId || connectedPeers.has(targetId)) return;
+  function connectToPeer(targetId = null) {
+    const inputField = document.getElementById('connectToId');
+    const target = targetId || inputField.value.trim();
+    if (!target || connectedPeers.has(target)) return;
 
-    connectedPeers.add(targetId);
+    connectedPeers.add(target);
     updateConnectionsList();
-    logMessage(`Conectado ao nó: ${targetId}`);
+    logMessage(`Conectado ao nó: ${target}`);
+    inputField.value = '';
   }
 
   function updateConnectionsList() {
@@ -146,12 +161,14 @@
     if (connectedPeers.size === 0) {
       list.innerHTML = '<p>Nenhum nó conectado ainda.</p>';
     } else {
+      const ul = document.createElement('ul');
       connectedPeers.forEach(id => {
-        const p = document.createElement('p');
-        p.className = 'connection';
-        p.textContent = `Conectado a: ${id}`;
-        list.appendChild(p);
+        const li = document.createElement('li');
+        li.className = 'connection';
+        li.textContent = `Conectado a: ${id}`;
+        ul.appendChild(li);
       });
+      list.appendChild(ul);
     }
   }
 
