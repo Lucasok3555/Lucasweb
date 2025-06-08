@@ -3,18 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Aplicativo P2P com WebRTC</title>
+  <title>Aplicativo P2P Funcional com WebRTC</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
-      background-color: #f4f4f4;
     }
     header {
       background-color: #333;
       color: white;
-      padding: 15px;
+      padding: 10px;
       text-align: center;
     }
     nav {
@@ -26,9 +25,8 @@
       background-color: #555;
       color: white;
       border: none;
-      padding: 12px 24px;
+      padding: 10px 20px;
       cursor: pointer;
-      font-size: 16px;
     }
     nav button.active {
       background-color: #777;
@@ -36,66 +34,37 @@
     section {
       display: none;
       padding: 20px;
-      background-color: #fff;
-      margin: 10px auto;
-      max-width: 800px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
     section.active {
       display: block;
     }
-
-    /* Chat */
-    .chat-box {
+    .chat-box, .connections-box {
       height: 300px;
-      overflow-y: auto;
       border: 1px solid #ccc;
+      overflow-y: scroll;
       padding: 10px;
       margin-bottom: 10px;
     }
-    .message {
-      margin-bottom: 8px;
-      word-wrap: break-word;
+    .message, .connection {
+      margin-bottom: 5px;
     }
-
     input[type="text"] {
-      width: 75%;
-      padding: 8px;
-      font-size: 14px;
+      width: 80%;
+      padding: 5px;
     }
     button {
-      padding: 8px 12px;
-      font-size: 14px;
-      margin-left: 5px;
-    }
-
-    /* Call */
-    .call-info {
-      margin-top: 10px;
-    }
-
-    audio {
-      margin: 10px 0;
-      width: 100%;
-    }
-
-    /* Network */
-    .connections-list {
-      list-style-type: none;
-      padding: 0;
-    }
-    .connections-list li {
-      background: #eee;
       padding: 5px 10px;
-      margin-bottom: 5px;
-      border-radius: 4px;
+      margin-top: 5px;
+    }
+    audio {
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
 
 <header>
-  <h1>Aplicativo P2P com WebRTC</h1>
+  <h1>Aplicativo P2P Funcional com WebRTC</h1>
 </header>
 
 <nav>
@@ -113,32 +82,31 @@
     <button onclick="sendMessage()">Enviar</button>
   </section>
 
-  <!-- Chamada -->
+  <!-- Chamada de Voz -->
   <section id="call" class="content">
     <h2>Chamada de Voz P2P</h2>
-    <input type="text" id="peerIdCall" placeholder="ID do usuário para ligar" />
+    <input type="text" id="peerIdCall" placeholder="ID do usuário" />
     <button onclick="startCall()">Ligar</button>
     <button onclick="endCall()">Desligar</button>
-    <div class="call-info">
-      <p id="callStatus">Estado da ligação: Nenhuma chamada em andamento.</p>
-      <p id="callTimer">Duração: 00:00</p>
-    </div>
+    <p id="callStatus">Estado da ligação: Nenhuma chamada em andamento.</p>
+    <p id="callTimer">Duração: 00:00</p>
     <audio id="localAudio" autoplay muted></audio>
     <audio id="remoteAudio" autoplay></audio>
   </section>
 
-  <!-- Rede -->
+  <!-- Rede P2P -->
   <section id="network" class="content">
     <h2>Conexão na Rede P2P</h2>
     <p><strong>Seu ID:</strong> <span id="userIdDisplay"></span></p>
     <input type="text" id="connectToId" placeholder="ID do nó para conectar" />
     <button onclick="connectToPeer()">Conectar</button>
-    <ul id="connectionsList" class="connections-list"></ul>
+    <div class="connections-box" id="connectionsList">
+      <p>Nenhum nó conectado ainda.</p>
+    </div>
   </section>
 </main>
 
 <script>
-  // Abas
   const tabs = document.querySelectorAll('.tab');
   const contents = document.querySelectorAll('.content');
 
@@ -152,7 +120,7 @@
     });
   });
 
-  // Gera ID único
+  // Gera um ID único
   function generateId() {
     return Math.random().toString(36).substr(2, 10);
   }
@@ -160,7 +128,7 @@
   const userId = generateId();
   document.getElementById('userIdDisplay').textContent = userId;
 
-  // Conexões P2P simuladas
+  // Simulação de conexões P2P (nós)
   const connectedPeers = new Set();
 
   function connectToPeer() {
@@ -176,49 +144,35 @@
     const list = document.getElementById('connectionsList');
     list.innerHTML = '';
     if (connectedPeers.size === 0) {
-      list.innerHTML = '<li>Nenhum nó conectado ainda.</li>';
+      list.innerHTML = '<p>Nenhum nó conectado ainda.</p>';
     } else {
       connectedPeers.forEach(id => {
-        const li = document.createElement('li');
-        li.textContent = `Conectado a: ${id}`;
-        list.appendChild(li);
+        const p = document.createElement('p');
+        p.className = 'connection';
+        p.textContent = `Conectado a: ${id}`;
+        list.appendChild(p);
       });
     }
   }
 
-  // Enviar mensagens para todos os nós conectados
+  // Chat P2P simulado
   function sendMessage() {
     const input = document.getElementById('messageInput');
     const message = input.value.trim();
-    if (!message) return;
-
-    if (connectedPeers.size === 0) {
+    if (message && connectedPeers.size > 0) {
+      const chatBox = document.getElementById('chatBox');
+      const div = document.createElement('div');
+      div.className = 'message';
+      div.textContent = `Você: ${message} (para todos os conectados)`;
+      chatBox.appendChild(div);
+      input.value = '';
+      chatBox.scrollTop = chatBox.scrollHeight;
+    } else {
       alert("Conecte-se a pelo menos um nó antes de enviar mensagens.");
-      return;
     }
-
-    const chatBox = document.getElementById('chatBox');
-    const div = document.createElement('div');
-    div.className = 'message';
-    div.textContent = `[Você]: ${message}`;
-    chatBox.appendChild(div);
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-    input.value = '';
   }
 
-  // Logs no chat
-  function logMessage(msg) {
-    const chatBox = document.getElementById('chatBox');
-    const div = document.createElement('div');
-    div.className = 'message';
-    div.style.color = 'gray';
-    div.textContent = `[Sistema] ${msg}`;
-    chatBox.appendChild(div);
-    chatBox.scrollTop = chatBox.scrollHeight;
-  }
-
-  // Chamadas de voz via WebRTC
+  // Chamada de voz via WebRTC
   let localStream;
   let peerConnection;
   let callStartTime = null;
@@ -248,14 +202,9 @@
         }
       };
 
-      const offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
-
-      // Simulação de signaling - não envia pra ninguém nesse exemplo
-      console.log("Oferta criada:", offer);
-      document.getElementById('callStatus').textContent = `Estado da ligação: Em andamento...`;
-
+      // Inicia temporizador de ligação
       callStartTime = Date.now();
+      document.getElementById('callStatus').textContent = `Estado da ligação: Em andamento...`;
       if (!callInterval) {
         callInterval = setInterval(updateCallTimer, 1000);
       }
@@ -271,7 +220,6 @@
       peerConnection.close();
       peerConnection = null;
     }
-
     const localAudio = document.getElementById('localAudio');
     const remoteAudio = document.getElementById('remoteAudio');
     localAudio.srcObject = null;
@@ -299,6 +247,16 @@
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  function logMessage(msg) {
+    const chatBox = document.getElementById('chatBox');
+    const div = document.createElement('div');
+    div.className = 'message';
+    div.style.color = 'gray';
+    div.textContent = `[Sistema] ${msg}`;
+    chatBox.appendChild(div);
+    chatBox.scrollTop = chatBox.scrollHeight;
   }
 
 </script>
