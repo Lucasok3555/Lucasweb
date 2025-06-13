@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Carteira Virtual</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      padding: 20px;
+    }
+    .wallet-container {
+      max-width: 400px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    .balance {
+      font-size: 20px;
+      margin: 20px 0;
+      color: green;
+    }
+    input[type="number"] {
+      padding: 8px;
+      width: 80%;
+      margin: 10px 0;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #007BFF;
+      color: white;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .file-input {
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wallet-container">
+    <h1>Sua Carteira Virtual</h1>
+    <div class="balance" id="balance">Saldo: L$<span id="saldoValor">100.00</span></div>
+
+    <input type="number" id="valueInput" placeholder="Digite o valor (ex: 50.00)">
+    
+    <button onclick="criarArquivoDownload()">Criar Arquivo de Download</button>
+    <button onclick="importarArquivo()">Importar Arquivo para Receber Dinheiro</button>
+
+    <div class="file-input">
+      <input type="file" id="fileInput" style="display:none;" onchange="lerArquivoDinheiro(event)">
+      <label for="fileInput"></label>
+    </div>
+  </div>
+
+  <script>
+    // Carrega o saldo salvo ou define o padrão como 100.00
+    let saldo = parseFloat(localStorage.getItem('saldo')) || 100.00;
+
+    function atualizarSaldo() {
+      document.getElementById('saldoValor').textContent = saldo.toFixed(2);
+      localStorage.setItem('saldo', saldo.toFixed(2)); // Salva no localStorage
+    }
+
+    function criarArquivoDownload() {
+      const valor = parseFloat(document.getElementById('valueInput').value);
+      if (isNaN(valor) || valor <= 0) {
+        alert("Por favor, digite um valor válido.");
+        return;
+      }
+
+      if (saldo < valor) {
+        alert("Saldo insuficiente para criar este arquivo.");
+        return;
+      }
+
+      // Gera ID único para o arquivo
+      const fileId = `file_${Date.now()}_${Math.random().toString(36).substr(2,9)}`;
+
+      // Cria conteúdo do arquivo com o valor e o ID único
+      const conteudo = JSON.stringify({
+        tipo: "L$",
+        valor: valor,
+        id: fileId
+      });
+
+      // Cria blob e link de download
+      const blob = new Blob([conteudo], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dinheiro_${valor}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      // Desconta o valor da carteira
+      saldo -= valor;
+      atualizarSaldo();
+    }
+
+    function importarArquivo() {
+      document.getElementById('fileInput').click();
+    }
+
+    const arquivosUsados = new Set(JSON.parse(localStorage.getItem('arquivosUsados') || '[]'));
+
+    function lerArquivoDinheiro(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (data.tipo === "L$" && typeof data.valor === 'number' && data.valor > 0 && typeof data.id === 'string') {
+            
+            // Verifica se o arquivo já foi usado
+            if (arquivosUsados.has(data.id)) {
+              alert("Este arquivo já foi utilizado e não pode ser reutilizado.");
+              return;
+            }
+
+            // Adiciona o ID do arquivo ao conjunto de usados
+            arquivosUsados.add(data.id);
+            localStorage.setItem('arquivosUsados', JSON.stringify([...arquivosUsados]));
+
+            // Adiciona o valor à carteira
+            saldo += data.valor;
+            atualizarSaldo();
+            alert(`Você recebeu L$${data.valor.toFixed(2)}!`);
+          } else {
+            throw new Error("Arquivo inválido ou não suportado.");
+          }
+        } catch (err) {
+          alert("Erro ao ler o arquivo: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // Inicializa exibição do saldo
+    atualizarSaldo();
+  </script>
+</body>
+</html>
