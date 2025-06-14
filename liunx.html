@@ -1,0 +1,103 @@
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Terminal Linux Isolado</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: monospace;
+      background-color: #1e1e1e;
+      color: #d4d4d4;
+    }
+    #terminal {
+      width: 100vw;
+      height: 100vh;
+      padding: 10px;
+      box-sizing: border-box;
+      overflow: auto;
+      white-space: pre;
+    }
+    .prompt {
+      color: #61afef;
+    }
+    input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #d4d4d4;
+      font-family: monospace;
+      font-size: 14px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="terminal">
+    <div><span class="prompt">guest@isolated-env:~$</span><input type="text" autofocus /></div>
+  </div>
+
+  <script>
+    const terminal = document.getElementById('terminal');
+    const input = document.querySelector('input');
+
+    const commands = {
+      'help': `Comandos disponíveis: help, echo [texto], clear, ls, pwd`,
+      'echo': (args) => args.join(' '),
+      'clear': () => { terminal.innerHTML = `<div><span class="prompt">guest@isolated-env:~$</span><input type="text" autofocus /></div>`; input.focus(); },
+      'ls': () => `index.html  script.js  assets/`,
+      'pwd': () => `/home/guest`
+    };
+
+    function executeCommand(command) {
+      const [cmd, ...args] = command.trim().split(' ');
+      let output = '';
+      if (commands[cmd]) {
+        if (typeof commands[cmd] === 'function') {
+          output = commands[cmd](args);
+        } else {
+          output = commands[cmd];
+        }
+      } else {
+        output = `Comando não encontrado: ${cmd}. Digite 'help' para ver os comandos disponíveis.`;
+      }
+      return output;
+    }
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const cmd = input.value;
+        const output = executeCommand(cmd);
+
+        const newLine = document.createElement('div');
+        newLine.textContent = input.value;
+        terminal.appendChild(newLine);
+
+        const resultLine = document.createElement('div');
+        resultLine.textContent = output;
+        terminal.appendChild(resultLine);
+
+        const promptLine = document.createElement('div');
+        promptLine.innerHTML = `<span class="prompt">guest@isolated-env:~$</span><input type="text" autofocus />`;
+        terminal.appendChild(promptLine);
+
+        input.remove();
+        const newInput = promptLine.querySelector('input');
+        newInput.focus();
+
+        newInput.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter') {
+            ev.preventDefault();
+            input = newInput;
+            input.removeEventListener('keydown', arguments.callee);
+            input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
+```
