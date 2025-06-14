@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Servidor Proxy Simples</title>
+</head>
+<body>
+    <h1>Servidor Proxy Simples (Node.js)</h1>
+    <p>Este é um exemplo básico de um servidor proxy feito em Node.js que retransmite requisições HTTP para outro servidor.</p>
+
+    <script>
+        // Este código é apenas para exibição e não executa no navegador.
+        // O código a seguir deve ser salvo como "proxy-server.js" e executado com o Node.js.
+
+        const http = require('http');
+        const url = require('url');
+
+        const proxyServer = http.createServer((req, res) => {
+            const requestUrl = req.headers['x-forwarded-to'];
+
+            if (!requestUrl) {
+                res.writeHead(400, { 'Content-Type': 'text/plain' });
+                res.end('Header x-forwarded-to não especificado.');
+                return;
+            }
+
+            const parsedUrl = url.parse(requestUrl);
+            const options = {
+                hostname: parsedUrl.hostname,
+                port: parsedUrl.port || 80,
+                path: parsedUrl.path,
+                method: req.method,
+                headers: req.headers
+            };
+
+            delete options.headers['x-forwarded-to']; // Remove header interno
+
+            const proxyReq = http.request(options, (proxyRes) => {
+                res.writeHead(proxyRes.statusCode, proxyRes.headers);
+                proxyRes.pipe(res);
+            });
+
+            req.pipe(proxyReq);
+        });
+
+        const PORT = 3000;
+        proxyServer.listen(PORT, () => {
+            console.log(`Servidor proxy rodando na porta ${PORT}`);
+            console.log(`Exemplo de uso: curl -H "x-forwarded-to: http://example.com" http://localhost:3000`);
+        });
+    </script>
+
+    <h2>Instruções:</h2>
+    <ol>
+        <li>Instale o Node.js: <a href="https://nodejs.org/"  target="_blank">https://nodejs.org/</a></li> 
+        <li>Copie o código acima e salve como <code>proxy-server.js</code></li>
+        <li>No terminal, execute: <code>node proxy-server.js</code></li>
+        <li>Faça uma requisição teste com cURL ou Postman:
+            <pre>curl -H "x-forwarded-to: http://example.com" http://localhost:3000</pre>
+        </li>
+    </ol>
+</body>
+</html>
