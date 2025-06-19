@@ -1,474 +1,156 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebRTC Video Sharing</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background-color: #f4f4f4;
-        }
-        .container {
-            width: 90%;
-            max-width: 1200px;
-            background-color: #fff;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            margin-top: 20px;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        .tabs {
-            display: flex;
-            border-bottom: 1px solid #ddd;
-        }
-        .tab-button {
-            padding: 15px 20px;
-            cursor: pointer;
-            background-color: #eee;
-            border: none;
-            outline: none;
-            font-size: 16px;
-            transition: background-color 0.3s ease;
-        }
-        .tab-button.active {
-            background-color: #fff;
-            border-bottom: 2px solid #007bff;
-            color: #007bff;
-        }
-        .tab-content {
-            padding: 20px;
-            display: none;
-        }
-        .tab-content.active {
-            display: block;
-        }
-        #video-display-section {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            padding: 20px;
-        }
-        .video-card {
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-            text-align: center;
-        }
-        .video-card video {
-            width: 100%;
-            height: 200px; /* Fixed height for consistency */
-            object-fit: cover;
-            border-radius: 4px;
-            background-color: #000;
-        }
-        .video-card h3 {
-            margin-top: 10px;
-            font-size: 1.1em;
-            word-break: break-all;
-        }
-        .upload-section {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            align-items: flex-start;
-        }
-        input[type="file"] {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            width: calc(100% - 22px);
-        }
-        button {
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.3s ease;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        #feed-section {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            padding: 20px;
-        }
-        .feed-video-card {
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-            text-align: center;
-        }
-        .feed-video-card video {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            border-radius: 4px;
-            background-color: #000;
-        }
-        .feed-video-card h3 {
-            margin-top: 10px;
-            font-size: 1.1em;
-            word-break: break-all;
-        }
-        .connect-section {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            align-items: flex-start;
-        }
-        .connect-section input[type="text"] {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            width: calc(100% - 22px);
-        }
-        #myIdDisplay {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #333;
-            background-color: #e9e9e9;
-            padding: 10px;
-            border-radius: 5px;
-            word-break: break-all;
-        }
-        #connectionStatus {
-            margin-top: 10px;
-            font-style: italic;
-            color: #555;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="tabs">
-            <button class="tab-button active" data-tab="video-display">Video Display</button>
-            <button class="tab-button" data-tab="upload-video">Upload Video</button>
-            <button class="tab-button" data-tab="feed">Feed</button>
-            <button class="tab-button" data-tab="connect">Connect</button>
-        </div>
-
-        <div id="video-display" class="tab-content active">
-            <h2>Your Uploaded Videos</h2>
-            <div id="video-display-section">
-                <!-- Videos will be loaded here -->
-            </div>
-        </div>
-
-        <div id="upload-video" class="tab-content">
-            <h2>Upload a Video</h2>
-            <div class="upload-section">
-                <input type="file" id="videoUploadInput" accept="video/*">
-                <button id="uploadToLocalButton">Upload to Local Browser</button>
-            </div>
-        </div>
-
-        <div id="feed" class="tab-content">
-            <h2>Shared Video Feed</h2>
-            <div id="feed-section">
-                <!-- Shared videos will appear here -->
-            </div>
-        </div>
-
-        <div id="connect" class="tab-content">
-            <h2>Connect with Peers</h2>
-            <div class="connect-section">
-                <button id="generateIdButton">Generate My ID</button>
-                <p>My ID: <span id="myIdDisplay"></span></p>
-                <input type="text" id="peerIdInput" placeholder="Enter Peer ID">
-                <button id="connectToPeerButton">Connect to Peer</button>
-                <p id="connectionStatus">Status: Not connected</p>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // --- Tab Functionality ---
-        const tabButtons = document.querySelectorAll('.tab-button');
-        const tabContents = document.querySelectorAll('.tab-content');
-
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const targetTab = button.dataset.tab;
-
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                tabContents.forEach(content => content.classList.remove('active'));
-
-                button.classList.add('active');
-                document.getElementById(targetTab).classList.add('active');
-
-                // If switching to video display, refresh the display
-                if (targetTab === 'video-display') {
-                    displayLocalVideos();
-                }
-            });
-        });
-
-        // --- Video Upload and Local Storage ---
-        const videoUploadInput = document.getElementById('videoUploadInput');
-        const uploadToLocalButton = document.getElementById('uploadToLocalButton');
-        const videoDisplaySection = document.getElementById('video-display-section');
-
-        let storedVideos = JSON.parse(localStorage.getItem('localVideos')) || [];
-
-        function saveVideosToLocalStorage() {
-            localStorage.setItem('localVideos', JSON.stringify(storedVideos));
-        }
-
-        function displayLocalVideos() {
-            videoDisplaySection.innerHTML = ''; // Clear current display
-            if (storedVideos.length === 0) {
-                videoDisplaySection.innerHTML = '<p>No videos uploaded yet. Go to "Upload Video" tab to add some.</p>';
-                return;
-            }
-            storedVideos.forEach((video, index) => {
-                const videoCard = document.createElement('div');
-                videoCard.classList.add('video-card');
-                videoCard.innerHTML = `
-                    <video controls src="${video.dataUrl}"></video>
-                    <h3>${video.name}</h3>
-                    <button data-index="${index}" class="upload-to-feed-button">Upload to Feed</button>
-                `;
-                videoDisplaySection.appendChild(videoCard);
-            });
-
-            // Add event listeners for "Upload to Feed" buttons
-            document.querySelectorAll('.upload-to-feed-button').forEach(button => {
-                button.addEventListener('click', (event) => {
-                    const videoIndex = event.target.dataset.index;
-                    uploadVideoToFeed(storedVideos[videoIndex]);
-                });
-            });
-        }
-
-        uploadToLocalButton.addEventListener('click', () => {
-            const file = videoUploadInput.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const videoData = {
-                        name: file.name,
-                        dataUrl: e.target.result
-                    };
-                    storedVideos.push(videoData);
-                    saveVideosToLocalStorage();
-                    displayLocalVideos(); // Refresh display after upload
-                    alert('Video uploaded to your local browser storage!');
-
-                    // Automatically switch to Video Display tab
-                    document.querySelector('.tab-button[data-tab="video-display"]').click();
-                };
-                reader.readAsDataURL(file);
-            } else {
-                alert('Please select a video file to upload.');
-            }
-        });
-
-        // Initial display of videos when the page loads
-        document.addEventListener('DOMContentLoaded', displayLocalVideos);
-
-
-        // --- WebRTC for Video Feed and Connection ---
-        const feedSection = document.getElementById('feed-section');
-        const generateIdButton = document.getElementById('generateIdButton');
-        const myIdDisplay = document.getElementById('myIdDisplay');
-        const peerIdInput = document.getElementById('peerIdInput');
-        const connectToPeerButton = document.getElementById('connectToPeerButton');
-        const connectionStatus = document.getElementById('connectionStatus');
-
-        let localPeerConnection;
-        let dataChannel;
-        let myGeneratedId = null;
-
-        const iceServers = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-            ]
-        };
-
-        // Simplified signaling for demonstration (using localStorage for IDs)
-        // In a real application, you'd use a signaling server (e.g., WebSocket)
-        function generateUniqueId() {
-            return 'peer-' + Math.random().toString(36).substr(2, 9);
-        }
-
-        generateIdButton.addEventListener('click', () => {
-            myGeneratedId = generateUniqueId();
-            myIdDisplay.textContent = myGeneratedId;
-            // For a real app, you'd send this ID to a signaling server
-            alert(`Your ID is: ${myGeneratedId}. Share this with a peer to connect.`);
-        });
-
-        function createPeerConnection() {
-            localPeerConnection = new RTCPeerConnection(iceServers);
-
-            localPeerConnection.onicecandidate = (event) => {
-                if (event.candidate) {
-                    console.log('New ICE candidate: ', event.candidate);
-                    // In a real app, send this candidate to the peer via signaling server
-                    // For this demo, you'd manually paste it, which is impractical.
-                    // We'll rely on offer/answer exchange for simplicity.
-                }
-            };
-
-            localPeerConnection.onconnectionstatechange = () => {
-                console.log('Connection state change: ', localPeerConnection.connectionState);
-                connectionStatus.textContent = `Status: ${localPeerConnection.connectionState}`;
-            };
-
-            localPeerConnection.ondatachannel = (event) => {
-                dataChannel = event.channel;
-                setupDataChannelListeners(dataChannel);
-                console.log('Data channel received!');
-            };
-
-            localPeerConnection.ontrack = (event) => {
-                console.log('Track received from peer:', event.streams[0]);
-                // This is where you would handle incoming video streams for live sharing
-                // For now, we are sharing pre-recorded videos via data channel
-            };
-        }
-
-        function setupDataChannelListeners(channel) {
-            channel.onopen = () => console.log('Data channel opened!');
-            channel.onclose = () => console.log('Data channel closed!');
-            channel.onerror = (error) => console.error('Data channel error:', error);
-            channel.onmessage = (event) => {
-                try {
-                    const message = JSON.parse(event.data);
-                    if (message.type === 'video') {
-                        addVideoToFeed(message.video);
-                    } else if (message.type === 'offer' || message.type === 'answer' || message.type === 'candidate') {
-                        // Handle WebRTC signaling messages if you were sending them over this channel
-                        // For this demo, we're not sending signaling over the data channel itself
-                        console.log('Received signaling message (ignored in this demo):', message.type);
-                    }
-                } catch (e) {
-                    console.error('Error parsing data channel message:', e);
-                }
-            };
-        }
-
-
-        connectToPeerButton.addEventListener('click', async () => {
-            const peerId = peerIdInput.value.trim();
-            if (!peerId || !myGeneratedId) {
-                alert('Please generate your ID and enter a peer ID.');
-                return;
-            }
-
-            createPeerConnection();
-
-            dataChannel = localPeerConnection.createDataChannel('video-sharing-channel');
-            setupDataChannelListeners(dataChannel);
-
-            try {
-                const offer = await localPeerConnection.createOffer();
-                await localPeerConnection.setLocalDescription(offer);
-                console.log('Local offer created and set:', offer);
-
-                // Simulate sending offer to peer (in a real app, this goes via signaling server)
-                // For this demo, imagine you send this `offer.sdp` to the peer with `myGeneratedId`
-                // and the peer needs to set it as remote description and create an answer.
-                alert(`Offer generated. Copy this to your peer:\n\n${JSON.stringify(offer)}\n\nThen have them paste their answer here.`);
-
-                // Placeholder for receiving answer from peer
-                // In a real app, the peer sends an answer back via the signaling server
-                // This part would be event-driven, not a prompt.
-                const answerText = prompt('Paste the peer\'s answer here (SDP only):');
-                if (answerText) {
-                    try {
-                        const answer = JSON.parse(answerText);
-                        await localPeerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-                        console.log('Remote answer set successfully.');
-                        connectionStatus.textContent = `Status: Connected with ${peerId}`;
-                    } catch (e) {
-                        alert('Invalid answer format. Please paste the full JSON answer.');
-                        console.error('Error setting remote answer:', e);
-                    }
-                }
-
-            } catch (error) {
-                console.error('Error creating or setting offer:', error);
-            }
-        });
-
-        // Function to simulate receiving an offer (for the "answerer" side)
-        // This would be triggered by a signaling server in a real application
-        window.receiveOffer = async (offerJson) => {
-            if (!myGeneratedId) {
-                alert('Please generate your ID first.');
-                return;
-            }
-
-            createPeerConnection();
-
-            try {
-                const offer = JSON.parse(offerJson);
-                await localPeerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-                console.log('Remote offer set successfully.');
-
-                const answer = await localPeerConnection.createAnswer();
-                await localPeerConnection.setLocalDescription(answer);
-                console.log('Local answer created and set:', answer);
-
-                alert(`Answer generated. Copy this and send it back to the offerer:\n\n${JSON.stringify(answer)}\n\nThen have them paste it in their prompt.`);
-            } catch (error) {
-                console.error('Error receiving or answering offer:', error);
-            }
-        };
-
-        // This function will be called when a video is "uploaded" to the feed
-        function uploadVideoToFeed(videoData) {
-            if (dataChannel && dataChannel.readyState === 'open') {
-                const message = {
-                    type: 'video',
-                    video: videoData
-                };
-                dataChannel.send(JSON.stringify(message));
-                alert(`Video "${videoData.name}" sent to connected peer!`);
-                addVideoToFeed(videoData); // Add to local feed as well
-            } else {
-                alert('No peer connected or data channel not open. Connect to a peer first!');
-                addVideoToFeed(videoData); // Still add to local feed for demonstration
-            }
-        }
-
-        // Function to add a video to the feed section
-        function addVideoToFeed(videoData) {
-            const feedVideoCard = document.createElement('div');
-            feedVideoCard.classList.add('feed-video-card');
-            feedVideoCard.innerHTML = `
-                <video controls src="${videoData.dataUrl}"></video>
-                <h3>${videoData.name} (Shared)</h3>
-            `;
-            feedSection.prepend(feedVideoCard); // Add to the top of the feed
-        }
-
-        // Helper to check for existing ID on load
-        if (localStorage.getItem('myWebRTCId')) {
-             myGeneratedId = localStorage.getItem('myWebRTCId');
-             myIdDisplay.textContent = myGeneratedId;
-        } else {
-            // For a more persistent ID, you could generate and store it on first load
-            // For now, it will require clicking "Generate My ID" on each session
-        }
-
-    </script>
-</body>
-</html>
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+  <meta charset="UTF-8">  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+  <title>Video Sharing App</title>  
+  <style>  
+    body {  
+      font-family: Arial, sans-serif;  
+      background-color: #f4f4f4;  
+    }  
+      
+    header {  
+      background-color: #333;  
+      color: #fff;  
+      padding: 10px;  
+    }  
+      
+    nav {  
+      display: flex;  
+      justify-content: center;  
+    }  
+      
+    nav a {  
+      color: #fff;  
+      margin: 0 15px;  
+      text-decoration: none;  
+    }  
+      
+    main {  
+      margin: 20px auto;  
+      max-width: 800px;  
+      background-color: #fff;  
+      box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);  
+      padding: 20px;  
+    }  
+      
+    video {  
+      max-width: 100%;  
+    }  
+  </style>  
+</head>  
+<body>  
+  <header>  
+    <h1>Video Sharing App</h1>  
+    <nav>  
+      <a href="#upload">Upload</a>  
+      <a href="#feed">Feed</a>  
+      <a href="#connect">Connect</a>  
+    </nav>  
+  </header>  
+  
+  <main>  
+    <section id="upload">  
+      <h2>Upload Video</h2>  
+      <input type="file" id="videoInput">  
+      <button onclick="uploadVideo()">Upload to Feed</button>  
+    </section>  
+  
+    <section id="feed">  
+      <h2>Video Feed</h2>  
+      <div id="videoContainer"></div>  
+    </section>  
+  
+    <section id="connect">  
+      <h2>Connect with Users</h2>  
+      <p>Your User ID: <span id="userID"></span></p>  
+      <input type="text" id="connectID" placeholder="Enter User ID">  
+      <button onclick="connectUser()">Connect</button>  
+      <div id="connectionArea"></div>  
+    </section>  
+  </main>  
+  
+  <script>  
+    // Generate a unique user ID  
+    function generateUID() {  
+      const uid = Math.random().toString(36).substring(2, 10);  
+      document.getElementById('userID').textContent = uid;  
+      return uid;  
+    }  
+  
+    generateUID();  
+  
+    // Upload video to feed  
+    function uploadVideo() {  
+      const videoFile = document.getElementById('videoInput').files[0];  
+      if (videoFile) {  
+        const reader = new FileReader();  
+        reader.onload = function(event) {  
+          const videoHTML = `<video controls src="${event.target.result}"></video>`;  
+          document.getElementById('videoContainer').innerHTML += videoHTML;  
+        };  
+        reader.readAsDataURL(videoFile);  
+      }  
+    }  
+  
+    // Connect with other users  
+    function connectUser() {  
+      const id = document.getElementById('connectID').value;  
+      if (id) {  
+        const pc = new RTCPeerConnection();  
+        pc.onicecandidate = event => {  
+          if (event.candidate) {  
+            sendMessage(id, event.candidate.candidate);  
+          }  
+        };  
+  
+        pc.onaddstream = event => {  
+          const videoElement = document.createElement('video');  
+          videoElement.srcObject = event.stream;  
+          document.getElementById('connectionArea').append(videoElement);  
+        };  
+  
+        const offer = pc.createOffer();  
+        pc.setLocalDescription(offer);  
+  
+        sendMessage(id, pc.localDescription);  
+      }  
+    }  
+  
+    function sendMessage(id, message) {  
+      // Implement sending messages to the server or directly to the recipient  
+      // For now, we'll just log it  
+      console.log(`Sending to ${id}: ${message.sdp || message.candidate}`);  
+    }  
+  
+    // Handle incoming messages and connections  
+    function receiveMessage(id, message) {  
+      if (message.sdp) {  
+        // If it's an SDP message, answer the call  
+        const pc = new RTCPeerConnection();  
+        pc.ondatachange = event => {  
+          console.log(`Data received from ${id}`);  
+        };  
+  
+        pc.setRemoteDescription(new RTCSessionDescription(message));  
+  
+        pc.createAnswer().then(answer => {  
+          pc.setLocalDescription(answer);  
+          sendMessage(id, pc.localDescription);  
+        });  
+      } else if (message.candidate) {  
+        // Add the remote candidate to our peer connection  
+        const pc = getPeerByUID(id);  
+        pc.addIceCandidate(new RTCIceCandidate(message.candidate));  
+      }  
+    }  
+  
+    function getPeerByUID(id) {  
+      // Simple mapping for demonstration, in a real app this would be managed properly  
+      const peers = {};  
+      return peers[id];  
+    }  
+  </script>  
+</body>  
+</html>  
