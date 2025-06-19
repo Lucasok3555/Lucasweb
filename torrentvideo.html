@@ -1,156 +1,152 @@
-<!DOCTYPE html>  
-<html lang="en">  
-<head>  
-  <meta charset="UTF-8">  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">  
-  <title>Video Sharing App</title>  
-  <style>  
-    body {  
-      font-family: Arial, sans-serif;  
-      background-color: #f4f4f4;  
-    }  
-      
-    header {  
-      background-color: #333;  
-      color: #fff;  
-      padding: 10px;  
-    }  
-      
-    nav {  
-      display: flex;  
-      justify-content: center;  
-    }  
-      
-    nav a {  
-      color: #fff;  
-      margin: 0 15px;  
-      text-decoration: none;  
-    }  
-      
-    main {  
-      margin: 20px auto;  
-      max-width: 800px;  
-      background-color: #fff;  
-      box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);  
-      padding: 20px;  
-    }  
-      
-    video {  
-      max-width: 100%;  
-    }  
-  </style>  
-</head>  
-<body>  
-  <header>  
-    <h1>Video Sharing App</h1>  
-    <nav>  
-      <a href="#upload">Upload</a>  
-      <a href="#feed">Feed</a>  
-      <a href="#connect">Connect</a>  
-    </nav>  
-  </header>  
-  
-  <main>  
-    <section id="upload">  
-      <h2>Upload Video</h2>  
-      <input type="file" id="videoInput">  
-      <button onclick="uploadVideo()">Upload to Feed</button>  
-    </section>  
-  
-    <section id="feed">  
-      <h2>Video Feed</h2>  
-      <div id="videoContainer"></div>  
-    </section>  
-  
-    <section id="connect">  
-      <h2>Connect with Users</h2>  
-      <p>Your User ID: <span id="userID"></span></p>  
-      <input type="text" id="connectID" placeholder="Enter User ID">  
-      <button onclick="connectUser()">Connect</button>  
-      <div id="connectionArea"></div>  
-    </section>  
-  </main>  
-  
-  <script>  
-    // Generate a unique user ID  
-    function generateUID() {  
-      const uid = Math.random().toString(36).substring(2, 10);  
-      document.getElementById('userID').textContent = uid;  
-      return uid;  
-    }  
-  
-    generateUID();  
-  
-    // Upload video to feed  
-    function uploadVideo() {  
-      const videoFile = document.getElementById('videoInput').files[0];  
-      if (videoFile) {  
-        const reader = new FileReader();  
-        reader.onload = function(event) {  
-          const videoHTML = `<video controls src="${event.target.result}"></video>`;  
-          document.getElementById('videoContainer').innerHTML += videoHTML;  
-        };  
-        reader.readAsDataURL(videoFile);  
-      }  
-    }  
-  
-    // Connect with other users  
-    function connectUser() {  
-      const id = document.getElementById('connectID').value;  
-      if (id) {  
-        const pc = new RTCPeerConnection();  
-        pc.onicecandidate = event => {  
-          if (event.candidate) {  
-            sendMessage(id, event.candidate.candidate);  
-          }  
-        };  
-  
-        pc.onaddstream = event => {  
-          const videoElement = document.createElement('video');  
-          videoElement.srcObject = event.stream;  
-          document.getElementById('connectionArea').append(videoElement);  
-        };  
-  
-        const offer = pc.createOffer();  
-        pc.setLocalDescription(offer);  
-  
-        sendMessage(id, pc.localDescription);  
-      }  
-    }  
-  
-    function sendMessage(id, message) {  
-      // Implement sending messages to the server or directly to the recipient  
-      // For now, we'll just log it  
-      console.log(`Sending to ${id}: ${message.sdp || message.candidate}`);  
-    }  
-  
-    // Handle incoming messages and connections  
-    function receiveMessage(id, message) {  
-      if (message.sdp) {  
-        // If it's an SDP message, answer the call  
-        const pc = new RTCPeerConnection();  
-        pc.ondatachange = event => {  
-          console.log(`Data received from ${id}`);  
-        };  
-  
-        pc.setRemoteDescription(new RTCSessionDescription(message));  
-  
-        pc.createAnswer().then(answer => {  
-          pc.setLocalDescription(answer);  
-          sendMessage(id, pc.localDescription);  
-        });  
-      } else if (message.candidate) {  
-        // Add the remote candidate to our peer connection  
-        const pc = getPeerByUID(id);  
-        pc.addIceCandidate(new RTCIceCandidate(message.candidate));  
-      }  
-    }  
-  
-    function getPeerByUID(id) {  
-      // Simple mapping for demonstration, in a real app this would be managed properly  
-      const peers = {};  
-      return peers[id];  
-    }  
-  </script>  
-</body>  
-</html>  
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Feed de Vídeo com WebRTC</title>
+  <style>
+    body { font-family: sans-serif; }
+    section { margin: 20px; }
+    video { width: 300px; height: 200px; background: #000; }
+    #feed video { margin: 10px; }
+  </style>
+</head>
+<body>
+
+  <!-- Aba de Upload -->
+  <section>
+    <h2>Upload de Vídeo</h2>
+    <input type="file" id="videoInput" accept="video/*">
+    <button onclick="salvarVideo()">Salvar no navegador</button>
+    <button onclick="enviarParaFeed()">Enviar para o feed</button>
+    <video id="preview" controls></video>
+  </section>
+
+  <!-- Feed -->
+  <section id="feed">
+    <h2>Feed de Vídeos</h2>
+  </section>
+
+  <!-- Conexão WebRTC -->
+  <section>
+    <h2>Conexão WebRTC</h2>
+    <input type="text" id="myId" placeholder="Meu ID">
+    <button onclick="gerarId()">Gerar ID</button>
+    <input type="text" id="otherId" placeholder="ID para conectar">
+    <button onclick="conectar()">Conectar</button>
+  </section>
+
+<script>
+  let videoBlob = null;
+
+  function salvarVideo() {
+    const file = document.getElementById('videoInput').files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function() {
+        videoBlob = new Blob([reader.result], { type: file.type });
+        const videoURL = URL.createObjectURL(videoBlob);
+        document.getElementById('preview').src = videoURL;
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  }
+
+  function enviarParaFeed() {
+    if (!videoBlob) return alert('Carregue um vídeo primeiro!');
+    const url = URL.createObjectURL(videoBlob);
+    const video = document.createElement('video');
+    video.src = url;
+    video.controls = true;
+    document.getElementById('feed').appendChild(video);
+  }
+
+  // Mockup para WebRTC (exemplo ilustrativo, sem sinal real)
+  function gerarId() {
+    document.getElementById('myId').value = Math.random().toString(36).substring(2, 10);
+  }
+
+  function conectar() {
+    const otherId = document.getElementById('otherId').value;
+    alert(`Conectando a ${otherId} via WebRTC...`);
+    // Aqui você aplicaria lógica real de WebRTC (peer connection, signaling etc.)
+  }
+</script>
+
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Feed de Vídeo com WebRTC</title>
+  <style>
+    body { font-family: sans-serif; }
+    section { margin: 20px; }
+    video { width: 300px; height: 200px; background: #000; }
+    #feed video { margin: 10px; }
+  </style>
+</head>
+<body>
+
+  <!-- Aba de Upload -->
+  <section>
+    <h2>Upload de Vídeo</h2>
+    <input type="file" id="videoInput" accept="video/*">
+    <button onclick="salvarVideo()">Salvar no navegador</button>
+    <button onclick="enviarParaFeed()">Enviar para o feed</button>
+    <video id="preview" controls></video>
+  </section>
+
+  <!-- Feed -->
+  <section id="feed">
+    <h2>Feed de Vídeos</h2>
+  </section>
+
+  <!-- Conexão WebRTC -->
+  <section>
+    <h2>Conexão WebRTC</h2>
+    <input type="text" id="myId" placeholder="Meu ID">
+    <button onclick="gerarId()">Gerar ID</button>
+    <input type="text" id="otherId" placeholder="ID para conectar">
+    <button onclick="conectar()">Conectar</button>
+  </section>
+
+<script>
+  let videoBlob = null;
+
+  function salvarVideo() {
+    const file = document.getElementById('videoInput').files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function() {
+        videoBlob = new Blob([reader.result], { type: file.type });
+        const videoURL = URL.createObjectURL(videoBlob);
+        document.getElementById('preview').src = videoURL;
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  }
+
+  function enviarParaFeed() {
+    if (!videoBlob) return alert('Carregue um vídeo primeiro!');
+    const url = URL.createObjectURL(videoBlob);
+    const video = document.createElement('video');
+    video.src = url;
+    video.controls = true;
+    document.getElementById('feed').appendChild(video);
+  }
+
+  // Mockup para WebRTC (exemplo ilustrativo, sem sinal real)
+  function gerarId() {
+    document.getElementById('myId').value = Math.random().toString(36).substring(2, 10);
+  }
+
+  function conectar() {
+    const otherId = document.getElementById('otherId').value;
+    alert(`Conectando a ${otherId} via WebRTC...`);
+    // Aqui você aplicaria lógica real de WebRTC (peer connection, signaling etc.)
+  }
+</script>
+
+</body>
+</html>
