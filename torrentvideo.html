@@ -1,486 +1,242 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Compartilhamento de Vídeos WebRTC</title>
+    <title>Compartilhamento de Vídeos via WebRTC</title>
     <style>
-        * {
-            box-sizing: border-box;
+        body {
+            font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
         }
-        
-        body {
-            background-color: #f5f5f5;
-            color: #333;
-            line-height: 1.6;
-        }
-        
+
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        header {
-            background-color: #4a76a8;
-            color: white;
-            padding: 20px 0;
-            text-align: center;
-            border-radius: 8px 8px 0 0;
-            margin-bottom: 20px;
-        }
-        
-        .tabs {
             display: flex;
-            background-color: #4a76a8;
-            border-radius: 8px 8px 0 0;
-        }
-        
-        .tab {
-            padding: 15px 25px;
-            cursor: pointer;
-            color: white;
-            background-color: #3a5f8a;
-            border: none;
             flex: 1;
-            text-align: center;
-            transition: all 0.3s;
-        }
-        
-        .tab:first-child {
-            border-radius: 8px 0 0 0;
-        }
-        
-        .tab:last-child {
-            border-radius: 0 8px 0 0;
-        }
-        
-        .tab.active {
-            background-color: #4a76a8;
-            font-weight: bold;
-        }
-        
-        .tab-content {
-            display: none;
-            padding: 20px;
-            background-color: white;
-            border-radius: 0 0 8px 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        .upload-area {
-            border: 2px dashed #4a76a8;
-            border-radius: 8px;
-            padding: 30px;
-            text-align: center;
-            margin-bottom: 20px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .upload-area:hover {
-            background-color: #f0f8ff;
-        }
-        
-        .upload-area i {
-            font-size: 48px;
-            color: #4a76a8;
-            margin-bottom: 15px;
-        }
-        
-        .btn {
-            background-color: #4a76a8;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: all 0.3s;
-        }
-        
-        .btn:hover {
-            background-color: #3a5f8a;
-        }
-        
-        .btn-secondary {
-            background-color: #6c757d;
-        }
-        
-        .btn-secondary:hover {
-            background-color: #5a6268;
-        }
-        
-        .video-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-        
-        .video-card {
-            background-color: white;
-            border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        
-        .video-card video {
+
+        .section {
+            padding: 20px;
+            border-right: 1px solid #ccc;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .map {
+            height: 200px;
+            background-color: #f0f0f0;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        input {
+            padding: 8px;
+            margin: 5px;
+            width: 200px;
+        }
+
+        video {
             width: 100%;
-            display: block;
+            max-width: 300px;
+            margin-bottom: 10px;
         }
-        
-        .video-info {
-            padding: 15px;
-        }
-        
-        .connect-form {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            max-width: 500px;
-            margin: 0 auto;
-        }
-        
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        
-        .form-group label {
-            font-weight: bold;
-        }
-        
-        .form-group input {
+
+        .video-item {
+            margin-bottom: 20px;
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 5px;
-            font-size: 16px;
-        }
-        
-        .id-display {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            text-align: center;
-            margin: 20px 0;
-            word-break: break-all;
-        }
-        
-        .status {
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 5px;
-            text-align: center;
-        }
-        
-        .status.connected {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        
-        .status.disconnected {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-        
-        .hidden {
-            display: none;
         }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-    <header>
-        <h1>Compartilhamento de Vídeos via WebRTC</h1>
-    </header>
-    
     <div class="container">
-        <div class="tabs">
-            <button class="tab active" data-tab="upload">Upload</button>
-            <button class="tab" data-tab="feed">Feed</button>
-            <button class="tab" data-tab="connect">Conectar</button>
-        </div>
-        
-        <div id="upload" class="tab-content active">
-            <div class="upload-area" id="dropArea">
-                <i class="fas fa-cloud-upload-alt"></i>
-                <h3>Arraste e solte seu vídeo aqui</h3>
-                <p>ou</p>
-                <input type="file" id="fileInput" accept="video/*" style="display: none;">
-                <button class="btn" id="selectFileBtn">Selecionar Vídeo</button>
+        <div class="section">
+            <h2>Upload de Vídeo</h2>
+            <div class="map" id="videoMap">
+                <p>Mapa para seleção de vídeo (simulado)</p>
             </div>
-            <div id="videoPreviewContainer" class="hidden">
-                <h3>Pré-visualização do Vídeo</h3>
-                <video id="videoPreview" controls style="max-width: 100%; margin-bottom: 20px;"></video>
-                <button class="btn" id="uploadToFeedBtn">Enviar para o Feed</button>
-            </div>
+            <input type="file" id="videoUpload" accept="video/*">
+            <button id="uploadButton">Fazer Upload</button>
+            <div id="videoPreview"></div>
         </div>
-        
-        <div id="feed" class="tab-content">
+
+        <div class="section">
             <h2>Feed de Vídeos</h2>
-            <div class="video-container" id="videoFeed">
-                <!-- Vídeos serão adicionados aqui dinamicamente -->
-                <p id="noVideosMsg">Nenhum vídeo disponível. Faça upload de um vídeo na aba de Upload.</p>
-            </div>
+            <div id="videoFeed"></div>
         </div>
-        
-        <div id="connect" class="tab-content">
-            <div class="connect-form">
-                <div class="form-group">
-                    <button class="btn" id="generateIdBtn">Gerar ID</button>
-                </div>
-                
-                <div id="myIdContainer" class="hidden">
-                    <h3>Seu ID:</h3>
-                    <div class="id-display" id="myIdDisplay"></div>
-                    <button class="btn btn-secondary" id="copyIdBtn">Copiar ID</button>
-                </div>
-                
-                <div class="form-group">
-                    <label for="peerIdInput">ID do Amigo:</label>
-                    <input type="text" id="peerIdInput" placeholder="Cole o ID do amigo aqui">
-                </div>
-                
-                <button class="btn" id="connectBtn">Conectar</button>
-                
-                <div id="connectionStatus" class="status disconnected">
-                    Desconectado
-                </div>
+
+        <div class="section">
+            <h2>Conectar via WebRTC</h2>
+            <div>
+                <button id="generateId">Gerar ID</button>
+                <input type="text" id="connectionId" placeholder="ID de Conexão">
+                <button id="connectButton">Conectar</button>
             </div>
+            <div id="connectionStatus">Status: Desconectado</div>
+            <div id="remoteVideo"></div>
         </div>
     </div>
 
     <script>
-        // Elementos da interface
-        const tabs = document.querySelectorAll('.tab');
-        const tabContents = document.querySelectorAll('.tab-content');
-        const fileInput = document.getElementById('fileInput');
-        const selectFileBtn = document.getElementById('selectFileBtn');
-        const dropArea = document.getElementById('dropArea');
+        // Variáveis globais
+        let localVideo = null;
+        let localStream = null;
+        let peerConnection = null;
+        let dataChannel = null;
+        let videos = [];
+
+        // Elementos DOM
+        const videoUpload = document.getElementById('videoUpload');
+        const uploadButton = document.getElementById('uploadButton');
         const videoPreview = document.getElementById('videoPreview');
-        const videoPreviewContainer = document.getElementById('videoPreviewContainer');
-        const uploadToFeedBtn = document.getElementById('uploadToFeedBtn');
         const videoFeed = document.getElementById('videoFeed');
-        const noVideosMsg = document.getElementById('noVideosMsg');
-        const generateIdBtn = document.getElementById('generateIdBtn');
-        const myIdContainer = document.getElementById('myIdContainer');
-        const myIdDisplay = document.getElementById('myIdDisplay');
-        const copyIdBtn = document.getElementById('copyIdBtn');
-        const peerIdInput = document.getElementById('peerIdInput');
-        const connectBtn = document.getElementById('connectBtn');
+        const generateId = document.getElementById('generateId');
+        const connectionId = document.getElementById('connectionId');
+        const connectButton = document.getElementById('connectButton');
         const connectionStatus = document.getElementById('connectionStatus');
-        
-        // Variáveis de estado
-        let currentVideoFile = null;
-        let myPeerId = null;
-        let peer = null;
-        let conn = null;
-        const localVideos = [];
-        const receivedVideos = [];
-        
-        // Configuração das abas
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                tabs.forEach(t => t.classList.remove('active'));
-                tabContents.forEach(c => c.classList.remove('active'));
-                
-                tab.classList.add('active');
-                const tabId = tab.getAttribute('data-tab');
-                document.getElementById(tabId).classList.add('active');
-            });
-        });
-        
-        // Upload de vídeos
-        selectFileBtn.addEventListener('click', () => fileInput.click());
-        
-        fileInput.addEventListener('change', handleFileSelect);
-        
-        dropArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropArea.style.backgroundColor = '#f0f8ff';
-        });
-        
-        dropArea.addEventListener('dragleave', () => {
-            dropArea.style.backgroundColor = '';
-        });
-        
-        dropArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropArea.style.backgroundColor = '';
-            
-            if (e.dataTransfer.files.length) {
-                fileInput.files = e.dataTransfer.files;
-                handleFileSelect({ target: fileInput });
-            }
-        });
-        
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file || !file.type.startsWith('video/')) {
-                alert('Por favor, selecione um arquivo de vídeo válido.');
+        const remoteVideo = document.getElementById('remoteVideo');
+
+        // Event listeners
+        uploadButton.addEventListener('click', handleUpload);
+        generateId.addEventListener('click', generateConnectionId);
+        connectButton.addEventListener('click', connectToPeer);
+
+        // Função para lidar com o upload de vídeo
+        function handleUpload() {
+            const file = videoUpload.files[0];
+            if (!file) {
+                alert('Por favor, selecione um vídeo para fazer upload.');
                 return;
             }
-            
-            currentVideoFile = file;
-            
+
             const videoURL = URL.createObjectURL(file);
-            videoPreview.src = videoURL;
-            videoPreviewContainer.classList.remove('hidden');
+            localVideo = document.createElement('video');
+            localVideo.src = videoURL;
+            localVideo.controls = true;
+
+            videoPreview.innerHTML = '';
+            videoPreview.appendChild(localVideo);
+
+            // Adiciona o vídeo ao feed
+            addVideoToFeed(videoURL);
         }
-        
-        uploadToFeedBtn.addEventListener('click', () => {
-            if (!currentVideoFile) return;
-            
-            // Adiciona ao feed local
-            addVideoToFeed(currentVideoFile, true);
-            
-            // Salva localmente
-            saveVideoLocally(currentVideoFile);
-            
-            // Limpa o upload
-            currentVideoFile = null;
-            videoPreview.src = '';
-            videoPreviewContainer.classList.add('hidden');
-            fileInput.value = '';
-            
-            // Mostra mensagem de sucesso
-            alert('Vídeo enviado para o feed com sucesso!');
-        });
-        
-        function addVideoToFeed(videoFile, isLocal) {
-            noVideosMsg.classList.add('hidden');
-            
-            const videoURL = URL.createObjectURL(videoFile);
-            
-            const videoCard = document.createElement('div');
-            videoCard.className = 'video-card';
-            
+
+        // Função para adicionar vídeo ao feed
+        function addVideoToFeed(videoURL) {
+            const videoItem = document.createElement('div');
+            videoItem.className = 'video-item';
+
             const videoElement = document.createElement('video');
             videoElement.src = videoURL;
             videoElement.controls = true;
-            
-            const videoInfo = document.createElement('div');
-            videoInfo.className = 'video-info';
-            videoInfo.textContent = isLocal ? 'Seu vídeo' : 'Vídeo compartilhado';
-            
-            videoCard.appendChild(videoElement);
-            videoCard.appendChild(videoInfo);
-            videoFeed.appendChild(videoCard);
-            
-            if (isLocal) {
-                localVideos.push(videoFile);
-            } else {
-                receivedVideos.push(videoFile);
-            }
+
+            videoItem.appendChild(videoElement);
+            videoFeed.appendChild(videoItem);
+
+            // Armazena o vídeo
+            videos.push(videoURL);
         }
-        
-        function saveVideoLocally(videoFile) {
-            // Simula salvamento local (numa aplicação real, usaria IndexedDB ou similar)
-            console.log('Vídeo salvo localmente:', videoFile.name);
+
+        // Função para gerar ID de conexão
+        function generateConnectionId() {
+            const id = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            connectionId.value = id;
         }
-        
-        // Carrega vídeos salvos localmente ao iniciar
-        function loadLocalVideos() {
-            // Simulação - numa aplicação real, carregaria da base de dados local
-            const savedVideos = JSON.parse(localStorage.getItem('localVideos')) || [];
-            
-            if (savedVideos.length > 0) {
-                noVideosMsg.classList.add('hidden');
-                
-                savedVideos.forEach(videoData => {
-                    // Convertendo de volta para File object (simplificado)
-                    const videoFile = dataURLtoFile(videoData.data, videoData.name);
-                    addVideoToFeed(videoFile, true);
-                });
-            }
-        }
-        
-        // Função auxiliar para converter data URL para File object
-        function dataURLtoFile(dataurl, filename) {
-            const arr = dataurl.split(',');
-            const mime = arr[0].match(/:(.*?);/)[1];
-            const bstr = atob(arr[1]);
-            let n = bstr.length;
-            const u8arr = new Uint8Array(n);
-            
-            while (n--) {
-                u8arr[n] = bstr.charCodeAt(n);
-            }
-            
-            return new File([u8arr], filename, { type: mime });
-        }
-        
-        // Conexão WebRTC
-        generateIdBtn.addEventListener('click', generatePeerId);
-        copyIdBtn.addEventListener('click', copyPeerId);
-        connectBtn.addEventListener('click', connectToPeer);
-        
-        function generatePeerId() {
-            // Gera um ID aleatório simples (numa aplicação real, poderia ser mais robusto)
-            myPeerId = 'user-' + Math.random().toString(36).substr(2, 9);
-            myIdDisplay.textContent = myPeerId;
-            myIdContainer.classList.remove('hidden');
-            
-            // Inicializa a conexão PeerJS
-            initializePeer();
-        }
-        
-        function copyPeerId() {
-            navigator.clipboard.writeText(myPeerId)
-                .then(() => alert('ID copiado para a área de transferência!'))
-                .catch(err => console.error('Falha ao copiar ID:', err));
-        }
-        
-        function initializePeer() {
-            // PeerJS seria usado aqui, mas como é um exemplo, simularemos o comportamento
-            
-            // Simulação de conexão PeerJS
-            console.log('Inicializando conexão PeerJS com ID:', myPeerId);
-            
-            // Simula eventos de conexão
-            setTimeout(() => {
-                connectionStatus.textContent = 'Pronto para conectar';
-                connectionStatus.className = 'status';
-            }, 1000);
-        }
-        
-        function connectToPeer() {
-            const peerId = peerIdInput.value.trim();
-            if (!peerId) {
-                alert('Por favor, insira o ID do amigo');
+
+        // Função para conectar via WebRTC
+        async function connectToPeer() {
+            const id = connectionId.value;
+            if (!id) {
+                alert('Por favor, gere ou insira um ID de conexão.');
                 return;
             }
-            
-            console.log('Conectando ao peer:', peerId);
-            connectionStatus.textContent = 'Conectando...';
-            connectionStatus.className = 'status';
-            
-            // Simulação de conexão bem-sucedida
-            setTimeout(() => {
-                connectionStatus.textContent = 'Conectado';
-                connectionStatus.className = 'status connected';
-                
-                // Simula o compartilhamento de vídeos locais
-                if (localVideos.length > 0) {
-                    alert(`Seus vídeos foram compartilhados com ${peerId}`);
-                    // Numa aplicação real, enviaria cada vídeo via WebRTC data channel
+
+            try {
+                // Configuração básica do WebRTC
+                const configuration = {
+                    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+                };
+
+                peerConnection = new RTCPeerConnection(configuration);
+
+                // Configura o data channel
+                dataChannel = peerConnection.createDataChannel('videoChannel');
+                setupDataChannel();
+
+                // Configura os eventos de ICE
+                peerConnection.onicecandidate = event => {
+                    if (event.candidate) {
+                        // Em um aplicativo real, você enviaria o candidato ICE para o peer remoto
+                        console.log('Novo candidato ICE:', event.candidate);
+                    }
+                };
+
+                // Configura o evento de track para receber vídeo remoto
+                peerConnection.ontrack = event => {
+                    if (event.streams && event.streams[0]) {
+                        const remoteVideoElement = document.createElement('video');
+                        remoteVideoElement.srcObject = event.streams[0];
+                        remoteVideoElement.controls = true;
+                        remoteVideoElement.autoplay = true;
+
+                        remoteVideo.innerHTML = '';
+                        remoteVideo.appendChild(remoteVideoElement);
+                    }
+                };
+
+                // Em um aplicativo real, você trocaria as ofertas e respostas SDP aqui
+                // Para simplificar, estamos apenas simulando a conexão
+                connectionStatus.textContent = 'Status: Conectado (simulado)';
+
+                // Envia os vídeos locais para o peer remoto
+                if (videos.length > 0) {
+                    videos.forEach(videoURL => {
+                        dataChannel.send(JSON.stringify({ type: 'video', url: videoURL }));
+                    });
                 }
-            }, 1500);
+
+            } catch (error) {
+                console.error('Erro ao conectar via WebRTC:', error);
+                connectionStatus.textContent = 'Status: Erro na conexão';
+            }
         }
-        
-        // Inicialização
-        document.addEventListener('DOMContentLoaded', () => {
-            loadLocalVideos();
-        });
+
+        // Função para configurar o data channel
+        function setupDataChannel() {
+            dataChannel.onopen = () => {
+                console.log('Data channel aberto');
+            };
+
+            dataChannel.onmessage = event => {
+                const message = JSON.parse(event.data);
+                if (message.type === 'video') {
+                    // Adiciona o vídeo recebido ao feed
+                    addVideoToFeed(message.url);
+                }
+            };
+
+            dataChannel.onclose = () => {
+                console.log('Data channel fechado');
+            };
+        }
     </script>
 </body>
 </html>
