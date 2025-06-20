@@ -1,178 +1,27 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Vídeos com WebRTC</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f9;
-        }
-        .container {
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        .tabs {
-            display: flex;
-            margin-bottom: 20px;
-        }
-        .tab {
-            padding: 10px 20px;
-            cursor: pointer;
-            background: #ddd;
-            border: none;
-            border-radius: 5px 5px 0 0;
-            margin-right: 5px;
-        }
-        .tab.active {
-            background: #007BFF;
-            color: white;
-        }
-        .tab-content {
-            display: none;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 0 0 5px 5px;
-        }
-        .tab-content.active {
-            display: block;
-        }
-        .video-container {
-            margin-top: 20px;
-        }
-        video {
-            width: 100%;
-            max-width: 500px;
-            border-radius: 5px;
-        }
-        button {
-            padding: 10px 15px;
-            background: #007BFF;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        button:hover {
-            background: #0056b3;
-        }
-        input {
-            padding: 10px;
-            width: 100%;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Exibir Vídeos</title>
+  <style>
+    video {
+      width: 100%;
+      max-width: 600px;
+      margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="tabs">
-            <button class="tab active" onclick="openTab('upload')">Upload</button>
-            <button class="tab" onclick="openTab('feed')">Feed</button>
-            <button class="tab" onclick="openTab('connect')">Conectar</button>
-        </div>
 
-        <div id="upload" class="tab-content active">
-            <h2>Upload de Vídeo</h2>
-            <input type="file" id="videoInput" accept="video/*">
-            <button onclick="uploadVideo()">Upload para Feed</button>
-            <div class="video-container">
-                <video id="uploadedVideo" controls></video>
-            </div>
-        </div>
+  <h1>Carregar Vídeo da Web</h1>
 
-        <div id="feed" class="tab-content">
-            <h2>Feed de Vídeos</h2>
-            <div id="videoFeed"></div>
-        </div>
+  <input type="text" id="urlInput" placeholder="Cole a URL do vídeo aqui..." style="width: 300px;">
+  <button onclick="carregarVideo()">Carregar Vídeo</button>
 
-        <div id="connect" class="tab-content">
-            <h2>Conexão via WebRTC</h2>
-            <button onclick="generateId()">Gerar ID</button>
-            <p id="userId"></p>
-            <input type="text" id="peerId" placeholder="Digite o ID do usuário">
-            <button onclick="connectToPeer()">Conectar</button>
-            <div id="peerVideoContainer"></div>
-        </div>
-    </div>
+  <div id="player"></div>
 
-    <script>
-        // Variáveis globais
-        let localStream;
-        let peerConnection;
-        const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+  <!-- Script JS -->
+  <script src="script.js"></script>
 
-        // Funções para abas
-        function openTab(tabName) {
-            const tabs = document.querySelectorAll('.tab-content');
-            const tabButtons = document.querySelectorAll('.tab');
-
-            tabs.forEach(tab => tab.classList.remove('active'));
-            tabButtons.forEach(button => button.classList.remove('active'));
-
-            document.getElementById(tabName).classList.add('active');
-            event.currentTarget.classList.add('active');
-        }
-
-        // Upload de vídeo
-        function uploadVideo() {
-            const videoInput = document.getElementById('videoInput');
-            const uploadedVideo = document.getElementById('uploadedVideo');
-
-            if (videoInput.files.length > 0) {
-                const file = videoInput.files[0];
-                const videoURL = URL.createObjectURL(file);
-
-                uploadedVideo.src = videoURL;
-                addVideoToFeed(videoURL);
-            } else {
-                alert('Selecione um vídeo primeiro!');
-            }
-        }
-
-        // Adicionar vídeo ao feed
-        function addVideoToFeed(videoURL) {
-            const videoFeed = document.getElementById('videoFeed');
-            const videoElement = document.createElement('video');
-            videoElement.src = videoURL;
-            videoElement.controls = true;
-            videoElement.style.width = '100%';
-            videoElement.style.maxWidth = '500px';
-            videoFeed.appendChild(videoElement);
-        }
-
-        // Gerar ID de usuário
-        function generateId() {
-            const userId = Math.random().toString(36).substring(2, 10);
-            document.getElementById('userId').textContent = `Seu ID: ${userId}`;
-            return userId;
-        }
-
-        // Conexão via WebRTC (simplificada)
-        async function connectToPeer() {
-            const peerId = document.getElementById('peerId').value;
-            if (!peerId) {
-                alert('Digite um ID válido!');
-                return;
-            }
-
-            try {
-                // Simulação de conexão WebRTC
-                alert(`Conectando ao usuário com ID: ${peerId}`);
-                // Aqui você implementaria a lógica real de WebRTC
-            } catch (error) {
-                console.error('Erro na conexão:', error);
-            }
-        }
-    </script>
 </body>
 </html>
