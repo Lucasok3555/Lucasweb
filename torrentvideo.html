@@ -2,26 +2,42 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Exibir Vídeos</title>
+  <title>Lista de Vídeos</title>
   <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    .video-container {
+      margin-top: 30px;
+    }
+
     video {
       width: 100%;
       max-width: 600px;
-      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+
+    .video-item {
+      margin-bottom: 10px;
     }
   </style>
 </head>
 <body>
 
-  <h1>Carregar Vídeo da Web</h1>
+  <h1>Lista de Vídeos</h1>
 
-  <input type="text" id="urlInput" placeholder="Cole a URL do vídeo aqui..." style="width: 300px;">
-  <button onclick="carregarVideo()">Carregar Vídeo</button>
+  <div id="lista-videos" class="video-list"></div>
 
-  <div id="player"></div>
+  <div class="video-container">
+    <h2>Vídeo Selecionado</h2>
+    <video id="player" controls></video>
+  </div>
 
-  <!-- Script JS -->
-  <script src="https://lucasok3555.github.io/Lucasweb/script.js"></script>
+  <!-- Scripts -->
+  <script src="videos.js"></script>
+  <script src="script.js"></script>
 
 </body>
 </html>
