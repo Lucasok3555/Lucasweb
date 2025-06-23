@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebRTC Video Feed</title>
+    <style>
+        /* Modern styling */
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .video-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
+        video { width: 100%; background: #222; border-radius: 8px; }
+        .controls { margin: 20px 0; padding: 15px; background: #f0f0f0; border-radius: 8px; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        input { padding: 8px; margin: 5px; width: 200px; }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <input type="file" id="videoInput" accept="video/*">
+        <button onclick="uploadVideo()">Upload to Feed</button>
+        <button onclick="generateID()">Generate My ID</button>
+        <br>
+        <input type="text" id="peerID" placeholder="Enter Peer ID">
+        <button onclick="connectPeers()">Connect</button>
+    </div>
+
+    <div class="video-container">
+        <video id="localVideo" autoplay muted></video>
+        <video id="remoteVideo" autoplay></video>
+    </div>
+
+<script>
+// WebRTC Configuration
+const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+let peerConnection;
+let localStream;
+
+// Initialize media stream
+async function initStream() {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        document.getElementById('localVideo').srcObject = localStream;
+    } catch (err) {
+        console.error("Error accessing camera:", err);
+    }
+}
+
+// File upload handling
+function uploadVideo() {
+    const fileInput = document.getElementById('videoInput');
+    const file = fileInput.files[0];
+    
+    if (file) {
+        const url = URL.createObjectURL(file);
+        const video = document.createElement('video');
+        video.src = url;
+        video.controls = true;
+        document.body.appendChild(video);
+    }
+}
+
+// Generate unique peer ID
+function generateID() {
+    const peerId = Math.random().toString(36).substr(2, 9);
+    alert(`Your Peer ID: ${peerId}`);
+}
+
+// WebRTC connection setup
+function connectPeers() {
+    const peerId = document.getElementById('peerID').value;
+    
+    // Create peer connection
+    peerConnection = new RTCPeerConnection(configuration);
+    
+    // Add local stream tracks
+    localStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, localStream);
+    });
+
+    // Handle ICE candidates
+    peerConnection.onicecandidate = event => {
+        if (event.candidate) {
+            // Send candidate to peer via signaling server (simulated here)
+            console.log('New ICE candidate:', event.candidate);
+        }
+    };
+
+    // Handle connection state
+    peerConnection.onconnectionstatechange = event => {
+        console.log('Connection state:', peerConnection.connectionState);
+    };
+
+    // Create data channel for signaling
+    const dataChannel = peerConnection.createDataChannel('signaling');
+    
+    // Create offer
+    peerConnection.createOffer()
+        .then(offer => peerConnection.setLocalDescription(offer))
+        .then(() => {
+            // Send offer to peer via signaling server (simulated)
+            console.log('Offer created:', peerConnection.localDescription);
+        })
+        .catch(err => console.error('Error creating offer:', err));
+}
+
+// Start initialization
+window.onload = initStream;
+</script>
+</body>
+</html>
