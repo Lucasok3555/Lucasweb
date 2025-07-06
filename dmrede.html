@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Visualizar Serviço</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    #iframe-container {
+      width: 100%;
+      height: 100vh;
+      border: none;
+    }
+    #erro {
+      display: none;
+      color: red;
+      text-align: center;
+      padding: 50px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+
+  <iframe id="meuIframe" src="http://147.185.221.29:51817" frameborder="0" width="100%" height="100%"></iframe>
+  <div id="erro">Os nossos serviços estão fora do ar no momento.</div>
+
+  <script>
+    const iframe = document.getElementById('meuIframe');
+    const erro = document.getElementById('erro');
+
+    // Espera no máximo 5 segundos por resposta
+    const tempoLimite = 5000;
+
+    const timer = setTimeout(() => {
+      iframe.style.display = 'none';
+      erro.style.display = 'block';
+    }, tempoLimite);
+
+    // Tenta detectar se carregou com sucesso
+    iframe.onload = () => {
+      clearTimeout(timer);
+    };
+
+    // Caso ocorra erro de rede
+    iframe.onerror = () => {
+      clearTimeout(timer);
+      iframe.style.display = 'none';
+      erro.style.display = 'block';
+    };
+  </script>
+
+</body>
+</html>
