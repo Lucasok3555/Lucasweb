@@ -1,0 +1,49 @@
+version: '3.7'
+
+services:
+  invidious-db:
+    image: postgres:15
+    container_name: invidious-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: invidious
+      POSTGRES_USER: invidious
+      POSTGRES_PASSWORD: invidious
+    volumes:
+      - invidious-db-data:/var/lib/postgresql/data
+
+  invidious:
+    image: ivorg/invidious:latest
+    container_name: invidious
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - invidious-db
+    environment:
+      # Conexão com o banco
+      INVIDIOUS_CONFIG: |
+        db:
+          user: invidious
+          password: invidious
+          dbname: invidious
+          host: invidious-db
+          port: 5432
+        # Configurações adicionais (opcional)
+        check_tables: true
+        domain: localhost
+        use_quic: false
+        hsts: false
+        statistics_enabled: false
+        registration_enabled: false
+        captcha_enabled: false
+        external_port: 3000
+        default_user_preferences:
+          annotations: false
+          quality: dash
+          captions: []
+          player_style: invidious
+          max_results: 20
+
+volumes:
+  invidious-db-data:
