@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Block Game</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            touch-action: none;
+            font-family: Arial, sans-serif;
+        }
+        canvas { 
+            display: block; 
+            touch-action: none;
+        }
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.8);
+            pointer-events: none;
+            z-index: 100;
+        }
+        #instructions {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            max-width: 200px;
+        }
+        #mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+        #joystick-area {
+            width: 120px;
+            height: 120px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 60px;
+            position: relative;
+        }
+        #joystick {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 20px;
+            top: 40px;
+            left: 40px;
+            touch-action: none;
+        }
+        #action-buttons {
+            display: flex;
+            gap: 15px;
+        }
+        .action-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        #break-btn {
+            background: rgba(255, 0, 0, 0.5);
+        }
+        #place-btn {
+            background: rgba(0, 255, 0, 0.5);
+        }
+        #inventory {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 5px;
+            background: rgba(0,0,0,0.5);
+            padding: 5px;
+            border-radius: 10px;
+            z-index: 10;
+        }
+        .inv-slot {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: white;
+            flex-direction: column;
+        }
+        .inv-slot.active {
+            border: 2px solid white;
+        }
+        .slot-img {
+            font-size: 16px;
+            margin-bottom: 2px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+</head>
+<body>
+    <div id="crosshair"></div>
+    <div id="instructions">
+        <h3>3D Block Game</h3>
+        <p>PC: WASD/Arrows to move, B to break, Click to place</p>
+        <p>Mobile: Joystick to move, Buttons to break/place</p>
+    </div>
+    
+    <div id="mobile-controls">
+        <div id="joystick-area">
+            <div id="joystick"></div>
+        </div>
+        <div id="action-buttons">
+            <div id="break-btn" class="action-btn">💥</div>
+            <div id="place-btn" class="action-btn">➕</div>
+        </div>
+    </div>
+    
+    <div id="inventory">
+        <div id="grass-slot" class="inv-slot active">
+            <div class="slot-img">🟩</div>
+            <div class="slot-count">G:0</div>
+        </div>
+        <div id="stone-slot" class="inv-slot">
+            <div class="slot-img">🪨</div>
+            <div class="slot-count">S:0</div>
+        </div>
+        <div id="wood-slot" class="inv-slot">
+            <div class="slot-img">🪵</div>
+            <div class="slot-count">W:0</div>
+        </div>
+        <div id="leaves-slot" class="inv-slot">
+            <div class="slot-img">🍃</div>
+            <div class="slot-count">L:0</div>
+        </div>
+        <div id="glass-slot" class="inv-slot">
+            <div class="slot-img">🟦</div>
+            <div class="slot-count">G:0</div>
+        </div>
+        <div id="door-slot" class="inv-slot">
+            <div class="slot-img">🚪</div>
+            <div class="slot-count">D:0</div>
+        </div>
+    </div>
+
+    <script>
+        // Set up scene, camera, and renderer
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB); // Sky blue
+        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.y = 10;
+        camera.position.z = 5;
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+        
+        // Add light
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(10, 20, 10);
+        scene.add(directionalLight);
+        
+        // Movement variables
+        const velocity = new THREE.Vector3();
+        let moveForward = false;
+        let moveBackward = false;
+        let moveLeft = false;
+        let moveRight = false;
+        
+        // Camera rotation
+        let yaw = 0;
+        let pitch = 0;
+        const mouseSensitivity = 0.002;
+        
+        // Joystick variables
+        const joystickArea = document.getElementById('joystick-area');
+        const joystick = document.getElementById('joystick');
+        let joystickActive = false;
+        let joystickOriginX = 0;
+        let joystickOriginY = 0;
+        
+        // Check if device is mobile
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        // Block geometry
+        const blockGeometry = new THREE.BoxGeometry(1, 1, 1);
+        const leafGeometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+        const glassGeometry = new THREE.BoxGeometry(1, 1, 1);
+        const doorGeometry = new THREE.BoxGeometry(0.4, 2, 1);
+        
+        // Block materials
+        const grassMaterial = new THREE.MeshLambertMaterial({ 
+            color: 0x7CFC00
+        });
+        
+        const stoneMaterial = new THREE.MeshLambertMaterial({ 
+            color: 0x808080
+        });
+        
+        const woodMaterial = new THREE.MeshLambertMaterial({ 
+            color: 0xD2691E
+        });
+        
+        const leavesMaterial = new THREE.MeshLambertMaterial({ 
+            color: 0x228B22,
+            transparent: true,
+            opacity: 0.8
+        });
+        
+        const glassMaterial = new THREE.MeshLambertMaterial({ 
+            color: 0xADD8E6,
+            transparent: true,
+            opacity: 0.6
+        });
+        
+        const doorMaterial = new THREE.MeshLambertMaterial({ 
+            color: 0x8B4513
+        });
+        
+        // World data
+        const world = {};
+        const CHUNK_SIZE = 16;
+        const WORLD_HEIGHT = 6;
+        const inventory = { grass: 0, stone: 0, wood: 0, leaves: 0, glass: 0, door: 0 };
+        let selectedBlock = 'grass';
+        
+        // Update inventory display
+        function updateInventory() {
+            document.querySelectorAll('.slot-count').forEach(el => {
+                const slotId = el.parentElement.id;
+                const blockType = slotId.split('-')[0];
+                el.textContent = blockType.charAt(0).toUpperCase() + ':' + inventory[blockType];
+            });
+        }
+        
+        // Inventory selection
+        document.querySelectorAll('.inv-slot').forEach(slot => {
+            slot.addEventListener('click', () => {
+                document.querySelectorAll('.inv-slot').forEach(el => el.classList.remove('active'));
+                slot.classList.add('active');
+                
+                const blockType = slot.id.split('-')[0];
+                selectedBlock = blockType;
+            });
+        });
+        
+        function setBlock(x, y, z, type) {
+            const key = `${Math.floor(x)},${Math.floor(y)},${Math.floor(z)}`;
+            if (world[key]) return;
+            
+            let material;
+            let geometry;
+            
+            switch (type) {
+                case 'grass':
+                    material = grassMaterial;
+                    geometry = blockGeometry;
+                    break;
+                case 'stone':
+                    material = stoneMaterial;
+                    geometry = blockGeometry;
+                    break;
+                case 'wood':
+                    material = woodMaterial;
+                    geometry = blockGeometry;
+                    break;
+                case 'leaves':
+                    material = leavesMaterial;
+                    geometry = leafGeometry;
+                    break;
+                case 'glass':
+                    material = glassMaterial;
+                    geometry = glassGeometry;
+                    break;
+                case 'door':
+                    material = doorMaterial;
+                    geometry = doorGeometry;
+                    break;
+                default:
+                    return;
+            }
+            
+            const block = new THREE.Mesh(geometry, material);
+            block.position.set(Math.floor(x), Math.floor(y), Math.floor(z));
+            scene.add(block);
+            
+            world[key] = {
+                type,
+                mesh: block
+            };
+        }
+        
+        // Generate a tree at the specified position
+        function generateTree(x, z) {
+            const trunkHeight = 4 + Math.floor(Math.random() * 3);
+            const treeTop = WORLD_HEIGHT + 5;
+            
+            // Create trunk
+            for (let y = treeTop; y < treeTop + trunkHeight; y++) {
+                setBlock(x, y, z, 'wood');
+            }
+            
+            // Create leaves canopy
+            for (let dy = -2; dy <= 2; dy++) {
+                for (let dx = -2; dx <= 2; dx++) {
+                    for (let dz = -2; dz <= 2; dz++) {
+                        const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                        if (dist <= 2.5 && Math.random() > 0.3) {
+                            setBlock(x + dx, treeTop + trunkHeight + dy, z + dz, 'leaves');
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Generate terrain chunk
+        function generateChunk(cx, cz) {
+            for (let x = 0; x < CHUNK_SIZE; x++) {
+                for (let z = 0; z < CHUNK_SIZE; z++) {
+                    const worldX = cx * CHUNK_SIZE + x;
+                    const worldZ = cz * CHUNK_SIZE + z;
+                    
+                    // Simple height map
+                    const height = Math.floor(
+                        WORLD_HEIGHT + 
+                        Math.sin(worldX * 0.1) * 2 + 
+                        Math.sin(worldZ * 0.2) * 1.5
+                    );
+                    
+                    // Add grass at the top
+                    setBlock(worldX, height, worldZ, 'grass');
+                    
+                    // Add stone below grass
+                    for (let y = height - 1; y > height - 5; y--) {
+                        if (y > 0) {
+                            setBlock(worldX, y, worldZ, 'stone');
+                        }
+                    }
+                    
+                    // Generate trees randomly
+                    if (Math.random() < 0.02) {
+                        generateTree(worldX, worldZ);
+                    }
+                }
+            }
+        }
+        
+        // Generate initial chunks
+        generateChunk(0, 0);
+        generateChunk(1, 0);
+        generateChunk(0, 1);
+        generateChunk(-1, 0);
+        generateChunk(0, -1);
+        
+        // Raycaster for block breaking and placing
+        const raycaster = new THREE.Raycaster();
+        
+        // Handle block breaking
+        function breakBlock() {
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+            const intersects = raycaster.intersectObjects(Object.values(world).map(w => w.mesh));
+            
+            if (intersects.length > 0 && intersects[0].distance < 5) {
+                const intersect = intersects[0];
+                const block = intersect.object;
+                const key = `${Math.round(block.position.x)},${Math.round(block.position.y)},${Math.round(block.position.z)}`;
+                const blockType = world[key].type;
+                
+                // Add to inventory
+                inventory[blockType]++;
+                updateInventory();
+                
+                // Remove from scene and world
+                scene.remove(block);
+                delete world[key];
+            }
+        }
+        
+        // Handle block placing
+        function placeBlock() {
+            if (inventory[selectedBlock] > 0) {
+                raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+                const intersects = raycaster.intersectObjects(Object.values(world).map(w => w.mesh));
+                
+                if (intersects.length > 0 && intersects[0].distance < 5) {
+                    const intersect = intersects[0];
+                    
+                    // Only place if looking at the outside face
+                    if (intersect.face.normal.dot(camera.getWorldDirection(new THREE.Vector3())) < 0) {
+                        const pos = new THREE.Vector3();
+                        pos.copy(intersect.point);
+                        pos.x += intersect.face.normal.x;
+                        pos.y += intersect.face.normal.y;
+                        pos.z += intersect.face.normal.z;
+                        
+                        // Only place if empty
+                        const key = `${Math.round(pos.x)},${Math.round(pos.y)},${Math.round(pos.z)}`;
+                        if (!world[key]) {
+                            setBlock(pos.x, pos.y, pos.z, selectedBlock);
+                            inventory[selectedBlock]--;
+                            updateInventory();
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Event listeners for PC
+        document.addEventListener('keydown', (event) => {
+            switch (event.code) {
+                case 'KeyW':
+                case 'ArrowUp':
+                    moveForward = true;
+                    break;
+                case 'KeyS':
+                case 'ArrowDown':
+                    moveBackward = true;
+                    break;
+                case 'KeyA':
+                case 'ArrowLeft':
+                    moveLeft = true;
+                    break;
+                case 'KeyD':
+                case 'ArrowRight':
+                    moveRight = true;
+                    break;
+                case 'KeyB':
+                    breakBlock();
+                    break;
+            }
+        });
+        
+        document.addEventListener('keyup', (event) => {
+            switch (event.code) {
+                case 'KeyW':
+                case 'ArrowUp':
+                    moveForward = false;
+                    break;
+                case 'KeyS':
+                case 'ArrowDown':
+                    moveBackward = false;
+                    break;
+                case 'KeyA':
+                case 'ArrowLeft':
+                    moveLeft = false;
+                    break;
+                case 'KeyD':
+                case 'ArrowRight':
+                    moveRight = false;
+                    break;
+            }
+        });
+        
+        // Mouse control for camera rotation (PC)
+        let isPointerLocked = false;
+        
+        document.addEventListener('click', () => {
+            if (!isPointerLocked) {
+                renderer.domElement.requestPointerLock();
+                isPointerLocked = true;
+            }
+        });
+        
+        document.addEventListener('pointerlockchange', () => {
+            isPointerLocked = document.pointerLockElement === renderer.domElement;
+        });
+        
+        renderer.domElement.addEventListener('mousedown', (event) => {
+            if (isPointerLocked && event.button === 0) { // Left click
+                placeBlock();
+            }
+        });
+        
+        // Mobile joystick controls
+        joystickArea.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const rect = joystickArea.getBoundingClientRect();
+            joystickOriginX = rect.left + rect.width / 2;
+            joystickOriginY = rect.top + rect.height / 2;
+            
+            const touch = e.touches[0];
+            const dx = touch.clientX - joystickOriginX;
+            const dy = touch.clientY - joystickOriginY;
+            const distance = Math.sqrt(dx*dx + dy*dy);
+            const maxDistance = rect.width / 2 - 20;
+            
+            if (distance <= maxDistance) {
+                joystick.style.transform = `translate(${dx}px, ${dy}px)`;
+            } else {
+                const angle = Math.atan2(dy, dx);
+                const x = Math.cos(angle) * maxDistance;
+                const y = Math.sin(angle) * maxDistance;
+                joystick.style.transform = `translate(${x}px, ${y}px)`;
+            }
+            
+            // Calculate movement direction
+            const normalizedDistance = Math.min(1, distance / maxDistance);
+            const angle = Math.atan2(dy, dx);
+            
+            moveForward = Math.abs(angle) < Math.PI/4 || Math.abs(angle) > 3*Math.PI/4;
+            moveBackward = Math.abs(angle - Math.PI) < Math.PI/4 || Math.abs(angle + Math.PI) < Math.PI/4;
+            moveLeft = angle > 0 && angle < Math.PI;
+            moveRight = angle < 0 || angle > Math.PI;
+            
+            joystickActive = true;
+        }, { passive: false });
+        
+        document.addEventListener('touchmove', (e) => {
+            if (joystickActive && e.touches[0] && 
+                e.touches[0].target.parentElement === joystickArea) {
+                e.preventDefault();
+                const rect = joystickArea.getBoundingClientRect();
+                const touch = e.touches[0];
+                const dx = touch.clientX - joystickOriginX;
+                const dy = touch.clientY - joystickOriginY;
+                const distance = Math.sqrt(dx*dx + dy*dy);
+                const maxDistance = rect.width / 2 - 20;
+                
+                if (distance <= maxDistance) {
+                    joystick.style.transform = `translate(${dx}px, ${dy}px)`;
+                } else {
+                    const angle = Math.atan2(dy, dx);
+                    const x = Math.cos(angle) * maxDistance;
+                    const y = Math.sin(angle) * maxDistance;
+                    joystick.style.transform = `translate(${x}px, ${y}px)`;
+                }
+                
+                // Calculate movement direction
+                const normalizedDistance = Math.min(1, distance / maxDistance);
+                const angle = Math.atan2(dy, dx);
+                
+                moveForward = Math.abs(angle) < Math.PI/4 || Math.abs(angle) > 3*Math.PI/4;
+                moveBackward = Math.abs(angle - Math.PI) < Math.PI/4 || Math.abs(angle + Math.PI) < Math.PI/4;
+                moveLeft = angle > 0 && angle < Math.PI;
+                moveRight = angle < 0 || angle > Math.PI;
+            }
+        }, { passive: false });
+        
+        document.addEventListener('touchend', (e) => {
+            if (joystickActive && (e.touches.length === 0 || 
+                !e.touches[0] || 
+                !e.touches[0].target.parentElement === joystickArea)) {
+                joystick.style.transform = 'translate(0px, 0px)';
+                moveForward = moveBackward = moveLeft = moveRight = false;
+                joystickActive = false;
+            }
+        });
+        
+        // Mobile action buttons
+        document.getElementById('break-btn').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            breakBlock();
+        });
+        
+        document.getElementById('place-btn').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            placeBlock();
+        });
+        
+        // Mouse/touch move for camera rotation
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        
+        renderer.domElement.addEventListener('mousemove', (e) => {
+            if (isPointerLocked) {
+                const movementX = e.movementX || 0;
+                const movementY = e.movementY || 0;
+                
+                yaw -= movementX * mouseSensitivity;
+                pitch -= movementY * mouseSensitivity;
+                
+                // Limit pitch
+                pitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, pitch));
+            }
+        });
+        
+        // Touch to rotate camera on mobile
+        let lastTouchX = 0;
+        let lastTouchY = 0;
+        
+        renderer.domElement.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1 && !isOnControl(e.touches[0])) {
+                lastTouchX = e.touches[0].clientX;
+                lastTouchY = e.touches[0].clientY;
+            }
+        }, { passive: false });
+        
+        renderer.domElement.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 1 && !isOnControl(e.touches[0]) && lastTouchX) {
+                e.preventDefault();
+                const touchX = e.touches[0].clientX;
+                const touchY = e.touches[0].clientY;
+                
+                const deltaX = touchX - lastTouchX;
+                const deltaY = touchY - lastTouchY;
+                
+                yaw -= deltaX * mouseSensitivity;
+                pitch -= deltaY * mouseSensitivity;
+                
+                // Limit pitch
+                pitch = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, pitch));
+                
+                lastTouchX = touchX;
+                lastTouchY = touchY;
+            }
+        }, { passive: false });
+        
+        renderer.domElement.addEventListener('touchend', () => {
+            lastTouchX = 0;
+            lastTouchY = 0;
+        });
+        
+        // Check if touch is on control area
+        function isOnControl(touch) {
+            const controls = [
+                joystickArea, 
+                document.getElementById('break-btn'),
+                document.getElementById('place-btn'),
+                document.getElementById('inventory')
+            ];
+            
+            for (const control of controls) {
+                const rect = control.getBoundingClientRect();
+                if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
+                    touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        // Check if we need to generate more chunks
+        function checkWorldBounds() {
+            const playerChunkX = Math.floor(camera.position.x / CHUNK_SIZE);
+            const playerChunkZ = Math.floor(camera.position.z / CHUNK_SIZE);
+            
+            // Generate surrounding chunks
+            for (let dx = -2; dx <= 2; dx++) {
+                for (let dz = -2; dz <= 2; dz++) {
+                    const cx = playerChunkX + dx;
+                    const cz = playerChunkZ + dz;
+                    const chunkKey = `chunk_${cx}_${cz}`;
+                    
+                    if (!world[chunkKey]) {
+                        world[chunkKey] = true; // Mark as generated
+                        generateChunk(cx, cz);
+                    }
+                }
+            }
+        }
+        
+        // Animation loop
+        const clock = new THREE.Clock();
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const delta = clock.getDelta();
+            
+            // Handle movement
+            velocity.x -= velocity.x * 10.0 * delta;
+            velocity.z -= velocity.z * 10.0 * delta;
+            
+            // Calculate direction based on camera yaw
+            if (moveForward) velocity.z -= 5.0 * delta;
+            if (moveBackward) velocity.z += 5.0 * delta;
+            if (moveLeft) velocity.x -= 5.0 * delta;
+            if (moveRight) velocity.x += 5.0 * delta;
+            
+            // Apply movement in camera direction
+            const moveX = velocity.x * Math.cos(yaw) - velocity.z * Math.sin(yaw);
+            const moveZ = velocity.z * Math.cos(yaw) + velocity.x * Math.sin(yaw);
+            
+            camera.position.x += moveX;
+            camera.position.z += moveZ;
+            
+            // Keep player above ground
+            const playerX = Math.floor(camera.position.x);
+            const playerZ = Math.floor(camera.position.z);
+            let groundY = 1;
+            
+            // Find ground level at player position
+            for (let y = 50; y > 0; y--) {
+                const key = `${playerX},${y},${playerZ}`;
+                if (world[key]) {
+                    groundY = y + 2; // Position player above the top block
+                    break;
+                }
+            }
+            
+            // Simple gravity/ground constraint
+            if (camera.position.y > groundY) {
+                camera.position.y -= (camera.position.y - groundY) * 0.1;
+            } else {
+                camera.position.y = groundY;
+            }
+            
+            // Apply camera rotation
+            camera.rotation.order = 'YXZ';
+            camera.rotation.y = yaw;
+            camera.rotation.x = pitch;
+            
+            checkWorldBounds();
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Initialize inventory display
+        updateInventory();
+    </script>
+</body>
+</html>
