@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Boneco de Palito com Vida Própria</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            touch-action: none;
+        }
+        
+        #thoughtBubble {
+            position: absolute;
+            background-color: white;
+            border: 2px solid black;
+            border-radius: 15px;
+            padding: 10px;
+            max-width: 250px;
+            font-size: 14px;
+            display: none;
+            z-index: 100;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            pointer-events: none;
+        }
+        
+        #thoughtBubble:after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -10px;
+            border-width: 10px 10px 0;
+            border-style: solid;
+            border-color: black transparent;
+        }
+        
+        #thoughtBubble p {
+            margin: 0;
+            color: black;
+        }
+        
+        #stickFigure {
+            position: absolute;
+            width: 40px;
+            height: 80px;
+            cursor: pointer;
+            z-index: 10;
+            user-select: none;
+        }
+        
+        .head {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid black;
+            top: 0;
+            left: 12px;
+            z-index: 2;
+        }
+        
+        .body {
+            position: absolute;
+            width: 2px;
+            height: 32px;
+            background-color: black;
+            top: 16px;
+            left: 20px;
+            z-index: 1;
+        }
+        
+        .arm {
+            position: absolute;
+            width: 24px;
+            height: 2px;
+            background-color: black;
+            top: 24px;
+            z-index: 3;
+        }
+        
+        .left-arm {
+            left: 4px;
+            transform-origin: left center;
+        }
+        
+        .right-arm {
+            left: 20px;
+            transform-origin: left center;
+        }
+        
+        .leg {
+            position: absolute;
+            width: 2px;
+            height: 28px;
+            background-color: black;
+            top: 48px;
+        }
+        
+        .left-leg {
+            left: 16px;
+            transform-origin: top center;
+        }
+        
+        .right-leg {
+            left: 24px;
+            transform-origin: top center;
+        }
+        
+        .item {
+            position: absolute;
+            font-size: 18px;
+            top: 28px;
+            left: 38px;
+            z-index: 4;
+            opacity: 0;
+            transition: opacity 0.3s;
+            transform-origin: left center;
+        }
+        
+        .drawing {
+            position: absolute;
+            font-size: 30px;
+            z-index: 5;
+            cursor: pointer;
+            transform: translate(-50%, -50%);
+        }
+        
+        .delete-btn {
+            position: absolute;
+            font-size: 18px;
+            background-color: red;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            top: -10px;
+            right: -10px;
+            cursor: pointer;
+            z-index: 10;
+        }
+        
+        #drawingContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .status-bar {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 200px;
+            font-size: 12px;
+            z-index: 200;
+        }
+        
+        .status-item {
+            margin-bottom: 5px;
+        }
+        
+        .status-label {
+            display: inline-block;
+            width: 70px;
+            font-weight: bold;
+        }
+        
+        .status-value {
+            display: inline-block;
+            width: 100px;
+            background-color: #eee;
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .status-fill {
+            height: 100%;
+            background-color: green;
+            width: 100%;
+            transition: width 0.5s;
+        }
+        
+        #emotions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            font-size: 14px;
+            z-index: 200;
+        }
+    </style>
+</head>
+<body>
+    <div class="status-bar">
+        <div class="status-item">
+            <span class="status-label">Fome:</span>
+            <div class="status-value"><div id="hungerFill" class="status-fill"></div></div>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Sede:</span>
+            <div class="status-value"><div id="thirstFill" class="status-fill"></div></div>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Cansaço:</span>
+            <div class="status-value"><div id="fatigueFill" class="status-fill"></div></div>
+        </div>
+    </div>
+    
+    <div id="emotions">Sentimento atual: Neutro</div>
+    
+    <div id="thoughtBubble"><p></p></div>
+    <div id="stickFigure">
+        <div class="head"></div>
+        <div class="body"></div>
+        <div class="arm left-arm"></div>
+        <div class="arm right-arm"></div>
+        <div class="leg left-leg"></div>
+        <div class="leg right-leg"></div>
+        <div class="item" id="pencil">✏️</div>
+        <div class="item" id="chicken">🍗</div>
+        <div class="item" id="drink">🥤</div>
+    </div>
+    
+    <div id="drawingContainer"></div>
+
+    <script>
+        const stickFigure = document.getElementById('stickFigure');
+        const thoughtBubble = document.getElementById('thoughtBubble');
+        const thoughtText = thoughtBubble.querySelector('p');
+        const leftArm = document.querySelector('.left-arm');
+        const rightArm = document.querySelector('.right-arm');
+        const leftLeg = document.querySelector('.left-leg');
+        const rightLeg = document.querySelector('.right-leg');
+        const pencil = document.getElementById('pencil');
+        const chicken = document.getElementById('chicken');
+        const drink = document.getElementById('drink');
+        const items = [pencil, chicken, drink];
+        const drawingContainer = document.getElementById('drawingContainer');
+        const emotionsDisplay = document.getElementById('emotions');
+        
+        // Status do boneco
+        let hunger = 50;
+        let thirst = 50;
+        let fatigue = 30;
+        let emotions = {
+            happy: 50,
+            angry: 30,
+            sad: 40,
+            lonely: 30,
+            curious: 60
+        };
+        
+        // Atualizar barras de status
+        function updateStatusBars() {
+            document.getElementById('hungerFill').style.width = (100 - hunger) + '%';
+            document.getElementById('thirstFill').style.width = (100 - thirst) + '%';
+            document.getElementById('fatigueFill').style.width = (100 - fatigue) + '%';
+            
+            // Cores conforme nível
+            if (hunger > 70) document.getElementById('hungerFill').style.backgroundColor = 'red';
+            else if (hunger > 50) document.getElementById('hungerFill').style.backgroundColor = 'orange';
+            else document.getElementById('hungerFill').style.backgroundColor = 'green';
+            
+            if (thirst > 70) document.getElementById('thirstFill').style.backgroundColor = 'red';
+            else if (thirst > 50) document.getElementById('thirstFill').style.backgroundColor = 'orange';
+            else document.getElementById('thirstFill').style.backgroundColor = 'green';
+            
+            if (fatigue > 70) document.getElementById('fatigueFill').style.backgroundColor = 'red';
+            else if (fatigue > 50) document.getElementById('fatigueFill').style.backgroundColor = 'orange';
+            else document.getElementById('fatigueFill').style.backgroundColor = 'green';
+        }
+        
+        // Posição do boneco
+        let x = window.innerWidth / 2;
+        let y = window.innerHeight / 2;
+        let isAngry = false;
+        let isClimbing = false;
+        let isWalking = false;
+        let isSitting = false;
+        let isSleeping = false;
+        let isUsingItem = false;
+        let isDrawing = false;
+        let walkDirection = 1;
+        let animationFrameId = null;
+        let currentItem = null;
+        let lastInteraction = 0;
+        let drawings = [];
+        let currentEmotion = 'neutro';
+        
+        // Posicionar o boneco
+        stickFigure.style.left = x + 'px';
+        stickFigure.style.top = y + 'px';
+        
+        // Pensamentos do boneco
+        const thoughts = {
+            normal: ["Estou bem.", "Que dia bonito!", "Vou explorar um pouco.", "Tudo tranquilo."],
+            hungry: ["Estou com fome!", "Preciso comer algo.", "Queria um lanche agora.", "Meu estômago roncando..."],
+            thirsty: ["Estou com sede!", "Preciso beber água.", "Uma bebida seria ótima.", "Seco aqui..."],
+            tired: ["Estou cansado.", "Preciso descansar.", "Queria sentar um pouco.", "Meu corpo dói..."],
+            angry: ["Me deixe em paz!", "Pare com isso!", "Você está me irritando!", "Vou embora!", "Isso é injusto!"],
+            calm: ["Estou melhor agora.", "Respirando fundo...", "Tudo bem, tudo bem...", "Voltando ao normal."],
+            lonely: ["Me sinto só...", "Queria alguém para conversar.", "Será que alguém me vê?", "Ninguém se importa..."],
+            happy: ["Estou feliz!", "Que alegria!", "Adoro desenhar!", "Que mundo maravilhoso!"],
+            curious: ["O que será isso?", "Vou investigar!", "Que interessante!", "Nunca vi isso antes!"],
+            reading: ["Lendo um livro interessante...", "Que história boa!", "Aprender é bom!", "Pensando profundamente..."],
+            drawing: ["Desenhando minha casa!", "Criando um móvel novo...", "Minha obra de arte!", "Expressando minha alma!"],
+            frustrated: ["Apagaram meu desenho!", "Por que você fez isso?", "Trabalho destruído!", "Estou muito chateado!"],
+            excited: ["Olha o carro!", "Uau, uma bicicleta!", "Que legal isso!", "Mundo cheio de surpresas!"]
+        };
+        
+        // Objetos que podem ser desenhados
+        const drawables = [
+            { emoji: "🏠", name: "casa", points: 10 },
+            { emoji: "🚗", name: "carro", points: 8 },
+            { emoji: "🚲", name: "bicicleta", points: 6 },
+            { emoji: "🛏️", name: "cama", points: 7 },
+            { emoji: "🪑", name: "cadeira", points: 5 },
+            { emoji: "🧊", name: "geladeira", points: 9 },
+            { emoji: "📺", name: "TV", points: 6 },
+            { emoji: "👗", name: "guarda-roupa", points: 8 },
+            { emoji: "🍽️", name: "mesa", points: 6 },
+            { emoji: "🍳", name: "fogão", points: 7 },
+            { emoji: "🍲", name: "panela", points: 5 },
+            { emoji: "🛋️", name: "sofá", points: 8 },
+            { emoji: "🛁", name: "banheira", points: 7 },
+            { emoji: "📚", name: "livro", points: 6 },
+            { emoji: "🧱", name: "bloco", points: 4 },
+            { emoji: "🎮", name: "jogo", points: 6 }
+        ];
+        
+        // Função para mostrar pensamento
+        function showThought(text) {
+            thoughtBubble.style.display = 'block';
+            thoughtText.textContent = text;
+            
+            const figureRect = stickFigure.getBoundingClientRect();
+            thoughtBubble.style.left = (figureRect.left + figureRect.width/2 - 120) + 'px';
+            thoughtBubble.style.top = (figureRect.top - 60) + 'px';
+            
+            setTimeout(() => {
+                thoughtBubble.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Função para escolher pensamento aleatório
+        function getRandomThought(category) {
+            const list = thoughts[category];
+            return list[Math.floor(Math.random() * list.length)];
+        }
+        
+        // Atualizar emoção exibida
+        function updateEmotionDisplay() {
+            // Determinar emoção dominante
+            let maxEmotion = 'neutro';
+            let maxValue = 0;
+            
+            for (let [emotion, value] of Object.entries(emotions)) {
+                if (value > maxValue) {
+                    maxValue = value;
+                    maxEmotion = emotion;
+                }
+            }
+            
+            // Ajustar valores ao longo do tempo
+            for (let emotion in emotions) {
+                if (emotion !== maxEmotion) {
+                    emotions[emotion] = Math.max(0, emotions[emotion] - 0.5);
+                }
+            }
+            
+            currentEmotion = maxEmotion;
+            emotionsDisplay.textContent = `Sentimento atual: ${maxEmotion.charAt(0).toUpperCase() + maxEmotion.slice(1)}`;
+        }
+        
+        // Animar membros
+        function animateArms() {
+            let angle = 0;
+            
+            function animate() {
+                if (isSleeping) {
+                    leftArm.style.transform = 'rotate(45deg)';
+                    rightArm.style.transform = 'rotate(-45deg)';
+                } else if (isSitting) {
+                    leftArm.style.transform = 'rotate(20deg)';
+                    rightArm.style.transform = 'rotate(-20deg)';
+                } else if (isWalking && !isUsingItem && !isDrawing) {
+                    angle += 0.15;
+                    const armAngle = Math.sin(angle * 2) * 20;
+                    
+                    leftArm.style.transform = `rotate(${-armAngle}deg)`;
+                    rightArm.style.transform = `rotate(${armAngle}deg)`;
+                } else if (isUsingItem && currentItem === chicken) {
+                    rightArm.style.transform = 'rotate(60deg)';
+                    leftArm.style.transform = 'rotate(0deg)';
+                } else if (isUsingItem && currentItem === drink) {
+                    rightArm.style.transform = 'rotate(45deg)';
+                    leftArm.style.transform = 'rotate(0deg)';
+                } else if ((isUsingItem || isDrawing) && currentItem === pencil) {
+                    rightArm.style.transform = 'rotate(30deg)';
+                    leftArm.style.transform = 'rotate(0deg)';
+                } else if (isClimbing) {
+                    angle += 0.2;
+                    const leftArmAngle = Math.sin(angle) * 60;
+                    const rightArmAngle = Math.sin(angle + Math.PI) * 60;
+                    
+                    leftArm.style.transform = `rotate(${leftArmAngle}deg)`;
+                    rightArm.style.transform = `rotate(${rightArmAngle}deg)`;
+                } else {
+                    leftArm.style.transform = 'rotate(0deg)';
+                    rightArm.style.transform = 'rotate(0deg)';
+                }
+                
+                animationFrameId = requestAnimationFrame(animate);
+            }
+            
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            animate();
+        }
+        
+        // Animar pernas
+        function animateLegs() {
+            let angle = 0;
+            
+            function animate() {
+                if (isSleeping) {
+                    leftLeg.style.transform = 'rotate(10deg)';
+                    rightLeg.style.transform = 'rotate(-10deg)';
+                } else if (isSitting) {
+                    leftLeg.style.transform = 'rotate(90deg)';
+                    rightLeg.style.transform = 'rotate(90deg)';
+                } else if (isWalking) {
+                    angle += 0.15;
+                    const leftLegAngle = Math.sin(angle) * 20;
+                    const rightLegAngle = Math.sin(angle + Math.PI) * 20;
+                    
+                    leftLeg.style.transform = `rotate(${leftLegAngle}deg)`;
+                    rightLeg.style.transform = `rotate(${rightLegAngle}deg)`;
+                } else {
+                    leftLeg.style.transform = 'rotate(0deg)';
+                    rightLeg.style.transform = 'rotate(0deg)';
+                }
+                
+                animationFrameId = requestAnimationFrame(animate);
+            }
+            
+            if (!animationFrameId) animate();
+        }
+        
+        // Iniciar animações
+        animateArms();
+        animateLegs();
+        
+        // Função para andar
+        function startWalking(targetX = null) {
+            if (isSitting || isSleeping || isClimbing || isUsingItem || isDrawing) return;
+            
+            isWalking = true;
+            const speed = 2;
+            const stepSize = 2;
+            
+            function walkStep() {
+                if (isAngry || isSitting || isSleeping || isUsingItem || isDrawing) {
+                    isWalking = false;
+                    return;
+                }
+                
+                if (targetX) {
+                    if (Math.abs(x - targetX) > stepSize) {
+                        x += (targetX > x) ? speed : -speed;
+                        walkDirection = (targetX > x) ? 1 : -1;
+                    } else {
+                        x = targetX;
+                        isWalking = false;
+                        return;
+                    }
+                } else {
+                    x += speed * walkDirection;
+                    if (x <= 0 || x >= window.innerWidth - 40) {
+                        walkDirection *= -1;
+                    }
+                }
+                
+                stickFigure.style.transform = `scaleX(${walkDirection})`;
+                stickFigure.style.left = x + 'px';
+                stickFigure.style.top = y + 'px';
+                
+                if (isWalking && !isAngry) {
+                    setTimeout(walkStep, 50);
+                }
+            }
+            
+            walkStep();
+        }
+        
+        // Função para escalar
+        function startClimbing() {
+            if (isSitting || isSleeping || isUsingItem || isDrawing) return;
+            
+            isClimbing = true;
+            isWalking = false;
+            const climbSpeed = 1.5;
+            let direction = 1;
+            
+            function climbStep() {
+                if (isAngry || isSitting || isSleeping || isUsingItem || isDrawing) {
+                    isClimbing = false;
+                    return;
+                }
+                
+                y += climbSpeed * direction;
+                if (y <= 0) direction = 1;
+                if (y >= window.innerHeight - 80) direction = -1;
+                
+                stickFigure.style.top = y + 'px';
+                setTimeout(climbStep, 100);
+            }
+            
+            climbStep();
+        }
+        
+        // Parar de escalar
+        function stopClimbing() {
+            isClimbing = false;
+        }
+        
+        // Sentar
+        function sitDown() {
+            if (isSleeping || isUsingItem || isClimbing || isDrawing) return;
+            
+            isSitting = true;
+            isWalking = false;
+            isClimbing = false;
+            
+            emotions.happy = Math.min(100, emotions.happy + 10);
+            emotions.lonely = Math.max(0, emotions.lonely - 5);
+            
+            showThought("Finalmente posso descansar um pouco.");
+            
+            // Atualizar status mais rápido enquanto sentado
+            fatigue = Math.max(0, fatigue - 5);
+            updateStatusBars();
+            
+            setTimeout(standUp, 5000 + Math.random() * 5000);
+        }
+        
+        // Levantar
+        function standUp() {
+            isSitting = false;
+            showThought("Estou melhor agora.");
+            startWalking();
+        }
+        
+        // Dormir
+        function goToSleep() {
+            if (isSitting || isUsingItem || isClimbing || isDrawing) return;
+            
+            isSleeping = true;
+            isWalking = false;
+            isClimbing = false;
+            fatigue = 0;
+            
+            stickFigure.style.top = (y + 10) + 'px';
+            
+            emotions.happy = Math.min(100, emotions.happy + 20);
+            emotions.lonely = Math.max(0, emotions.lonely - 10);
+            emotions.angry = Math.max(0, emotions.angry - 15);
+            
+            showThought("Zzz... Sonhando com campos verdes...");
+            
+            // Recuperar rapidamente durante o sono
+            const sleepInterval = setInterval(() => {
+                hunger = Math.max(0, hunger - 2);
+                thirst = Math.max(0, thirst - 2);
+                updateStatusBars();
+            }, 1000);
+            
+            setTimeout(() => {
+                clearInterval(sleepInterval);
+                wakeUp();
+            }, 10000 + Math.random() * 10000);
+        }
+        
+        // Acordar
+        function wakeUp() {
+            isSleeping = false;
+            stickFigure.style.top = y + 'px';
+            showThought("Que sono bom! Me sinto renovado!");
+            startWalking();
+        }
+        
+        // Usar item
+        function useItem(item) {
+            if (isSleeping || isSitting || isClimbing || isDrawing) return;
+            
+            isUsingItem = true;
+            currentItem = item;
+            
+            // Esconder outros itens
+            items.forEach(i => {
+                if (i !== item) i.style.opacity = '0';
+            });
+            
+            // Mostrar item atual
+            item.style.opacity = '1';
+            
+            let actionType = '';
+            let duration = 0;
+            
+            if (item === chicken) {
+                actionType = 'eating';
+                duration = 3000;
+                hunger = Math.max(0, hunger - 30);
+                emotions.happy = Math.min(100, emotions.happy + 15);
+                emotions.angry = Math.max(0, emotions.angry - 10);
+                showThought("Hmm, que gostoso!");
+            } else if (item === drink) {
+                actionType = 'drinking';
+                duration = 2000;
+                thirst = Math.max(0, thirst - 30);
+                emotions.happy = Math.min(100, emotions.happy + 10);
+                showThought("Ah, que refrescante!");
+            } else if (item === pencil) {
+                actionType = 'drawing';
+                duration = 1000;
+                isDrawing = true;
+                fatigue = Math.min(100, fatigue + 3);
+                emotions.curious = Math.min(100, emotions.curious + 10);
+                emotions.happy = Math.min(100, emotions.happy + 5);
+                drawSomething();
+            }
+            
+            updateStatusBars();
+            
+            setTimeout(() => {
+                isUsingItem = false;
+                isDrawing = false;
+                currentItem = null;
+                item.style.opacity = '0';
+            }, duration);
+        }
+        
+        // Desenhar algo
+        function drawSomething() {
+            if (!pencil.style.opacity || pencil.style.opacity === '0') return;
+            
+            // Escolher objeto aleatório para desenhar
+            const drawable = drawables[Math.floor(Math.random() * drawables.length)];
+            
+            // Posição aleatória, mas não muito perto do boneco
+            let drawX, drawY;
+            do {
+                drawX = 100 + Math.random() * (window.innerWidth - 200);
+                drawY = 100 + Math.random() * (window.innerHeight - 200);
+            } while (Math.abs(drawX - x) < 150 && Math.abs(drawY - y) < 150);
+            
+            // Criar elemento de desenho
+            const drawing = document.createElement('div');
+            drawing.className = 'drawing';
+            drawing.dataset.name = drawable.name;
+            drawing.style.left = drawX + 'px';
+            drawing.style.top = drawY + 'px';
+            
+            // Adicionar emoji
+            drawing.innerHTML = drawable.emoji;
+            
+            // Adicionar botão de exclusão
+            const deleteBtn = document.createElement('div');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.innerHTML = '×';
+            deleteBtn.style.pointerEvents = 'auto';
+            drawing.appendChild(deleteBtn);
+            
+            // Evento de exclusão
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                drawingContainer.removeChild(drawing);
+                drawings = drawings.filter(d => d !== drawing);
+                
+                // Reação ao apagar desenho
+                isAngry = true;
+                emotions.angry = Math.min(100, emotions.angry + 30);
+                emotions.happy = Math.max(0, emotions.happy - 15);
+                showThought("Por que você apagou meu desenho? Estou muito chateado!");
+                
+                // Se for uma panela, jogar no mouse
+                if (drawable.name === 'panela') {
+                    throwObject(drawX, drawY);
+                }
+                
+                lastInteraction = Date.now();
+            });
+            
+            // Evento de clique no desenho
+            drawing.style.pointerEvents = 'auto';
+            drawing.addEventListener('click', () => {
+                // Reação do boneco ao ver o objeto
+                const reactions = {
+                    'carro': "Olha o carro! Que incrível!",
+                    'bicicleta': "Uau, uma bicicleta! Adoro pedalar!",
+                    'livro': "Um livro! Vou ler algo interessante...",
+                    'bloco': "Só um bloco chato...",
+                    'casa': "Minha casa! Meu lugar favorito!"
+                };
+                
+                const reaction = reactions[drawable.name] || `Olha um(a) ${drawable.name}! Que interessante!`;
+                showThought(reaction);
+                
+                // Atualizar emoções
+                if (drawable.name === 'livro') {
+                    emotions.curious = Math.min(100, emotions.curious + 10);
+                    useItem(pencil); // Começa a ler/estudar
+                }
+            });
+            
+            // Adicionar ao container
+            drawingContainer.appendChild(drawing);
+            drawings.push(drawing);
+            
+            // Reação ao desenhar
+            emotions.happy = Math.min(100, emotions.happy + 5);
+            showThought(`Desenhei um(a) ${drawable.name}! Ficou ótimo!`);
+        }
+        
+        // Jogar objeto (como panela) no mouse
+        function throwObject(startX, startY) {
+            const projectile = document.createElement('div');
+            projectile.style.position = 'absolute';
+            projectile.style.left = startX + 'px';
+            projectile.style.top = startY + 'px';
+            projectile.style.fontSize = '30px';
+            projectile.style.zIndex = 10;
+            projectile.style.pointerEvents = 'none';
+            projectile.innerHTML = '🍲';
+            document.body.appendChild(projectile);
+            
+            // Animação de lançamento
+            let currentX = startX;
+            let currentY = startY;
+            const duration = 500;
+            const startTime = Date.now();
+            
+            function animate() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Trajetória parabólica
+                currentX += 10;
+                currentY -= 20 * Math.sin(progress * Math.PI);
+                
+                projectile.style.left = currentX + 'px';
+                projectile.style.top = currentY + 'px';
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // Remover projétil
+                    setTimeout(() => {
+                        document.body.removeChild(projectile);
+                    }, 1000);
+                }
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Decidir ação com base nos status
+        function decideAction() {
+            // Atualizar status com o tempo
+            hunger = Math.min(100, hunger + 0.3);
+            thirst = Math.min(100, thirst + 0.4);
+            fatigue = Math.min(100, fatigue + 0.2);
+            updateStatusBars();
+            updateEmotionDisplay();
+            
+            if (isAngry || isSleeping || isSitting || isUsingItem || isClimbing) {
+                return;
+            }
+            
+            // Prioridades baseadas em emoções e necessidades
+            if (fatigue > 80) {
+                goToSleep();
+            } else if (isWalking && fatigue > 60) {
+                sitDown();
+            } else if (hunger > 70) {
+                showThought(getRandomThought('hungry'));
+                useItem(chicken);
+            } else if (thirst > 70) {
+                showThought(getRandomThought('thirsty'));
+                useItem(drink);
+            } else if (emotions.lonely > 60) {
+                showThought("Me sinto só... Vou desenhar algo para me distrair.");
+                useItem(pencil);
+            } else if (emotions.curious > 70) {
+                showThought("Estou curioso! Vou explorar e aprender coisas novas.");
+                startClimbing();
+                setTimeout(stopClimbing, 3000);
+            } else if (Math.random() > 0.95 && emotions.happy > 50) {
+                showThought(getRandomThought('happy'));
+                useItem(pencil);
+            } else if (Math.random() > 0.98) {
+                sitDown();
+            } else if (!isWalking) {
+                startWalking();
+            }
+            
+            // Eventos aleatórios de descoberta
+            if (Math.random() > 0.995) {
+                const discoveries = [
+                    { prob: 0.3, msg: "Olha um carro! Que incrível!", emotion: 'excited', emoChange: { excited: 20 } },
+                    { prob: 0.3, msg: "Uma bicicleta! Adoro pedalar!", emotion: 'excited', emoChange: { excited: 15 } },
+                    { prob: 0.2, msg: "Um livro interessante! Vou ler algo novo.", emotion: 'curious', emoChange: { curious: 20 } },
+                    { prob: 0.2, msg: "Me sinto tão só...", emotion: 'lonely', emoChange: { lonely: 25, happy: -10 } }
+                ];
+                
+                const event = discoveries[Math.floor(Math.random() * discoveries.length)];
+                showThought(event.msg);
+                for (let [emo, change] of Object.entries(event.emoChange)) {
+                    emotions[emo] = Math.max(0, Math.min(100, emotions[emo] + change));
+                }
+            }
+        }
+        
+        // Monitorar interações
+        function monitorInteractions() {
+            setInterval(() => {
+                if (isAngry && (Date.now() - lastInteraction) > 5000) {
+                    isAngry = false;
+                    emotions.angry = Math.max(0, emotions.angry - 20);
+                    showThought("Estou me acalmando agora.");
+                }
+            }, 1000);
+        }
+        
+        // Eventos de toque/mouse
+        document.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            lastInteraction = Date.now();
+            
+            if (isCloseToFigure(touch.clientX, touch.clientY)) {
+                e.preventDefault();
+                isAngry = true;
+                emotions.angry = Math.min(100, emotions.angry + 20);
+                emotions.happy = Math.max(0, emotions.happy - 15);
+                showThought("Me deixe em paz! Pare com isso!");
+            }
+        }, { passive: false });
+        
+        document.addEventListener('mousedown', (e) => {
+            lastInteraction = Date.now();
+            if (isCloseToFigure(e.clientX, e.clientY)) {
+                isAngry = true;
+                emotions.angry = Math.min(100, emotions.angry + 20);
+                emotions.happy = Math.max(0, emotions.happy - 15);
+                showThought("Pare com isso! Você está me irritando!");
+            }
+        });
+        
+        // Verificar proximidade
+        function isCloseToFigure(clientX, clientY) {
+            const figureRect = stickFigure.getBoundingClientRect();
+            const figureCenterX = figureRect.left + figureRect.width/2;
+            const figureCenterY = figureRect.top + figureRect.height/2;
+            const distance = Math.sqrt(
+                Math.pow(clientX - figureCenterX, 2) + 
+                Math.pow(clientY - figureCenterY, 2)
+            );
+            return distance < 100;
+        }
+        
+        // Iniciar comportamento
+        setTimeout(() => {
+            showThought("Olá! Eu sou um boneco de palito com vida própria e cheio de sentimentos!");
+            startWalking();
+            monitorInteractions();
+            
+            // Atualizar decisões periodicamente
+            setInterval(decideAction, 2000);
+            
+        }, 1000);
+        
+        // Ajustar para redimensionamento
+        window.addEventListener('resize', () => {
+            x = Math.min(x, window.innerWidth - 40);
+            y = Math.min(y, window.innerHeight - 80);
+            stickFigure.style.left = x + 'px';
+            stickFigure.style.top = y + 'px';
+        });
+    </script>
+</body>
+</html>
