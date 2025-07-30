@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Vídeo - Boneco Palito</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        #canvas-container {
+            position: relative;
+            width: 800px;
+            height: 500px;
+            border: 3px solid #333;
+            background-color: white;
+            overflow: hidden;
+        }
+        #video-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            background-color: white;
+        }
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.7);
+        }
+        button {
+            padding: 10px 15px;
+            margin: 0 5px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #status {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <canvas id="video-canvas" width="800" height="500"></canvas>
+        <div id="controls">
+            <button id="start-btn">Iniciar Animação</button>
+            <button id="stop-btn">Parar</button>
+            <button id="download-btn">Baixar Vídeo</button>
+            <div id="status">Clique em "Iniciar Animação" para começar</div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas2video@1.0.4/dist/canvas2video.min.js"></script>
+    <script>
+        // Elementos do DOM
+        const canvas = document.getElementById('video-canvas');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const statusEl = document.getElementById('status');
+
+        // Variáveis de animação
+        let animationId;
+        let stickFigure = {
+            x: -50,
+            y: 350,
+            width: 20,
+            height: 60,
+            speed: 2,
+            state: 'walking' // walking, waving, jumping, thinking
+        };
+
+        // Estados da animação
+        const states = ['walking', 'waving', 'jumping', 'thinking', 'walking', 'waving'];
+        let currentStateIndex = 0;
+        let stateChangeTime = 0;
+        let frameCount = 0;
+
+        // Inicializar Canvas2Video
+        let c2v;
+        let recording = false;
+
+        // Função para desenhar o boneco palito
+        function drawStickFigure(x, y, state, frame) {
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            // Cabeça
+            ctx.beginPath();
+            ctx.arc(x, y - 45, 15, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Corpo
+            ctx.beginPath();
+            ctx.moveTo(x, y - 30);
+            ctx.lineTo(x, y + 15);
+            ctx.stroke();
+            
+            // Braços
+            if (state === 'waving') {
+                const waveOffset = Math.sin(frame * 0.3) * 20;
+                ctx.beginPath();
+                ctx.moveTo(x, y - 20);
+                ctx.lineTo(x - 20 + waveOffset, y);
+                ctx.lineTo(x - 30 + waveOffset, y + 10);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(x, y - 20);
+                ctx.lineTo(x + 10, y - 10);
+                ctx.stroke();
+            } else if (state === 'thinking') {
+                ctx.beginPath();
+                ctx.moveTo(x, y - 20);
+                ctx.lineTo(x - 20, y - 10);
+                ctx.stroke();
+                
+                // Mão na cabeça
+                ctx.beginPath();
+                ctx.arc(x - 25, y - 25, 5, 0, Math.PI * 2);
+                ctx.stroke();
+            } else {
+                ctx.beginPath();
+                ctx.moveTo(x, y - 20);
+                ctx.lineTo(x - 20, y);
+                ctx.lineTo(x - 30, y + 10);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(x, y - 20);
+                ctx.lineTo(x + 20, y);
+                ctx.lineTo(x + 30, y + 10);
+                ctx.stroke();
+            }
+            
+            // Pernas
+            if (state === 'jumping') {
+                ctx.beginPath();
+                ctx.moveTo(x, y + 15);
+                ctx.lineTo(x - 10, y + 30);
+                ctx.lineTo(x - 15, y + 45);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(x, y + 15);
+                ctx.lineTo(x + 10, y + 30);
+                ctx.lineTo(x + 15, y + 45);
+                ctx.stroke();
+            } else if (state === 'walking') {
+                const walkOffset = Math.sin(frame * 0.2) * 15;
+                ctx.beginPath();
+                ctx.moveTo(x, y + 15);
+                ctx.lineTo(x - 10, y + 30 + walkOffset);
+                ctx.lineTo(x - 15, y + 45 + walkOffset);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(x, y + 15);
+                ctx.lineTo(x + 10, y + 30 - walkOffset);
+                ctx.lineTo(x + 15, y + 45 - walkOffset);
+                ctx.stroke();
+            } else {
+                ctx.beginPath();
+                ctx.moveTo(x, y + 15);
+                ctx.lineTo(x - 15, y + 35);
+                ctx.lineTo(x - 20, y + 50);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(x, y + 15);
+                ctx.lineTo(x + 15, y + 35);
+                ctx.lineTo(x + 20, y + 50);
+                ctx.stroke();
+            }
+        }
+
+        // Função para desenhar o cenário
+        function drawScene() {
+            // Céu
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#98FB98');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Chão
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(0, 380, canvas.width, 120);
+            
+            // Grama
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, 380, canvas.width, 20);
+            
+            // Sol
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(700, 80, 40, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Nuvens
+            drawCloud(100, 60, 1);
+            drawCloud(300, 100, 0.8);
+            drawCloud(500, 40, 1.2);
+            
+            // Árvores
+            drawTree(700, 300, 1);
+            drawTree(100, 320, 0.8);
+            drawTree(600, 280, 0.9);
+        }
+
+        function drawCloud(x, y, scale) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.beginPath();
+            ctx.arc(x, y, 20 * scale, 0, Math.PI * 2);
+            ctx.arc(x + 15 * scale, y - 10 * scale, 25 * scale, 0, Math.PI * 2);
+            ctx.arc(x + 30 * scale, y, 20 * scale, 0, Math.PI * 2);
+            ctx.arc(x + 15 * scale, y + 10 * scale, 18 * scale, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawTree(x, y, scale) {
+            // Tronco
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(x - 5 * scale, y, 10 * scale, 40 * scale);
+            
+            // Folhas
+            ctx.fillStyle = '#006400';
+            ctx.beginPath();
+            ctx.arc(x, y, 30 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(x - 15 * scale, y - 10 * scale, 25 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(x + 15 * scale, y - 10 * scale, 25 * scale, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Função de animação
+        function animate() {
+            // Limpar o canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Desenhar a cena
+            drawScene();
+            
+            // Atualizar estado do boneco palito
+            if (frameCount - stateChangeTime > 120 && stickFigure.x > 100) {
+                currentStateIndex = (currentStateIndex + 1) % states.length;
+                stateChangeTime = frameCount;
+            }
+            
+            stickFigure.state = states[currentStateIndex];
+            
+            // Atualizar posição
+            stickFigure.x += stickFigure.speed;
+            
+            // Desenhar boneco palito
+            drawStickFigure(stickFigure.x, stickFigure.y, stickFigure.state, frameCount);
+            
+            // Gravar frame se estiver gravando
+            if (recording && c2v) {
+                c2v.addFrame(canvas);
+            }
+            
+            // Resetar posição quando sair da tela
+            if (stickFigure.x > canvas.width + 50) {
+                stickFigure.x = -50;
+                currentStateIndex = 0;
+                stateChangeTime = frameCount;
+            }
+            
+            // Continuar animação
+            frameCount++;
+            animationId = requestAnimationFrame(animate);
+        }
+
+        // Iniciar animação
+        startBtn.addEventListener('click', () => {
+            // Parar qualquer animação em andamento
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            
+            // Resetar estado
+            stickFigure.x = -50;
+            stickFigure.y = 350;
+            currentStateIndex = 0;
+            stateChangeTime = 0;
+            frameCount = 0;
+            
+            // Iniciar gravação
+            c2v = new Canvas2Video(canvas.width, canvas.height, 30);
+            recording = true;
+            
+            // Iniciar animação
+            animate();
+            
+            statusEl.textContent = "Animação em andamento...";
+        });
+
+        // Parar animação
+        stopBtn.addEventListener('click', () => {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            
+            recording = false;
+            statusEl.textContent = "Animação parada. Clique em 'Iniciar Animação' para recomeçar.";
+        });
+
+        // Baixar vídeo
+        downloadBtn.addEventListener('click', () => {
+            if (c2v && recording === false) {
+                c2v.getVideo((err, src) => {
+                    if (err) {
+                        console.error(err);
+                        statusEl.textContent = "Erro ao gerar o vídeo.";
+                        return;
+                    }
+                    
+                    const a = document.createElement('a');
+                    a.href = src;
+                    a.download = 'boneco_palito_animacao.mp4';
+                    a.click();
+                    
+                    statusEl.textContent = "Vídeo gerado e pronto para download!";
+                });
+            } else if (recording) {
+                statusEl.textContent = "Aguarde a animação terminar antes de baixar.";
+            } else {
+                statusEl.textContent = "Nenhuma animação foi gerada ainda.";
+            }
+        });
+
+        // Inicializar cena
+        drawScene();
+        drawStickFigure(stickFigure.x, stickFigure.y, stickFigure.state, 0);
+        statusEl.textContent = "Clique em 'Iniciar Animação' para começar";
+    </script>
+</body>
+</html>
