@@ -3,141 +3,139 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Conversor para .jv (WebM)</title>
+  <title>Conversor para .ji (WebP)</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: #f4f4f8;
-      color: #333;
+      background: #f0f2f5;
+      color: #2c3e50;
       text-align: center;
       padding: 20px;
     }
     h1 {
-      color: #2c3e50;
+      color: #16a085;
     }
     .container {
       max-width: 600px;
       margin: 0 auto;
       padding: 20px;
       background: white;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
-    button {
-      margin: 15px 0;
-      padding: 10px 20px;
+    button, select {
+      margin: 10px 0;
+      padding: 10px 15px;
       font-size: 16px;
-      background: #3498db;
-      color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
     }
+    button {
+      background: #2980b9;
+      color: white;
+    }
     button:disabled {
       background: #95a5a6;
       cursor: not-allowed;
+    }
+    img {
+      max-width: 100%;
+      margin: 15px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
     #status {
       margin: 15px 0;
       font-size: 14px;
       color: #7f8c8d;
     }
-    video {
-      max-width: 100%;
-      margin: 15px 0;
-      border: 1px solid #ddd;
-      border-radius: 5px;
+    label {
+      font-weight: bold;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>🎥 Conversor para .jv</h1>
-    <p>Converta seu vídeo para o formato <strong>.jv</strong> (WebM com extensão personalizada)</p>
+    <h1>🖼️ Conversor .ji</h1>
+    <p>Converta imagens para o formato <strong>.ji</strong> (baseado em WebP)</p>
 
-    <input type="file" id="inputFile" accept="video/*" />
+    <input type="file" id="inputImage" accept="image/*" />
     <br/>
-    <button id="convertBtn" disabled>Converter para .jv</button>
-    <div id="status">Carregando FFmpeg...</div>
+    <label for="quality">Qualidade (0-100):</label>
+    <input type="number" id="quality" min="1" max="100" value="80" />
 
-    <video id="preview" controls></video>
-    <a id="downloadLink" style="display: none;">Baixar .jv</a>
+    <br/>
+    <label for="lossless">Sem perdas?</label>
+    <select id="lossless">
+      <option value="false">Com perdas (recomendado)</option>
+      <option value="true">Sem perdas</option>
+    </select>
+
+    <br/>
+    <button id="convertBtn" disabled>Converter para .ji</button>
+    <div id="status">Pronto para converter.</div>
+
+    <img id="preview" style="display: none;" alt="Prévia" />
+    <a id="downloadLink" style="display: none;">📥 Baixar .ji</a>
   </div>
 
-  <!-- Carregar FFmpeg via WebAssembly (usando unpkg) -->
-  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.4/dist/ffmpeg.min.js"></script>
   <script>
-    const { createFFmpeg, fetchFile } = FFmpeg;
-
-    // Inicializar FFmpeg
-    const ffmpeg = createFFmpeg({ 
-      log: true,
-      corePath: "https://unpkg.com/@ffmpeg/core@0.12.4/dist/ffmpeg-core.js"
-    });
-
-    const inputFile = document.getElementById("inputFile");
+    const inputImage = document.getElementById("inputImage");
     const convertBtn = document.getElementById("convertBtn");
-    const status = document.getElementById("status");
     const preview = document.getElementById("preview");
     const downloadLink = document.getElementById("downloadLink");
+    const status = document.getElementById("status");
 
-    // Carregar FFmpeg ao iniciar
-    async function carregarFFmpeg() {
-      status.innerText = "Inicializando FFmpeg...";
-      await ffmpeg.load();
-      status.innerText = "Pronto! Envie um vídeo.";
-      convertBtn.disabled = false;
-    }
-
-    carregarFFmpeg();
-
-    // Mostrar prévia do vídeo
-    inputFile.addEventListener("change", () => {
-      const file = inputFile.files[0];
-      if (file) {
-        preview.src = URL.createObjectURL(file);
+    // Habilitar botão ao carregar imagem
+    inputImage.addEventListener("change", () => {
+      if (inputImage.files[0]) {
+        preview.src = URL.createObjectURL(inputImage.files[0]);
+        preview.style.display = "block";
         convertBtn.disabled = false;
+        status.innerText = "Clique em 'Converter para .ji'";
       }
     });
 
-    // Converter o vídeo para .jv (WebM)
-    convertBtn.addEventListener("click", async () => {
-      if (!inputFile.files[0]) return;
+    // Conversão usando Canvas do navegador
+    convertBtn.addEventListener("click", () => {
+      if (!inputImage.files[0]) return;
 
-      const file = inputFile.files[0];
-      const fileName = file.name.split(".")[0] + ".jv";
+      const file = inputImage.files[0];
+      const quality = parseFloat(document.getElementById("quality").value) / 100;
+      const isLossless = document.getElementById("lossless").value === "true";
+      const fileName = file.name.replace(/\.\w+$/, "") + ".ji";
 
-      status.innerText = "Convertendo para .jv...";
+      status.innerText = "Convertendo para .ji...";
 
-      try {
-        // Escrever o arquivo no sistema virtual do FFmpeg
-        ffmpeg.FS("writeFile", "input.mp4", await fetchFile(file));
+      const img = new Image();
+      img.onload = () => {
+        // Criar canvas com tamanho da imagem
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
 
-        // Executar a conversão para WebM (VP9 + Opus)
-        await ffmpeg.run(
-          "-i", "input.mp4",
-          "-c:v", "vp9",
-          "-c:a", "opus",
-          "-f", "webm",
-          "output.jv"
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+
+        // Converter para WebP (formato base do .ji)
+        canvas.toBlob(
+          (blob) => {
+            // Criar URL para download
+            const url = URL.createObjectURL(blob);
+            downloadLink.href = url;
+            downloadLink.download = fileName;
+            downloadLink.innerText = `📥 Baixar ${fileName}`;
+            downloadLink.style.display = "inline-block";
+
+            status.innerText = "Conversão concluída!";
+          },
+          "image/webp",
+          isLossless ? 1 : quality  // WebP: qualidade ou sem perdas
         );
+      };
 
-        // Ler o resultado
-        const data = ffmpeg.FS("readFile", "output.jv");
-
-        // Criar URL para download
-        const videoBlob = new Blob([data.buffer], { type: "video/webm" });
-        const url = URL.createObjectURL(videoBlob);
-        downloadLink.href = url;
-        downloadLink.download = fileName;
-        downloadLink.innerText = `📥 Baixar ${fileName}`;
-        downloadLink.style.display = "inline-block";
-
-        status.innerText = "Conversão concluída!";
-      } catch (err) {
-        status.innerText = "Erro: " + err.message;
-        console.error(err);
-      }
+      img.src = preview.src;
     });
   </script>
 </body>
