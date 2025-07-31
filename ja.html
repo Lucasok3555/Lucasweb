@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Conversor para .ja (Ogg/Opus)</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f8f9fa;
+      color: #212529;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      color: #4a148c;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 25px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+    button, select {
+      margin: 10px 0;
+      padding: 10px 15px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button {
+      background: #6a1b9a;
+      color: white;
+    }
+    button:disabled {
+      background: #bcaaa4;
+      cursor: not-allowed;
+    }
+    audio {
+      width: 100%;
+      margin: 15px 0;
+    }
+    #status {
+      margin: 15px 0;
+      font-size: 14px;
+      color: #6c757d;
+    }
+    label {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔊 Conversor .ja</h1>
+    <p>Converta áudios para o formato <strong>.ja</strong> (baseado em Ogg + Opus)</p>
+
+    <input type="file" id="inputAudio" accept="audio/*" />
+    <br/>
+    <label for="codec">Codec:</label>
+    <select id="codec">
+      <option value="opus">Opus (recomendado)</option>
+      <option value="vorbis">Vorbis</option>
+    </select>
+
+    <br/>
+    <button id="convertBtn" disabled>Converter para .ja</button>
+    <div id="status">Carregando FFmpeg...</div>
+
+    <audio id="player" controls style="display: none;"></audio>
+    <a id="downloadLink" style="display: none;">📥 Baixar .ja</a>
+  </div>
+
+  <!-- Carregar FFmpeg.wasm -->
+  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.4/dist/ffmpeg.min.js"></script>
+  <script>
+    const { createFFmpeg, fetchFile } = FFmpeg;
+
+    const ffmpeg = createFFmpeg({ 
+      log: true,
+      corePath: "https://unpkg.com/@ffmpeg/core@0.12.4/dist/ffmpeg-core.js"
+    });
+
+    const inputAudio = document.getElementById("inputAudio");
+    const convertBtn = document.getElementById("convertBtn");
+    const player = document.getElementById("player");
+    const downloadLink = document.getElementById("downloadLink");
+    const status = document.getElementById("status");
+
+    // Carregar FFmpeg
+    async function carregar() {
+      status.innerText = "Inicializando FFmpeg...";
+      await ffmpeg.load();
+      status.innerText = "Pronto! Envie um áudio.";
+      convertBtn.disabled = false;
+    }
+    carregar();
+
+    inputAudio.addEventListener("change", () => {
+      if (inputAudio.files[0]) {
+        player.src = URL.createObjectURL(inputAudio.files[0]);
+        player.style.display = "block";
+      }
+    });
+
+    convertBtn.addEventListener("click", async () => {
+      const file = inputAudio.files[0];
+      if (!file) return;
+
+      const codec = document.getElementById("codec").value;
+      const fileName = file.name.replace(/\.\w+$/, "") + ".ja";
+
+      status.innerText = `Convertendo para .ja (${codec.toUpperCase()})...`;
+
+      try {
+        // Escrever arquivo no sistema virtual
+        ffmpeg.FS("writeFile", "input.mp3", await fetchFile(file));
+
+        let args;
+        if (codec === "opus") {
+          args = [
+            "-i", "input.mp3",
+            "-c:a", "libopus", 
+            "-b:a", "128k",
+            "-f", "ogg",
+            "output.ja"
+          ];
+        } else {
+          args = [
+            "-i", "input.mp3",
+            "-c:a", "libvorbis",
+            "-q:a", "4",  // qualidade média
+            "output.ja"
+          ];
+        }
+
+        await ffmpeg.run(...args);
+
+        // Ler o arquivo convertido
+        const data = ffmpeg.FS("readFile", "output.ja");
+        const blob = new Blob([data.buffer], { type: "audio/ogg" });
+        const url = URL.createObjectURL(blob);
+
+        downloadLink.href = url;
+        downloadLink.download = fileName;
+        downloadLink.innerText = `📥 Baixar ${fileName}`;
+        downloadLink.style.display = "inline-block";
+
+        status.innerText = "Conversão concluída!";
+      } catch (err) {
+        status.innerText = "Erro: " + err.message;
+        console.error(err);
+      }
+    });
+  </script>
+</body>
+</html>
