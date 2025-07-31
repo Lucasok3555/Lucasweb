@@ -5,44 +5,59 @@
   <title>Simulador de Rádio FM</title>
 </head>
 <body>
-  <h2>Simulador de Rádio FM</h2>
-  <input type="text" id="audioURL" placeholder="Cole o link do áudio aqui">
-  <button onclick="iniciarRadio()">Iniciar Rádio</button>
+  <h2>🎙️ Simulador de Rádio FM</h2>
+
+  <p>🔊 Escolha um modo de áudio:</p>
+  <input type="file" id="audioFile" accept="audio/*"><br><br>
+  <input type="text" id="audioURL" placeholder="Ou cole um link de transmissão (MP3, OGG, M3U8...)">
+  <button onclick="iniciarRadio()">▶️ Iniciar Rádio</button>
 
   <br><br>
-  <label>Ruído FM: <input type="range" id="noiseLevel" min="0" max="1" step="0.01" value="0.3"></label>
+  <label>📡 Intensidade do ruído:
+    <input type="range" id="noiseLevel" min="0" max="1" step="0.01" value="0.3">
+  </label>
 
-  <audio id="audioPlayer" controls></audio>
-  <audio id="noisePlayer" loop></audio>
+  <br><br>
+  <audio id="player" controls></audio>
+  <audio id="noise" loop></audio>
 
   <script>
-    let audio = document.getElementById('audioPlayer');
-    let noise = document.getElementById('noisePlayer');
+    const player = document.getElementById('player');
+    const noise = document.getElementById('noise');
+    const noiseLevelInput = document.getElementById('noiseLevel');
+    let interferenceTimer;
 
     function iniciarRadio() {
+      clearInterval(interferenceTimer);
+      const file = document.getElementById('audioFile').files[0];
       const url = document.getElementById('audioURL').value;
-      if (!url) {
-        alert("Cole um link de áudio!");
+
+      if (file) {
+        const objectURL = URL.createObjectURL(file);
+        player.src = objectURL;
+      } else if (url) {
+        player.src = url;
+      } else {
+        alert("Escolha um arquivo ou cole um link de áudio!");
         return;
       }
 
-      audio.src = url;
-      audio.play();
+      player.volume = 1;
+      player.play();
 
+      // Chiado FM
       noise.src = "https://upload.wikimedia.org/wikipedia/commons/0/05/White_noise.ogg";
-      noise.volume = parseFloat(document.getElementById('noiseLevel').value);
+      noise.volume = parseFloat(noiseLevelInput.value);
       noise.play();
 
-      setInterval(() => {
-        // Simula pequenas interferências no áudio principal
-        if (Math.random() < 0.05) {
-          audio.volume = 0.2 + Math.random() * 0.3;
+      // Simula interferências e chiado variando
+      interferenceTimer = setInterval(() => {
+        if (Math.random() < 0.1) {
+          player.volume = 0.2 + Math.random() * 0.3;
         } else {
-          audio.volume = 1;
+          player.volume = 1;
         }
-
-        // Atualiza o volume do ruído
-        noise.volume = parseFloat(document.getElementById('noiseLevel').value);
+        noise.volume = parseFloat(noiseLevelInput.value);
       }, 300);
     }
   </script>
