@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Simulador de Rádio FM</title>
+</head>
+<body>
+  <h2>Simulador de Rádio FM</h2>
+  <input type="text" id="audioURL" placeholder="Cole o link do áudio aqui">
+  <button onclick="iniciarRadio()">Iniciar Rádio</button>
+
+  <br><br>
+  <label>Ruído FM: <input type="range" id="noiseLevel" min="0" max="1" step="0.01" value="0.3"></label>
+
+  <audio id="audioPlayer" controls></audio>
+  <audio id="noisePlayer" loop></audio>
+
+  <script>
+    let audio = document.getElementById('audioPlayer');
+    let noise = document.getElementById('noisePlayer');
+
+    function iniciarRadio() {
+      const url = document.getElementById('audioURL').value;
+      if (!url) {
+        alert("Cole um link de áudio!");
+        return;
+      }
+
+      audio.src = url;
+      audio.play();
+
+      noise.src = "https://upload.wikimedia.org/wikipedia/commons/0/05/White_noise.ogg";
+      noise.volume = parseFloat(document.getElementById('noiseLevel').value);
+      noise.play();
+
+      setInterval(() => {
+        // Simula pequenas interferências no áudio principal
+        if (Math.random() < 0.05) {
+          audio.volume = 0.2 + Math.random() * 0.3;
+        } else {
+          audio.volume = 1;
+        }
+
+        // Atualiza o volume do ruído
+        noise.volume = parseFloat(document.getElementById('noiseLevel').value);
+      }, 300);
+    }
+  </script>
+</body>
+</html>
