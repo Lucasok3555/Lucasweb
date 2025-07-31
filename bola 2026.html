@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo de Futebol 3D com IA</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: Arial, sans-serif;
+        }
+        #scoreboard {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            background-color: rgba(0,0,0,0.6);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 100;
+        }
+        #gameStatus {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: white;
+            background-color: rgba(0,0,0,0.6);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            z-index: 100;
+        }
+        #resetButton {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            z-index: 100;
+            display: none;
+        }
+        #resetButton:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div id="scoreboard">
+        Time 1 (Vermelho): 0 | Time 2 (Azul): 0
+    </div>
+    <div id="gameStatus">
+        Status: Jogo iniciando - Time Azul com a posse inicial
+    </div>
+    <button id="resetButton">Reiniciar Jogo</button>
+    <script>
+        // Configuração da cena
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB);
+        
+        // Câmera
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 25, 35);
+        
+        // Renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        
+        // Controles da câmera
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        
+        // Iluminação
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(10, 30, 10);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.shadow.camera.near = 0.5;
+        directionalLight.shadow.camera.far = 50;
+        directionalLight.shadow.camera.left = -25;
+        directionalLight.shadow.camera.right = 25;
+        directionalLight.shadow.camera.top = 25;
+        directionalLight.shadow.camera.bottom = -25;
+        scene.add(directionalLight);
+        
+        // Campo de futebol
+        const fieldGeometry = new THREE.PlaneGeometry(50, 30);
+        const fieldMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x228B22,
+            side: THREE.DoubleSide,
+            roughness: 0.8,
+            metalness: 0.2
+        });
+        const field = new THREE.Mesh(fieldGeometry, fieldMaterial);
+        field.rotation.x = -Math.PI / 2;
+        field.receiveShadow = true;
+        scene.add(field);
+        
+        // Linhas do campo
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+        
+        // Linha central
+        const centerLineGeometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(0, 0.01, 15),
+            new THREE.Vector3(0, 0.01, -15)
+        ]);
+        const centerLine = new THREE.Line(centerLineGeometry, lineMaterial);
+        scene.add(centerLine);
+        
+        // Círculo central
+        const circleGeometry = new THREE.BufferGeometry();
+        const circlePoints = [];
+        for (let i = 0; i <= 64; i++) {
+            const theta = (i / 32) * Math.PI;
+            circlePoints.push(
+                new THREE.Vector3(
+                    Math.cos(theta) * 7,
+                    0.01,
+                    Math.sin(theta) * 7
+                )
+            );
+        }
+        circleGeometry.setFromPoints(circlePoints);
+        const centerCircle = new THREE.Line(circleGeometry, lineMaterial);
+        scene.add(centerCircle);
+        
+        // Área do gol
+        const areaGeometry1 = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(22, 0.01, 9),
+            new THREE.Vector3(25, 0.01, 9),
+            new THREE.Vector3(25, 0.01, -9),
+            new THREE.Vector3(22, 0.01, -9)
+        ]);
+        const goalArea1 = new THREE.Line(areaGeometry1, lineMaterial);
+        scene.add(goalArea1);
+        
+        const areaGeometry2 = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(-22, 0.01, 9),
+            new THREE.Vector3(-25, 0.01, 9),
+            new THREE.Vector3(-25, 0.01, -9),
+            new THREE.Vector3(-22, 0.01, -9)
+        ]);
+        const goalArea2 = new THREE.Line(areaGeometry2, lineMaterial);
+        scene.add(goalArea2);
+        
+        // Pequena área
+        const penaltyArea1 = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(18, 0.01, 12),
+            new THREE.Vector3(25, 0.01, 12),
+            new THREE.Vector3(25, 0.01, -12),
+            new THREE.Vector3(18, 0.01, -12)
+        ]);
+        const penaltyAreaLine1 = new THREE.Line(penaltyArea1, lineMaterial);
+        scene.add(penaltyAreaLine1);
+        
+        const penaltyArea2 = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(-18, 0.01, 12),
+            new THREE.Vector3(-25, 0.01, 12),
+            new THREE.Vector3(-25, 0.01, -12),
+            new THREE.Vector3(-18, 0.01, -12)
+        ]);
+        const penaltyAreaLine2 = new THREE.Line(penaltyArea2, lineMaterial);
+        scene.add(penaltyAreaLine2);
+        
+        // Ponto de pênalti
+        const penaltyPoint1 = new THREE.Mesh(
+            new THREE.SphereGeometry(0.2, 16, 16),
+            new THREE.MeshBasicMaterial({ color: 0xffffff })
+        );
+        penaltyPoint1.position.set(19, 0.02, 0);
+        scene.add(penaltyPoint1);
+        
+        const penaltyPoint2 = new THREE.Mesh(
+            new THREE.SphereGeometry(0.2, 16, 16),
+            new THREE.MeshBasicMaterial({ color: 0xffffff })
+        );
+        penaltyPoint2.position.set(-19, 0.02, 0);
+        scene.add(penaltyPoint2);
+        
+        // Gols
+        const goalWidth = 7;
+        const goalHeight = 3;
+        
+        // Rede de gol 1
+        const goal1Geometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(25, 0, goalWidth/2),
+            new THREE.Vector3(25, goalHeight, goalWidth/2),
+            new THREE.Vector3(25, goalHeight, -goalWidth/2),
+            new THREE.Vector3(25, 0, -goalWidth/2)
+        ]);
+        const goal1 = new THREE.Line(goal1Geometry, lineMaterial);
+        scene.add(goal1);
+        
+        // Trave superior
+        const crossbar1Geometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(25, goalHeight, goalWidth/2),
+            new THREE.Vector3(25, goalHeight, -goalWidth/2)
+        ]);
+        const crossbar1 = new THREE.Line(crossbar1Geometry, lineMaterial);
+        scene.add(crossbar1);
+        
+        // Rede de gol 2
+        const goal2Geometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(-25, 0, goalWidth/2),
+            new THREE.Vector3(-25, goalHeight, goalWidth/2),
+            new THREE.Vector3(-25, goalHeight, -goalWidth/2),
+            new THREE.Vector3(-25, 0, -goalWidth/2)
+        ]);
+        const goal2 = new THREE.Line(goal2Geometry, lineMaterial);
+        scene.add(goal2);
+        
+        // Trave superior
+        const crossbar2Geometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(-25, goalHeight, goalWidth/2),
+            new THREE.Vector3(-25, goalHeight, -goalWidth/2)
+        ]);
+        const crossbar2 = new THREE.Line(crossbar2Geometry, lineMaterial);
+        scene.add(crossbar2);
+        
+        // Bola
+        const ballGeometry = new THREE.SphereGeometry(0.6, 32, 32);
+        const ballMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xffffff,
+            roughness: 0.5,
+            metalness: 0.2
+        });
+        const ball = new THREE.Mesh(ballGeometry, ballMaterial);
+        ball.position.set(0, 1, 0);
+        ball.castShadow = true;
+        scene.add(ball);
+        
+        // Física da bola
+        let ballVelocity = new THREE.Vector3(0, 0, 0);
+        const friction = 0.98;
+        const gravity = 0.02;
+        let ballOnGround = true;
+        
+        // Jogadores - 7 por time com IA avançada
+        const playerGeometry = new THREE.BoxGeometry(1.2, 1.8, 1.2);
+        const team1Material = new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.5 });
+        const team2Material = new THREE.MeshStandardMaterial({ color: 0x0000ff, roughness: 0.5 });
+        
+        const team1Players = [];
+        const team2Players = [];
+        
+        // Função para verificar colisão entre dois jogadores
+        function checkPlayerCollision(player1, player2) {
+            const distance = player1.position.distanceTo(player2.position);
+            return distance < 2.0; // Raio de colisão entre jogadores
+        }
+        
+        // Função para verificar se a posição é válida (não colide com outros jogadores)
+        function isValidPosition(position, excludePlayer = null) {
+            // Verificar colisão com jogadores do time 1
+            for (let player of team1Players) {
+                if (player.mesh === excludePlayer) continue;
+                const distance = position.distanceTo(player.mesh.position);
+                if (distance < 2.0) return false;
+            }
+            
+            // Verificar colisão com jogadores do time 2
+            for (let player of team2Players) {
+                if (player.mesh === excludePlayer) continue;
+                const distance = position.distanceTo(player.mesh.position);
+                if (distance < 2.0) return false;
+            }
+            
+            // Verificar limites do campo
+            if (Math.abs(position.x) > 24 || Math.abs(position.z) > 14) return false;
+            
+            return true;
+        }
+        
+        // Sistema de IA avançado para os jogadores
+        class FootballAI {
+            constructor() {
+                this.ballPrediction = new THREE.Vector3();
+                this.passTarget = new THREE.Vector3();
+                this.movementTarget = new THREE.Vector3();
+                this.kickoffTeam = 'team2'; // Time azul começa com a bola
+            }
+            
+            // Prever a posição futura da bola
+            predictBallPosition(currentBallPos, ballVelocity, timeAhead = 1.5) {
+                const predicted = currentBallPos.clone();
+                predicted.x += ballVelocity.x * timeAhead;
+                predicted.y += ballVelocity.y * timeAhead;
+                predicted.z += ballVelocity.z * timeAhead;
+                return predicted;
+            }
+            
+            // Decidir se deve passar, chutar ou manter a posse
+            decideAction(player, ballPos, teamPlayers, opponentPlayers, ballHasPlayer, gameTime) {
+                const distanceToBall = player.mesh.position.distanceTo(ballPos);
+                const inOffensiveHalf = (player.team === 'team1' && ballPos.x < 0) || (player.team === 'team2' && ballPos.x > 0);
+                const inDefensiveHalf = (player.team === 'team1' && ballPos.x > 0) || (player.team === 'team2' && ballPos.x < 0);
+                const ballNearGoal = (player.team === 'team1' && ballPos.x < -20) || (player.team === 'team2' && ballPos.x > 20);
+                
+                // Se a bola está com o jogador
+                if (distanceToBall < 1.5 && ballHasPlayer) {
+                    // Se está perto do gol adversário, chuta
+                    if (ballNearGoal) {
+                        return 'shoot';
+                    }
+                    
+                    // Procurar o melhor companheiro para passe
+                    const bestPassTarget = this.findBestPassTarget(player, teamPlayers, opponentPlayers);
+                    if (bestPassTarget && Math.random() > 0.3) { // 70% de chance de passar se houver opção boa
+                        this.passTarget.copy(bestPassTarget.position);
+                        return 'pass';
+                    }
+                    
+                    // Se não pode passar, avança com a bola
+                    return 'dribble';
+                }
+                
+                // Se a bola não está com o jogador
+                if (!ballHasPlayer) {
+                    // Goleiro se comporta diferente
+                    if (player.role === 'goalkeeper') {
+                        const ownGoalX = player.team === 'team1' ? -22 : 22;
+                        if (Math.abs(ballPos.x - ownGoalX) < 5) {
+                            return 'defend_goal';
+                        }
+                        return 'move_to_ball';
+                    }
+                    
+                    // Defensores focam em marcar
+                    if (player.role === 'defender') {
+                        if (inDefensiveHalf) {
+                            return 'mark_opponent';
+                        }
+                        return 'support_attack';
+                    }
+                    
+                    // Meio-campistas têm papel híbrido
+                    if (player.role === 'midfielder') {
+                        return 'cover_space';
+                    }
+                    
+                    return 'move_to_ball';
+                }
+                
+                return 'hold_position';
+            }
+            
+            // Encontrar o melhor alvo para passe
+            findBestPassTarget(player, teamPlayers, opponentPlayers) {
+                let bestTarget = null;
+                let bestScore = -1;
+                
+                for (let teammate of teamPlayers) {
+                    // Não pode passar para si mesmo
+                    if (teammate.mesh === player.mesh) continue;
+                    
+                    // Calcular distância
+                    const distance = player.mesh.position.distanceTo(teammate.mesh.position);
+                    if (distance < 2 || distance > 20) continue; // Fora do alcance
+                    
+                    // Verificar se o passe está livre de oponentes
+                    const passVector = new THREE.Vector3().subVectors(teammate.mesh.position, player.mesh.position);
+                    const passDirection = passVector.clone().normalize();
+                    
+                    let opponentInWay = false;
+                    for (let opponent of opponentPlayers) {
+                        const opponentToPassLine = this.distanceFromPointToLine(
+                            opponent.mesh.position, 
+                            player.mesh.position, 
+                            teammate.mesh.position
+                        );
+                        if (opponentToPassLine < 2.5) {
+                            opponentInWay = true;
+                            break;
+                        }
+                    }
+                    
+                    if (opponentInWay) continue;
+                    
+                    // Calcular pontuação do passe
+                    let score = 1 / distance; // Quanto mais perto, melhor
+                    
+                    // Bônus se o companheiro está se movendo para frente
+                    if (teammate.role === 'midfielder' || teammate.role === 'forward') {
+                        score += 0.5;
+                    }
+                    
+                    // Bônus se está na metade ofensiva
+                    if ((player.team === 'team1' && teammate.mesh.position.x < 0) || 
+                        (player.team === 'team2' && teammate.mesh.position.x > 0)) {
+                        score += 0.3;
+                    }
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestTarget = teammate.mesh;
+                    }
+                }
+                
+                return bestScore > 0.1 ? bestTarget : null;
+            }
+            
+            // Calcular distância de um ponto para uma linha
+            distanceFromPointToLine(point, lineStart, lineEnd) {
+                const line = new THREE.Vector3().subVectors(lineEnd, lineStart);
+                const pointToStart = new THREE.Vector3().subVectors(point, lineStart);
+                
+                const t = Math.max(0, Math.min(1, pointToStart.dot(line) / line.dot(line)));
+                const projection = new THREE.Vector3().addVectors(
+                    lineStart,
+                    new THREE.Vector3().copy(line).multiplyScalar(t)
+                );
+                
+                return point.distanceTo(projection);
+            }
+            
+            // Obter direção de movimento baseado na ação
+            getMovementDirection(player, action, ballPos, deltaTime) {
+                this.movementTarget.copy(player.mesh.position);
+                
+                switch (action) {
+                    case 'shoot':
+                        // Chutar em direção ao gol adversário
+                        const goalX = player.team === 'team1' ? -25 : 25;
+                        this.movementTarget.set(goalX, 0, ballPos.z);
+                        break;
+                        
+                    case 'pass':
+                        // Passar para o alvo definido
+                        this.movementTarget.copy(this.passTarget);
+                        break;
+                        
+                    case 'dribble':
+                        // Avançar com a bola em direção ao gol adversário
+                        const advanceX = player.team === 'team1' ? 
+                            Math.max(-24, player.mesh.position.x - 0.8) : 
+                            Math.min(24, player.mesh.position.x + 0.8);
+                        this.movementTarget.x = advanceX;
+                        this.movementTarget.z = ballPos.z;
+                        break;
+                        
+                    case 'move_to_ball':
+                        // Mover em direção à bola
+                        this.movementTarget.copy(ballPos);
+                        break;
+                        
+                    case 'defend_goal':
+                        // Goleiro defende a meta
+                        this.movementTarget.copy(ballPos);
+                        const ownGoalX = player.team === 'team1' ? -22 : 22;
+                        this.movementTarget.x = player.team === 'team1' ? 
+                            Math.min(ownGoalX, this.movementTarget.x) : 
+                            Math.max(ownGoalX, this.movementTarget.x);
+                        break;
+                        
+                    case 'mark_opponent':
+                        // Marcar o oponente mais próximo com a bola
+                        let closestOpponent = null;
+                        let minDistance = Infinity;
+                        
+                        const opponents = player.team === 'team1' ? team2Players : team1Players;
+                        for (let opponent of opponents) {
+                            const distance = player.mesh.position.distanceTo(opponent.mesh.position);
+                            if (distance < minDistance) {
+                                minDistance = distance;
+                                closestOpponent = opponent;
+                            }
+                        }
+                        
+                        if (closestOpponent) {
+                            const markPosition = new THREE.Vector3().lerpVectors(
+                                closestOpponent.mesh.position, 
+                                ballPos, 
+                                0.7 // Fica entre o oponente e a bola
+                            );
+                            this.movementTarget.copy(markPosition);
+                        }
+                        break;
+                        
+                    case 'cover_space':
+                        // Meio-campista cobre espaço estratégico
+                        const fieldCenter = new THREE.Vector3(0, 0.9, 0);
+                        const ballToCenter = new THREE.Vector3().subVectors(fieldCenter, ballPos);
+                        const coverPos = new THREE.Vector3().addVectors(ballPos, ballToCenter.multiplyScalar(0.3));
+                        this.movementTarget.copy(coverPos);
+                        break;
+                        
+                    case 'support_attack':
+                        // Apoiar o ataque
+                        const ballX = ballPos.x;
+                        this.movementTarget.x = player.team === 'team1' ? 
+                            Math.min(-15, ballX + 3) : 
+                            Math.max(15, ballX - 3);
+                        this.movementTarget.z = ballPos.z;
+                        break;
+                        
+                    default:
+                        // Posição padrão por papel
+                        this.getRolePosition(player);
+                }
+                
+                // Manter altura do jogador
+                this.movementTarget.y = player.mesh.position.y;
+                
+                // Direção de movimento
+                const direction = new THREE.Vector3().subVectors(this.movementTarget, player.mesh.position);
+                direction.y = 0;
+                return direction.normalize();
+            }
+            
+            // Posição padrão por papel
+            getRolePosition(player) {
+                const baseX = player.team === 'team1' ? -15 : 15;
+                const baseZ = player.team === 'team1' ? -10 : 10;
+                
+                switch (player.role) {
+                    case 'goalkeeper':
+                        this.movementTarget.set(player.team === 'team1' ? -22 : 22, 0.9, 0);
+                        break;
+                    case 'defender':
+                        if (player.mesh.position.z < 0) {
+                            this.movementTarget.set(baseX, 0.9, -6);
+                        } else {
+                            this.movementTarget.set(baseX, 0.9, 6);
+                        }
+                        break;
+                    case 'midfielder':
+                        if (player.index === (player.team === 'team1' ? 5 : 5)) {
+                            this.movementTarget.set(player.team === 'team1' ? -5 : 5, 0.9, 0);
+                        } else {
+                            this.movementTarget.set(player.team === 'team1' ? -3 : 3, 0.9, player.team === 'team1' ? 5 : -5);
+                        }
+                        break;
+                    default:
+                        this.movementTarget.copy(player.mesh.position);
+                }
+            }
+        }
+        
+        const aiSystem = new FootballAI();
+        
+        // Criar jogadores do Time 1 (vermelho) - 7 jogadores com IA
+        function createTeam1Players() {
+            // Goleiro
+            const goalkeeper = new THREE.Mesh(playerGeometry, team1Material);
+            goalkeeper.castShadow = true;
+            goalkeeper.position.set(-22, 0.9, 0);
+            scene.add(goalkeeper);
+            team1Players.push({
+                mesh: goalkeeper,
+                speed: 0.08,  // Mais lento
+                role: 'goalkeeper',
+                team: 'team1',
+                index: 0,
+                hasBall: false
+            });
+            
+            // Defensores
+            for (let i = 0; i < 2; i++) {
+                const player = new THREE.Mesh(playerGeometry, team1Material);
+                player.castShadow = true;
+                player.position.set(-15, 0.9, -6 + i * 12);
+                scene.add(player);
+                team1Players.push({
+                    mesh: player,
+                    speed: 0.10,  // Mais lento
+                    role: 'defender',
+                    team: 'team1',
+                    index: i + 1,
+                    hasBall: false
+                });
+            }
+            
+            // Zagueiros
+            for (let i = 0; i < 2; i++) {
+                const player = new THREE.Mesh(playerGeometry, team1Material);
+                player.castShadow = true;
+                player.position.set(-10, 0.9, -3 + i * 6);
+                scene.add(player);
+                team1Players.push({
+                    mesh: player,
+                    speed: 0.10,  // Mais lento
+                    role: 'defender',
+                    team: 'team1',
+                    index: i + 3,
+                    hasBall: false
+                });
+            }
+            
+            // Meio-campistas
+            const midfielder1 = new THREE.Mesh(playerGeometry, team1Material);
+            midfielder1.castShadow = true;
+            midfielder1.position.set(-5, 0.9, 0);
+            scene.add(midfielder1);
+            team1Players.push({
+                mesh: midfielder1,
+                speed: 0.12,  // Mais lento
+                role: 'midfielder',
+                team: 'team1',
+                index: 5,
+                hasBall: false
+            });
+            
+            const midfielder2 = new THREE.Mesh(playerGeometry, team1Material);
+            midfielder2.castShadow = true;
+            midfielder2.position.set(-3, 0.9, 5);
+            scene.add(midfielder2);
+            team1Players.push({
+                mesh: midfielder2,
+                speed: 0.12,  // Mais lento
+                role: 'midfielder',
+                team: 'team1',
+                index: 6,
+                hasBall: false
+            });
+        }
+        
+        // Criar jogadores do Time 2 (azul) - 7 jogadores com IA
+        function createTeam2Players() {
+            // Goleiro
+            const goalkeeper = new THREE.Mesh(playerGeometry, team2Material);
+            goalkeeper.castShadow = true;
+            goalkeeper.position.set(22, 0.9, 0);
+            scene.add(goalkeeper);
+            team2Players.push({
+                mesh: goalkeeper,
+                speed: 0.08,  // Mais lento
+                role: 'goalkeeper',
+                team: 'team2',
+                index: 0,
+                hasBall: false
+            });
+            
+            // Defensores
+            for (let i = 0; i < 2; i++) {
+                const player = new THREE.Mesh(playerGeometry, team2Material);
+                player.castShadow = true;
+                player.position.set(15, 0.9, -6 + i * 12);
+                scene.add(player);
+                team2Players.push({
+                    mesh: player,
+                    speed: 0.10,  // Mais lento
+                    role: 'defender',
+                    team: 'team2',
+                    index: i + 1,
+                    hasBall: false
+                });
+            }
+            
+            // Zagueiros
+            for (let i = 0; i < 2; i++) {
+                const player = new THREE.Mesh(playerGeometry, team2Material);
+                player.castShadow = true;
+                player.position.set(10, 0.9, -3 + i * 6);
+                scene.add(player);
+                team2Players.push({
+                    mesh: player,
+                    speed: 0.10,  // Mais lento
+                    role: 'defender',
+                    team: 'team2',
+                    index: i + 3,
+                    hasBall: false
+                });
+            }
+            
+            // Meio-campistas
+            const midfielder1 = new THREE.Mesh(playerGeometry, team2Material);
+            midfielder1.castShadow = true;
+            midfielder1.position.set(5, 0.9, 0);
+            scene.add(midfielder1);
+            team2Players.push({
+                mesh: midfielder1,
+                speed: 0.12,  // Mais lento
+                role: 'midfielder',
+                team: 'team2',
+                index: 5,
+                hasBall: false
+            });
+            
+            const midfielder2 = new THREE.Mesh(playerGeometry, team2Material);
+            midfielder2.castShadow = true;
+            midfielder2.position.set(3, 0.9, -5);
+            scene.add(midfielder2);
+            team2Players.push({
+                mesh: midfielder2,
+                speed: 0.12,  // Mais lento
+                role: 'midfielder',
+                team: 'team2',
+                index: 6,
+                hasBall: false
+            });
+        }
+        
+        createTeam1Players();
+        createTeam2Players();
+        
+        // Torcida
+        function createSpectators() {
+            const standMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
+            const seatGeometry = new THREE.BoxGeometry(1.5, 0.3, 0.8);
+            const headGeometry = new THREE.SphereGeometry(0.25, 16, 16);
+            
+            // Torcida no lado superior
+            for (let row = 0; row < 3; row++) {
+                for (let i = -22; i < 23; i += 2) {
+                    if (Math.random() > 0.2) {  // 80% dos assentos ocupados
+                        const seat = new THREE.Mesh(seatGeometry, standMaterial);
+                        seat.position.set(i, 0.15 + row * 0.5, 16 + row * 0.4);
+                        seat.rotation.x = -Math.PI / 6;
+                        scene.add(seat);
+                        
+                        // Torcedores dos dois times misturados
+                        const headColor = Math.random() > 0.5 ? 0xff0000 : 0x0000ff;
+                        const head = new THREE.Mesh(headGeometry, new THREE.MeshStandardMaterial({ color: headColor }));
+                        head.position.set(i, 0.6 + row * 0.5, 16 + row * 0.4);
+                        scene.add(head);
+                    }
+                }
+            }
+            
+            // Torcida no lado inferior
+            for (let row = 0; row < 3; row++) {
+                for (let i = -22; i < 23; i += 2) {
+                    if (Math.random() > 0.2) {
+                        const seat = new THREE.Mesh(seatGeometry, standMaterial);
+                        seat.position.set(i, 0.15 + row * 0.5, -16 - row * 0.4);
+                        seat.rotation.x = Math.PI / 6;
+                        scene.add(seat);
+                        
+                        const headColor = Math.random() > 0.5 ? 0xff0000 : 0x0000ff;
+                        const head = new THREE.Mesh(headGeometry, new THREE.MeshStandardMaterial({ color: headColor }));
+                        head.position.set(i, 0.6 + row * 0.5, -16 - row * 0.4);
+                        scene.add(head);
+                    }
+                }
+            }
+            
+            // Torcida nas laterais
+            for (let row = 0; row < 2; row++) {
+                for (let i = -12; i < 13; i += 2) {
+                    if (Math.random() > 0.3) {
+                        // Lateral direita
+                        const seat1 = new THREE.Mesh(seatGeometry, standMaterial);
+                        seat1.position.set(27 + row * 0.4, 0.15 + row * 0.4, i);
+                        seat1.rotation.z = Math.PI / 2;
+                        scene.add(seat1);
+                        
+                        const headColor1 = Math.random() > 0.5 ? 0xff0000 : 0x0000ff;
+                        const head1 = new THREE.Mesh(headGeometry, new THREE.MeshStandardMaterial({ color: headColor1 }));
+                        head1.position.set(27 + row * 0.4, 0.6 + row * 0.4, i);
+                        scene.add(head1);
+                        
+                        // Lateral esquerda
+                        const seat2 = new THREE.Mesh(seatGeometry, standMaterial);
+                        seat2.position.set(-27 - row * 0.4, 0.15 + row * 0.4, i);
+                        seat2.rotation.z = -Math.PI / 2;
+                        scene.add(seat2);
+                        
+                        const headColor2 = Math.random() > 0.5 ? 0xff0000 : 0x0000ff;
+                        const head2 = new THREE.Mesh(headGeometry, new THREE.MeshStandardMaterial({ color: headColor2 }));
+                        head2.position.set(-27 - row * 0.4, 0.6 + row * 0.4, i);
+                        scene.add(head2);
+                    }
+                }
+            }
+        }
+        
+        createSpectators();
+        
+        // Placar
+        let scoreTeam1 = 0;
+        let scoreTeam2 = 0;
+        const scoreboardElement = document.getElementById('scoreboard');
+        const gameStatusElement = document.getElementById('gameStatus');
+        const resetButton = document.getElementById('resetButton');
+        
+        // Variáveis de jogo
+        let gameActive = true;
+        let kickoffDone = false;
+        
+        // Verificação de gols
+        function checkGoal() {
+            // Gol do Time 2 (bola entra no gol direito)
+            if (ball.position.x > 24 && 
+                Math.abs(ball.position.z) < goalWidth/2 && 
+                ball.position.y < goalHeight) {
+                scoreTeam2++;
+                resetAfterGoal('team2');
+                updateScoreboard();
+                gameStatusElement.innerText = "Status: Gol do Time 2 (Azul)!";
+                setTimeout(() => {
+                    gameStatusElement.innerText = "Status: Jogo em andamento";
+                }, 3000);
+            }
+            
+            // Gol do Time 1 (bola entra no gol esquerdo)
+            if (ball.position.x < -24 && 
+                Math.abs(ball.position.z) < goalWidth/2 && 
+                ball.position.y < goalHeight) {
+                scoreTeam1++;
+                resetAfterGoal('team1');
+                updateScoreboard();
+                gameStatusElement.innerText = "Status: Gol do Time 1 (Vermelho)!";
+                setTimeout(() => {
+                    gameStatusElement.innerText = "Status: Jogo em andamento";
+                }, 3000);
+            }
+        }
+        
+        function resetAfterGoal(scoringTeam) {
+            ball.position.set(0, 1, 0);
+            ballVelocity.set(0, 0, 0);
+            
+            // Reposicionar jogadores
+            resetPlayerPositions();
+            
+            // O time que sofreu o gol começa com a bola
+            aiSystem.kickoffTeam = scoringTeam === 'team1' ? 'team2' : 'team1';
+            
+            // Dar um pequeno chute inicial
+            const kickoffDirection = scoringTeam === 'team1' ? 1 : -1;
+            ballVelocity.x = kickoffDirection * 0.5;
+            ballVelocity.z = (Math.random() - 0.5) * 0.5;
+            ballVelocity.y = 0.3;
+            ballOnGround = false;
+        }
+        
+        function updateScoreboard() {
+            scoreboardElement.innerText = `Time 1 (Vermelho): ${scoreTeam1} | Time 2 (Azul): ${scoreTeam2}`;
+            
+            // Verificar vitória
+            if (scoreTeam1 >= 10 || scoreTeam2 >= 10) {
+                gameActive = false;
+                const winningTeam = scoreTeam1 >= 10 ? "Time 1 (Vermelho)" : "Time 2 (Azul)";
+                gameStatusElement.innerText = `Status: ${winningTeam} venceu!`;
+                resetButton.style.display = "block";
+            }
+        }
+        
+        function resetBall() {
+            ball.position.set(0, 1, 0);
+            ballVelocity.set(0, 0, 0);
+        }
+        
+        function resetPlayerPositions() {
+            // Reposicionar jogadores do Time 1
+            team1Players[0].mesh.position.set(-22, 0.9, 0); // Goleiro
+            team1Players[1].mesh.position.set(-15, 0.9, -6); // Defensor 1
+            team1Players[2].mesh.position.set(-15, 0.9, 6);  // Defensor 2
+            team1Players[3].mesh.position.set(-10, 0.9, -3); // Zagueiro 1
+            team1Players[4].mesh.position.set(-10, 0.9, 3);  // Zagueiro 2
+            team1Players[5].mesh.position.set(-5, 0.9, 0);   // Meio-campista 1
+            team1Players[6].mesh.position.set(-3, 0.9, 5);   // Meio-campista 2
+            
+            // Reposicionar jogadores do Time 2
+            team2Players[0].mesh.position.set(22, 0.9, 0); // Goleiro
+            team2Players[1].mesh.position.set(15, 0.9, -6); // Defensor 1
+            team2Players[2].mesh.position.set(15, 0.9, 6);  // Defensor 2
+            team2Players[3].mesh.position.set(10, 0.9, -3); // Zagueiro 1
+            team2Players[4].mesh.position.set(10, 0.9, 3);  // Zagueiro 2
+            team2Players[5].mesh.position.set(5, 0.9, 0);   // Meio-campista 1
+            team2Players[6].mesh.position.set(3, 0.9, -5);  // Meio-campista 2
+        }
+        
+        function resetGame() {
+            scoreTeam1 = 0;
+            scoreTeam2 = 0;
+            gameActive = true;
+            resetButton.style.display = "none";
+            updateScoreboard();
+            gameStatusElement.innerText = "Status: Jogo iniciando - Time Azul com a posse inicial";
+            
+            // Resetar posição dos jogadores
+            resetPlayerPositions();
+            
+            // Resetar bola
+            resetBall();
+            
+            // O time azul começa com a posse
+            aiSystem.kickoffTeam = 'team2';
+            
+            // Dar o pontapé inicial
+            setTimeout(() => {
+                ballVelocity.x = 0.5;
+                ballVelocity.z = 0;
+                ballVelocity.y = 0.3;
+                ballOnGround = false;
+                gameStatusElement.innerText = "Status: Jogo em andamento";
+            }, 1000);
+        }
+        
+        // Função de detecção de colisão entre jogador e bola
+        function checkPlayerBallCollision(player, ball) {
+            const distance = player.position.distanceTo(ball.position);
+            return distance < 1.5;  // Raio de colisão
+        }
+        
+        // Variável para rastrear qual jogador tem a posse da bola
+        let playerWithBall = null;
+        let lastPlayerWithBall = null;
+        
+        // Botão de reset
+        resetButton.addEventListener('click', resetGame);
+        
+        // Animação
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (!gameActive) return;
+            
+            // Atualizar física da bola
+            if (ballOnGround) {
+                ballVelocity.x *= friction;
+                ballVelocity.z *= friction;
+                
+                // Parar movimento muito pequeno
+                if (ballVelocity.lengthSq() < 0.001) {
+                    ballVelocity.set(0, 0, 0);
+                }
+            } else {
+                ballVelocity.y -= gravity;
+            }
+            
+            ball.position.x += ballVelocity.x;
+            ball.position.y += ballVelocity.y;
+            ball.position.z += ballVelocity.z;
+            
+            // Limites do campo
+            if (Math.abs(ball.position.x) > 24.5) {
+                ballVelocity.x *= -0.8;
+                ball.position.x = Math.sign(ball.position.x) * 24.5;
+            }
+            
+            if (Math.abs(ball.position.z) > 14.5) {
+                ballVelocity.z *= -0.8;
+                ball.position.z = Math.sign(ball.position.z) * 14.5;
+            }
+            
+            // Chão
+            if (ball.position.y < 0.6) {
+                ball.position.y = 0.6;
+                if (ballVelocity.y < 0) {
+                    ballVelocity.y = -ballVelocity.y * 0.5;
+                }
+                ballOnGround = true;
+            } else {
+                ballOnGround = false;
+            }
+            
+            // Verificar qual jogador tem a posse da bola
+            let currentPlayerWithBall = null;
+            let closestDistance = 1.5;
+            
+            // Verificar Time 1
+            for (let player of team1Players) {
+                player.hasBall = false;
+                const distance = player.mesh.position.distanceTo(ball.position);
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    currentPlayerWithBall = player;
+                }
+            }
+            
+            // Verificar Time 2
+            for (let player of team2Players) {
+                player.hasBall = false;
+                const distance = player.mesh.position.distanceTo(ball.position);
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    currentPlayerWithBall = player;
+                }
+            }
+            
+            // Atualizar posse de bola
+            if (currentPlayerWithBall) {
+                currentPlayerWithBall.hasBall = true;
+                if (currentPlayerWithBall !== playerWithBall) {
+                    lastPlayerWithBall = playerWithBall;
+                    playerWithBall = currentPlayerWithBall;
+                }
+            } else {
+                playerWithBall = null;
+            }
+            
+            // Movimentação dos jogadores com IA avançada
+            const allPlayers = [...team1Players, ...team2Players];
+            
+            allPlayers.forEach(player => {
+                // Decidir ação com base na IA
+                const action = aiSystem.decideAction(
+                    player, 
+                    ball.position, 
+                    player.team === 'team1' ? team1Players : team2Players,
+                    player.team === 'team1' ? team2Players : team1Players,
+                    player.hasBall,
+                    0
+                );
+                
+                // Obter direção de movimento
+                const direction = aiSystem.getMovementDirection(
+                    player, action, ball.position, 0.016
+                );
+                
+                // Nova posição proposta
+                const speed = player.hasBall ? player.speed * 0.8 : player.speed;
+                const newPosition = player.mesh.position.clone();
+                newPosition.x += direction.x * speed;
+                newPosition.z += direction.z * speed;
+                
+                // Verificar se a nova posição é válida
+                if (isValidPosition(newPosition, player.mesh)) {
+                    player.mesh.position.x = newPosition.x;
+                    player.mesh.position.z = newPosition.z;
+                }
+            });
+            
+            // Verificar colisões com a bola
+            allPlayers.forEach(player => {
+                if (player.hasBall) {
+                    // Executar ação com a bola
+                    const action = aiSystem.decideAction(
+                        player, 
+                        ball.position, 
+                        player.team === 'team1' ? team1Players : team2Players,
+                        player.team === 'team1' ? team2Players : team1Players,
+                        true,
+                        0
+                    );
+                    
+                    if (action === 'shoot') {
+                        // Chutar em direção ao gol
+                        const targetX = player.team === 'team1' ? -25 : 25;
+                        const direction = new THREE.Vector3(
+                            targetX - ball.position.x,
+                            0.5,
+                            0 - ball.position.z
+                        );
+                        direction.normalize();
+                        
+                        ballVelocity.x = direction.x * 1.2;
+                        ballVelocity.y = direction.y * 1.2;
+                        ballVelocity.z = direction.z * 1.2;
+                        ballOnGround = false;
+                    }
+                    else if (action === 'pass') {
+                        // Passar para o companheiro
+                        const passTarget = aiSystem.passTarget;
+                        const direction = new THREE.Vector3().subVectors(passTarget, ball.position);
+                        direction.y = 0.3;
+                        direction.normalize();
+                        
+                        ballVelocity.x = direction.x * 0.9;
+                        ballVelocity.y = direction.y * 0.9;
+                        ballVelocity.z = direction.z * 0.9;
+                        ballOnGround = false;
+                    }
+                }
+            });
+            
+            // Verificar gols
+            checkGoal();
+            
+            // Atualizar controles da câmera
+            controls.update();
+            
+            // Renderizar
+            renderer.render(scene, camera);
+        }
+        
+        // Redimensionar
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Iniciar o jogo
+        resetGame();
+        
+        // Iniciar animação
+        animate();
+    </script>
+</body>
+</html>
