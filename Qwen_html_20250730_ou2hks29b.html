@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo de Futebol 3D</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            font-family: Arial, sans-serif;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background-color: rgba(0,0,0,0.6);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            z-index: 100;
+        }
+        #scoreboard {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            background-color: rgba(0,0,0,0.6);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h3>Jogo de Futebol 3D</h3>
+        <p>Use as setas para mover o jogador vermelho (Time 1)</p>
+        <p>Teclas: W, A, S, D para mover o jogador azul (Time 2)</p>
+        <p>Ganhe ao marcar 10 gols!</p>
+        <p>Cada time tem 7 jogadores</p>
+    </div>
+    <div id="scoreboard">
+        Time 1 (Vermelho): 0 | Time 2 (Azul): 0
+    </div>
+    <script>
+        // Configuração da cena
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB);
+        
+        // Câmera
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 25, 35);
+        
+        // Renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        
+        // Controles da câmera
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        
+        // Iluminação
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(10, 30, 10);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.shadow.camera.near = 0.5;
+        directionalLight.shadow.camera.far = 50;
+        directionalLight.shadow.camera.left = -25;
+        directionalLight.shadow.camera.right = 25;
+        directionalLight.shadow.camera.top = 25;
+        directionalLight.shadow.camera.bottom = -25;
+        scene.add(directionalLight);
+        
+        // Campo de futebol
+        const fieldGeometry = new THREE.PlaneGeometry(50, 30);
+        const fieldMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x228B22,
+            side: THREE.DoubleSide,
+            roughness: 0.8,
+            metalness: 0.2
+        });
+        const field = new THREE.Mesh(fieldGeometry, fieldMaterial);
+        field.rotation.x = -Math.PI / 2;
+        field.receiveShadow = true;
+        scene.add(field);
+        
+        // Linhas do campo
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+        
+        // Linha central
+        const centerLineGeometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(0, 0.01, 15),
+            new THREE.Vector3(0, 0.01, -15)
+        ]);
+        const centerLine = new THREE.Line(centerLineGeometry, lineMaterial);
+        scene.add(centerLine);
+        
+        // Círculo central
+        const circleGeometry = new THREE.BufferGeometry();
+        const circlePoints = [];
+        for (let i = 0; i <= 64; i++) {
+            const theta = (i / 32) * Math.PI;
+            circlePoints.push(
+                new THREE.Vector3(
+                    Math.cos(theta) * 7,
+                    0.01,
+                    Math.sin(theta) * 7
+                )
+            );
+        }
+        circleGeometry.setFromPoints(circlePoints);
+        const centerCircle = new THREE.Line(circleGeometry, lineMaterial);
+        scene.add(centerCircle);
+        
+        // Área do gol
+        const areaGeometry1 = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(22, 0.01, 9),
+            new THREE.Vector3(25, 0.01, 9),
+            new THREE.Vector3(25, 0.01, -9),
+            new THREE.Vector3(22, 0.01, -9)
+        ]);
+        const goalArea1 = new THREE.Line(areaGeometry1, lineMaterial);
+        scene.add(goalArea1);
+        
+        const areaGeometry2 = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(-22, 0.01, 9),
+            new THREE.Vector3(-25, 0.01, 9),
+            new THREE.Vector3(-25, 0.01, -9),
+            new THREE.Vector3(-22, 0.01, -9)
+        ]);
+        const goalArea2 = new THREE.Line(areaGeometry2, lineMaterial);
+        scene.add(goalArea2);
+        
+        // Pequena área
+        const penaltyArea1 = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(18, 0.01, 12),
+            new THREE.Vector3(25, 0.01, 12),
+            new THREE.Vector3(25, 0.01, -12),
+            new THREE.Vector3(18, 0.01, -12)
+        ]);
+        const penaltyAreaLine1 = new THREE.Line(penaltyArea1, lineMaterial);
+        scene.add(penaltyAreaLine1);
+        
+        const penaltyArea2 = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(-18, 0.01, 12),
+            new THREE.Vector3(-25, 0.01, 12),
+            new THREE.Vector3(-25, 0.01, -12),
+            new THREE.Vector3(-18, 0.01, -12)
+        ]);
+        const penaltyAreaLine2 = new THREE.Line(penaltyArea2, lineMaterial);
+        scene.add(penaltyAreaLine2);
+        
+        // Ponto de pênalti
+        const penaltyPoint1 = new THREE.Mesh(
+            new THREE.SphereGeometry(0.2, 16, 16),
+            new THREE.MeshBasicMaterial({ color: 0xffffff })
+        );
+        penaltyPoint1.position.set(19, 0.02, 0);
+        scene.add(penaltyPoint1);
+        
+        const penaltyPoint2 = new THREE.Mesh(
+            new THREE.SphereGeometry(0.2, 16, 16),
+            new THREE.MeshBasicMaterial({ color: 0xffffff })
+        );
+        penaltyPoint2.position.set(-19, 0.02, 0);
+        scene.add(penaltyPoint2);
+        
+        // Gols
+        const goalWidth = 7;
+        const goalHeight = 3;
+        
+        // Rede de gol 1
+        const goal1Geometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(25, 0, goalWidth/2),
+            new THREE.Vector3(25, goalHeight, goalWidth/2),
+            new THREE.Vector3(25, goalHeight, -goalWidth/2),
+            new THREE.Vector3(25, 0, -goalWidth/2)
+        ]);
+        const goal1 = new THREE.Line(goal1Geometry, lineMaterial);
+        scene.add(goal1);
+        
+        // Trave superior
+        const crossbar1Geometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(25, goalHeight, goalWidth/2),
+            new THREE.Vector3(25, goalHeight, -goalWidth/2)
+        ]);
+        const crossbar1 = new THREE.Line(crossbar1Geometry, lineMaterial);
+        scene.add(crossbar1);
+        
+        // Rede de gol 2
+        const goal2Geometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(-25, 0, goalWidth/2),
+            new THREE.Vector3(-25, goalHeight, goalWidth/2),
+            new THREE.Vector3(-25, goalHeight, -goalWidth/2),
+            new THREE.Vector3(-25, 0, -goalWidth/2)
+        ]);
+        const goal2 = new THREE.Line(goal2Geometry, lineMaterial);
+        scene.add(goal2);
+        
+        // Trave superior
+        const crossbar2Geometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(-25, goalHeight, goalWidth/2),
+            new THREE.Vector3(-25, goalHeight, -goalWidth/2)
+        ]);
+        const crossbar2 = new THREE.Line(crossbar2Geometry, lineMaterial);
+        scene.add(crossbar2);
+        
+        // Bola
+        const ballGeometry = new THREE.SphereGeometry(0.6, 32, 32);
+        const ballMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xffffff,
+            roughness: 0.5,
+            metalness: 0.2
+        });
+        const ball = new THREE.Mesh(ballGeometry, ballMaterial);
+        ball.position.set(0, 1, 0);
+        ball.castShadow = true;
+        scene.add(ball);
+        
+        // Física da bola
+        let ballVelocity = new THREE.Vector3(0, 0, 0);
+        const friction = 0.98;
+        const gravity = 0.02;
+        let ballOnGround = true;
+        
+        // Jogadores - 7 por time
+        const playerGeometry = new THREE.BoxGeometry(1.2, 1.8, 1.2);
+        const team1Material = new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.5 });
+        const team2Material = new THREE.MeshStandardMaterial({ color: 0x0000ff, roughness: 0.5 });
+        
+        const team1Players = [];
+        const team2Players = [];
+        
+        // Função para verificar colisão entre dois jogadores
+        function checkPlayerCollision(player1, player2) {
+            const distance = player1.position.distanceTo(player2.position);
+            return distance < 2.0; // Raio de colisão entre jogadores
+        }
+        
+        // Função para verificar se a posição é válida (não colide com outros jogadores)
+        function isValidPosition(position, excludePlayer = null, teamPlayers) {
+            // Verificar colisão com jogadores do time 1
+            for (let player of team1Players) {
+                if (player.mesh === excludePlayer) continue;
+                const distance = position.distanceTo(player.mesh.position);
+                if (distance < 2.0) return false;
+            }
+            
+            // Verificar colisão com jogadores do time 2
+            for (let player of team2Players) {
+                if (player.mesh === excludePlayer) continue;
+                const distance = position.distanceTo(player.mesh.position);
+                if (distance < 2.0) return false;
+            }
+            
+            // Verificar limites do campo
+            if (Math.abs(position.x) > 24 || Math.abs(position.z) > 14) return false;
+            
+            return true;
+        }
+        
+        // Criar jogadores do Time 1 (vermelho) - 7 jogadores
+        function createTeam1Players() {
+            // Goleiro
+            const goalkeeper = new THREE.Mesh(playerGeometry, team1Material);
+            goalkeeper.castShadow = true;
+            goalkeeper.position.set(-22, 0.9, 0);
+            scene.add(goalkeeper);
+            team1Players.push({
+                mesh: goalkeeper,
+                speed: 0.12,
+                controls: null
+            });
+            
+            // Defensores
+            for (let i = 0; i < 2; i++) {
+                const player = new THREE.Mesh(playerGeometry, team1Material);
+                player.castShadow = true;
+                player.position.set(-15, 0.9, -6 + i * 12);
+                scene.add(player);
+                team1Players.push({
+                    mesh: player,
+                    speed: 0.14,
+                    controls: null
+                });
+            }
+            
+            // Zagueiros
+            for (let i = 0; i < 2; i++) {
+                const player = new THREE.Mesh(playerGeometry, team1Material);
+                player.castShadow = true;
+                player.position.set(-10, 0.9, -3 + i * 6);
+                scene.add(player);
+                team1Players.push({
+                    mesh: player,
+                    speed: 0.14,
+                    controls: null
+                });
+            }
+            
+            // Meio-campistas
+            const midfielder1 = new THREE.Mesh(playerGeometry, team1Material);
+            midfielder1.castShadow = true;
+            midfielder1.position.set(-5, 0.9, 0);
+            scene.add(midfielder1);
+            team1Players.push({
+                mesh: midfielder1,
+                speed: 0.16,
+                controls: 'arrows'  // Jogador controlado pelo usuário
+            });
+            
+            const midfielder2 = new THREE.Mesh(playerGeometry, team1Material);
+            midfielder2.castShadow = true;
+            midfielder2.position.set(-3, 0.9, 5);
+            scene.add(midfielder2);
+            team1Players.push({
+                mesh: midfielder2,
+                speed: 0.16,
+                controls: null
+            });
+        }
+        
+        // Criar jogadores do Time 2 (azul) - 7 jogadores
+        function createTeam2Players() {
+            // Goleiro
+            const goalkeeper = new THREE.Mesh(playerGeometry, team2Material);
+            goalkeeper.castShadow = true;
+            goalkeeper.position.set(22, 0.9, 0);
+            scene.add(goalkeeper);
+            team2Players.push({
+                mesh: goalkeeper,
+                speed: 0.12,
+                controls: null
+            });
+            
+            // Defensores
+            for (let i = 0; i < 2; i++) {
+                const player = new THREE.Mesh(playerGeometry, team2Material);
+                player.castShadow = true;
+                player.position.set(15, 0.9, -6 + i * 12);
+                scene.add(player);
+                team2Players.push({
+                    mesh: player,
+                    speed: 0.14,
+                    controls: null
+                });
+            }
+            
+            // Zagueiros
+            for (let i = 0; i < 2; i++) {
+                const player = new THREE.Mesh(playerGeometry, team2Material);
+                player.castShadow = true;
+                player.position.set(10, 0.9, -3 + i * 6);
+                scene.add(player);
+                team2Players.push({
+                    mesh: player,
+                    speed: 0.14,
+                    controls: null
+                });
+            }
+            
+            // Meio-campistas
+            const midfielder1 = new THREE.Mesh(playerGeometry, team2Material);
+            midfielder1.castShadow = true;
+            midfielder1.position.set(5, 0.9, 0);
+            scene.add(midfielder1);
+            team2Players.push({
+                mesh: midfielder1,
+                speed: 0.16,
+                controls: 'wasd'  // Jogador controlado pelo usuário
+            });
+            
+            const midfielder2 = new THREE.Mesh(playerGeometry, team2Material);
+            midfielder2.castShadow = true;
+            midfielder2.position.set(3, 0.9, -5);
+            scene.add(midfielder2);
+            team2Players.push({
+                mesh: midfielder2,
+                speed: 0.16,
+                controls: null
+            });
+        }
+        
+        createTeam1Players();
+        createTeam2Players();
+        
+        // Torcida
+        function createSpectators() {
+            const standMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
+            const seatGeometry = new THREE.BoxGeometry(1.5, 0.3, 0.8);
+            const headGeometry = new THREE.SphereGeometry(0.25, 16, 16);
+            
+            // Torcida no lado superior
+            for (let row = 0; row < 3; row++) {
+                for (let i = -22; i < 23; i += 2) {
+                    if (Math.random() > 0.2) {  // 80% dos assentos ocupados
+                        const seat = new THREE.Mesh(seatGeometry, standMaterial);
+                        seat.position.set(i, 0.15 + row * 0.5, 16 + row * 0.4);
+                        seat.rotation.x = -Math.PI / 6;
+                        scene.add(seat);
+                        
+                        // Torcedores dos dois times misturados
+                        const headColor = Math.random() > 0.5 ? 0xff0000 : 0x0000ff;
+                        const head = new THREE.Mesh(headGeometry, new THREE.MeshStandardMaterial({ color: headColor }));
+                        head.position.set(i, 0.6 + row * 0.5, 16 + row * 0.4);
+                        scene.add(head);
+                    }
+                }
+            }
+            
+            // Torcida no lado inferior
+            for (let row = 0; row < 3; row++) {
+                for (let i = -22; i < 23; i += 2) {
+                    if (Math.random() > 0.2) {
+                        const seat = new THREE.Mesh(seatGeometry, standMaterial);
+                        seat.position.set(i, 0.15 + row * 0.5, -16 - row * 0.4);
+                        seat.rotation.x = Math.PI / 6;
+                        scene.add(seat);
+                        
+                        const headColor = Math.random() > 0.5 ? 0xff0000 : 0x0000ff;
+                        const head = new THREE.Mesh(headGeometry, new THREE.MeshStandardMaterial({ color: headColor }));
+                        head.position.set(i, 0.6 + row * 0.5, -16 - row * 0.4);
+                        scene.add(head);
+                    }
+                }
+            }
+            
+            // Torcida nas laterais
+            for (let row = 0; row < 2; row++) {
+                for (let i = -12; i < 13; i += 2) {
+                    if (Math.random() > 0.3) {
+                        // Lateral direita
+                        const seat1 = new THREE.Mesh(seatGeometry, standMaterial);
+                        seat1.position.set(27 + row * 0.4, 0.15 + row * 0.4, i);
+                        seat1.rotation.z = Math.PI / 2;
+                        scene.add(seat1);
+                        
+                        const headColor1 = Math.random() > 0.5 ? 0xff0000 : 0x0000ff;
+                        const head1 = new THREE.Mesh(headGeometry, new THREE.MeshStandardMaterial({ color: headColor1 }));
+                        head1.position.set(27 + row * 0.4, 0.6 + row * 0.4, i);
+                        scene.add(head1);
+                        
+                        // Lateral esquerda
+                        const seat2 = new THREE.Mesh(seatGeometry, standMaterial);
+                        seat2.position.set(-27 - row * 0.4, 0.15 + row * 0.4, i);
+                        seat2.rotation.z = -Math.PI / 2;
+                        scene.add(seat2);
+                        
+                        const headColor2 = Math.random() > 0.5 ? 0xff0000 : 0x0000ff;
+                        const head2 = new THREE.Mesh(headGeometry, new THREE.MeshStandardMaterial({ color: headColor2 }));
+                        head2.position.set(-27 - row * 0.4, 0.6 + row * 0.4, i);
+                        scene.add(head2);
+                    }
+                }
+            }
+        }
+        
+        createSpectators();
+        
+        // Placar
+        let scoreTeam1 = 0;
+        let scoreTeam2 = 0;
+        const scoreboardElement = document.getElementById('scoreboard');
+        
+        // Verificação de gols
+        function checkGoal() {
+            // Gol do Time 2 (bola entra no gol direito)
+            if (ball.position.x > 24 && 
+                Math.abs(ball.position.z) < goalWidth/2 && 
+                ball.position.y < goalHeight) {
+                scoreTeam2++;
+                resetBall();
+                updateScoreboard();
+            }
+            
+            // Gol do Time 1 (bola entra no gol esquerdo)
+            if (ball.position.x < -24 && 
+                Math.abs(ball.position.z) < goalWidth/2 && 
+                ball.position.y < goalHeight) {
+                scoreTeam1++;
+                resetBall();
+                updateScoreboard();
+            }
+        }
+        
+        function updateScoreboard() {
+            scoreboardElement.innerText = `Time 1 (Vermelho): ${scoreTeam1} | Time 2 (Azul): ${scoreTeam2}`;
+            
+            // Verificar vitória
+            if (scoreTeam1 >= 10) {
+                alert("Time 1 (Vermelho) venceu ao marcar 10 gols!");
+                resetGame();
+            } else if (scoreTeam2 >= 10) {
+                alert("Time 2 (Azul) venceu ao marcar 10 gols!");
+                resetGame();
+            }
+        }
+        
+        function resetBall() {
+            ball.position.set(0, 1, 0);
+            ballVelocity.set(0, 0, 0);
+        }
+        
+        function resetGame() {
+            scoreTeam1 = 0;
+            scoreTeam2 = 0;
+            updateScoreboard();
+            resetBall();
+        }
+        
+        // Controles
+        const keys = {};
+        
+        window.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+        });
+        
+        window.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+        
+        // Função de detecção de colisão entre jogador e bola
+        function checkPlayerBallCollision(player, ball) {
+            const distance = player.position.distanceTo(ball.position);
+            return distance < 1.5;  // Raio de colisão
+        }
+        
+        // Função para mover jogador em direção à bola (IA básica)
+        function movePlayerTowardsBall(player, ball, speed) {
+            const direction = new THREE.Vector3().subVectors(ball.position, player.position);
+            direction.y = 0;  // Manter movimento no plano horizontal
+            direction.normalize();
+            
+            // Nova posição proposta
+            const newPosition = player.position.clone();
+            newPosition.x += direction.x * speed * 0.7;
+            newPosition.z += direction.z * speed * 0.7;
+            
+            // Verificar se a nova posição é válida
+            if (isValidPosition(newPosition, player, [...team1Players, ...team2Players])) {
+                player.position.x = newPosition.x;
+                player.position.z = newPosition.z;
+            }
+        }
+        
+        // Animação
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Atualizar física da bola
+            if (ballOnGround) {
+                ballVelocity.x *= friction;
+                ballVelocity.z *= friction;
+                
+                // Parar movimento muito pequeno
+                if (ballVelocity.lengthSq() < 0.001) {
+                    ballVelocity.set(0, 0, 0);
+                }
+            } else {
+                ballVelocity.y -= gravity;
+            }
+            
+            ball.position.x += ballVelocity.x;
+            ball.position.y += ballVelocity.y;
+            ball.position.z += ballVelocity.z;
+            
+            // Limites do campo
+            if (Math.abs(ball.position.x) > 24.5) {
+                ballVelocity.x *= -0.8;
+                ball.position.x = Math.sign(ball.position.x) * 24.5;
+            }
+            
+            if (Math.abs(ball.position.z) > 14.5) {
+                ballVelocity.z *= -0.8;
+                ball.position.z = Math.sign(ball.position.z) * 14.5;
+            }
+            
+            // Chão
+            if (ball.position.y < 0.6) {
+                ball.position.y = 0.6;
+                if (ballVelocity.y < 0) {
+                    ballVelocity.y = -ballVelocity.y * 0.5;
+                }
+                ballOnGround = true;
+            } else {
+                ballOnGround = false;
+            }
+            
+            // Controles dos jogadores principais
+            const activePlayer1 = team1Players.find(p => p.controls === 'arrows');
+            const activePlayer2 = team2Players.find(p => p.controls === 'wasd');
+            
+            if (activePlayer1) {
+                // Salvar posição atual para poder reverter em caso de colisão
+                const originalPosition1 = activePlayer1.mesh.position.clone();
+                
+                if (keys['ArrowUp']) {
+                    activePlayer1.mesh.position.z -= activePlayer1.speed;
+                }
+                if (keys['ArrowDown']) {
+                    activePlayer1.mesh.position.z += activePlayer1.speed;
+                }
+                if (keys['ArrowLeft']) {
+                    activePlayer1.mesh.position.x -= activePlayer1.speed;
+                }
+                if (keys['ArrowRight']) {
+                    activePlayer1.mesh.position.x += activePlayer1.speed;
+                }
+                
+                // Verificar colisão com outros jogadores
+                let collision = false;
+                for (let player of team1Players) {
+                    if (player.mesh === activePlayer1.mesh) continue;
+                    if (checkPlayerCollision(activePlayer1.mesh, player.mesh)) {
+                        collision = true;
+                        break;
+                    }
+                }
+                
+                for (let player of team2Players) {
+                    if (checkPlayerCollision(activePlayer1.mesh, player.mesh)) {
+                        collision = true;
+                        break;
+                    }
+                }
+                
+                // Verificar limites do campo
+                if (Math.abs(activePlayer1.mesh.position.x) > 24 || 
+                    Math.abs(activePlayer1.mesh.position.z) > 14 ||
+                    collision) {
+                    // Reverter posição se houver colisão ou fora dos limites
+                    activePlayer1.mesh.position.copy(originalPosition1);
+                }
+            }
+            
+            if (activePlayer2) {
+                // Salvar posição atual para poder reverter em caso de colisão
+                const originalPosition2 = activePlayer2.mesh.position.clone();
+                
+                if (keys['w']) {
+                    activePlayer2.mesh.position.z -= activePlayer2.speed;
+                }
+                if (keys['s']) {
+                    activePlayer2.mesh.position.z += activePlayer2.speed;
+                }
+                if (keys['a']) {
+                    activePlayer2.mesh.position.x -= activePlayer2.speed;
+                }
+                if (keys['d']) {
+                    activePlayer2.mesh.position.x += activePlayer2.speed;
+                }
+                
+                // Verificar colisão com outros jogadores
+                let collision = false;
+                for (let player of team1Players) {
+                    if (checkPlayerCollision(activePlayer2.mesh, player.mesh)) {
+                        collision = true;
+                        break;
+                    }
+                }
+                
+                for (let player of team2Players) {
+                    if (player.mesh === activePlayer2.mesh) continue;
+                    if (checkPlayerCollision(activePlayer2.mesh, player.mesh)) {
+                        collision = true;
+                        break;
+                    }
+                }
+                
+                // Verificar limites do campo
+                if (Math.abs(activePlayer2.mesh.position.x) > 24 || 
+                    Math.abs(activePlayer2.mesh.position.z) > 14 ||
+                    collision) {
+                    // Reverter posição se houver colisão ou fora dos limites
+                    activePlayer2.mesh.position.copy(originalPosition2);
+                }
+            }
+            
+            // IA básica para outros jogadores (seguir a bola ou posição estratégica)
+            team1Players.filter(p => p.controls !== 'arrows').forEach(player => {
+                movePlayerTowardsBall(player.mesh, ball, player.speed);
+            });
+            
+            team2Players.filter(p => p.controls !== 'wasd').forEach(player => {
+                movePlayerTowardsBall(player.mesh, ball, player.speed);
+            });
+            
+            // Verificar colisões com a bola
+            team1Players.forEach(player => {
+                if (checkPlayerBallCollision(player.mesh, ball)) {
+                    const direction = new THREE.Vector3().subVectors(ball.position, player.mesh.position);
+                    direction.y = 0.3;  // Dar um pequeno ângulo para cima
+                    direction.normalize();
+                    
+                    // Aplicar força na bola baseada na velocidade do jogador
+                    ballVelocity.x = direction.x * 0.8;
+                    ballVelocity.y = direction.y * 0.8;
+                    ballVelocity.z = direction.z * 0.8;
+                    ballOnGround = false;
+                }
+            });
+            
+            team2Players.forEach(player => {
+                if (checkPlayerBallCollision(player.mesh, ball)) {
+                    const direction = new THREE.Vector3().subVectors(ball.position, player.mesh.position);
+                    direction.y = 0.3;
+                    direction.normalize();
+                    
+                    // Aplicar força na bola
+                    ballVelocity.x = direction.x * 0.8;
+                    ballVelocity.y = direction.y * 0.8;
+                    ballVelocity.z = direction.z * 0.8;
+                    ballOnGround = false;
+                }
+            });
+            
+            // Verificar gols
+            checkGoal();
+            
+            // Atualizar controles da câmera
+            controls.update();
+            
+            // Renderizar
+            renderer.render(scene, camera);
+        }
+        
+        // Redimensionar
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Iniciar animação
+        animate();
+    </script>
+</body>
+</html>
