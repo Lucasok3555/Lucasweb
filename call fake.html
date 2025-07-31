@@ -2,78 +2,71 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Simulador de Chamada WebRTC</title>
+  <title>Chamada WebRTC com Ruído e Travamentos</title>
   <style>
     body { font-family: sans-serif; text-align: center; padding: 20px; }
-    audio, video { margin-top: 10px; width: 300px; }
-    button { padding: 10px 20px; margin: 10px; }
+    video { width: 300px; margin: 10px; }
+    button { padding: 10px 20px; margin: 10px; font-size: 16px; }
   </style>
 </head>
 <body>
 
-  <h2>📞 Simulador WebRTC com Áudio</h2>
+  <h2>📞 Simulador WebRTC com Ruído e Travamentos</h2>
 
   <input type="file" id="audioInput" accept="audio/*"><br>
   <button onclick="iniciarChamada()">Iniciar Chamada</button><br>
 
-  <video id="localVideo" autoplay playsinline muted></video>
+  <video id="localVideo" autoplay muted playsinline></video>
   <video id="remoteVideo" autoplay playsinline></video>
 
   <script>
     let localStream;
     let peer1, peer2;
+    let mediaCtx;
 
     async function iniciarChamada() {
-      const audioInput = document.getElementById("audioInput").files[0];
+      const file = document.getElementById("audioInput").files[0];
+      mediaCtx = new AudioContext();
+      const destination = mediaCtx.createMediaStreamDestination();
 
-      if (audioInput) {
+      if (file) {
         // Usa o áudio enviado
-        const audioURL = URL.createObjectURL(audioInput);
+        const audioURL = URL.createObjectURL(file);
         const audio = new Audio(audioURL);
         audio.loop = true;
+
+        const src = mediaCtx.createMediaElementSource(audio);
+        src.connect(destination);
+        src.connect(mediaCtx.destination);
         audio.play();
-
-        // Criar MediaStream com esse áudio
-        const audioCtx = new AudioContext();
-        const source = audioCtx.createMediaElementSource(audio);
-        const destination = audioCtx.createMediaStreamDestination();
-        source.connect(destination);
-        source.connect(audioCtx.destination);
-        localStream = destination.stream;
       } else {
-        // Gera tom simulado com Web Audio API
-        const audioCtx = new AudioContext();
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
-        gainNode.gain.value = 0.3;
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
+        // Tom telefônico gerado
+        const oscillator = mediaCtx.createOscillator();
+        oscillator.frequency.setValueAtTime(440, mediaCtx.currentTime);
+        oscillator.type = "sine";
 
-        const dest = audioCtx.createMediaStreamDestination();
-        gainNode.connect(dest);
+        const gain = mediaCtx.createGain();
+        gain.gain.value = 0.2;
+
+        oscillator.connect(gain);
+        gain.connect(destination);
+        gain.connect(mediaCtx.destination);
+
         oscillator.start();
-
-        localStream = dest.stream;
       }
 
-      // Exibir o stream local (mudo para não duplicar som)
-      const localVideo = document.getElementById("localVideo");
-      localVideo.srcObject = localStream;
+      localStream = destination.stream;
+      document.getElementById("localVideo").srcObject = localStream;
 
-      // Configurar WebRTC local simulado
+      // WebRTC local peer-to-peer
       peer1 = new RTCPeerConnection();
       peer2 = new RTCPeerConnection();
 
-      // Enviar áudio do peer1 para peer2
       localStream.getTracks().forEach(track => peer1.addTrack(track, localStream));
-      peer2.ontrack = event => {
-        const remoteVideo = document.getElementById("remoteVideo");
-        remoteVideo.srcObject = event.streams[0];
+      peer2.ontrack = e => {
+        document.getElementById("remoteVideo").srcObject = e.streams[0];
       };
 
-      // Sinalização local (troca de oferta e resposta)
       const offer = await peer1.createOffer();
       await peer1.setLocalDescription(offer);
       await peer2.setRemoteDescription(offer);
@@ -81,6 +74,53 @@
       const answer = await peer2.createAnswer();
       await peer2.setLocalDescription(answer);
       await peer1.setRemoteDescription(answer);
+
+      // Iniciar simulação de ruído e lentidão
+      setTimeout(tocarRuido, 10000); // ruído no meio da "chamada"
+      simularLentidaoConexao();
+    }
+
+    function tocarRuido() {
+      const ruido = mediaCtx.createBuffer(1, mediaCtx.sampleRate * 5, mediaCtx.sampleRate);
+      const data = ruido.getChannelData(0);
+      for (let i = 0; i < data.length; i++) {
+        data[i] = (Math.random() * 2 - 1) * 0.2; // ruído aleatório
+      }
+
+      const ruidoSource = mediaCtx.createBufferSource();
+      ruidoSource.buffer = ruido;
+      ruidoSource.connect(mediaCtx.destination);
+      ruidoSource.start();
+      console.log("🔊 Ruído de 5 segundos iniciado.");
+    }
+
+    function simularLentidaoConexao() {
+      setInterval(() => {
+        const inicio = performance.now();
+        setTimeout(() => {
+          const fim = performance.now();
+          const atraso = fim - inicio;
+
+          if (atraso > 300) {
+            console.warn("📉 Conexão lenta detectada:", Math.round(atraso) + "ms");
+            tocarTravamento();
+          }
+        }, Math.random() * 500); // atraso aleatório
+      }, 3000);
+    }
+
+    function tocarTravamento() {
+      const buffer = mediaCtx.createBuffer(1, mediaCtx.sampleRate * 0.2, mediaCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) {
+        data[i] = Math.sin(i * 0.3) * Math.random() * 0.3;
+      }
+
+      const travamento = mediaCtx.createBufferSource();
+      travamento.buffer = buffer;
+      travamento.connect(mediaCtx.destination);
+      travamento.start();
+      console.log("⚠️ Efeito de travamento simulado.");
     }
   </script>
 </body>
