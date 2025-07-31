@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Tradutor de Vídeo com Voz do Navegador</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 700px; margin: auto; }
+    video { width: 100%; margin-top: 20px; }
+    textarea { width: 100%; height: 80px; }
+  </style>
+</head>
+<body>
+
+  <h2>🗣️ Traduzir Vídeo com Voz Padrão</h2>
+
+  <form action="upload.php" method="POST" enctype="multipart/form-data">
+    <label>Escolher vídeo (.mp4):</label><br>
+    <input type="file" name="video" accept="video/mp4" required><br><br>
+    <button type="submit">Enviar vídeo</button>
+  </form>
+
+  <hr>
+
+  <h3>2. Reproduzir com voz traduzida</h3>
+  <label>Texto traduzido para leitura:</label><br>
+  <textarea id="translatedText" placeholder="Cole aqui o texto traduzido..."></textarea><br><br>
+
+  <label>Escolher voz:</label>
+  <select id="voiceSelect"></select><br><br>
+
+  <button onclick="falarComGravacao()">▶️ Reproduzir com dublagem e gravar</button>
+  <button id="downloadBtn" style="display:none">📥 Baixar vídeo dublado</button>
+
+  <video id="video" controls></video>
+
+  <script>
+    const video = document.getElementById('video');
+    const voiceSelect = document.getElementById('voiceSelect');
+    const translatedText = document.getElementById('translatedText');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    let voices = [];
+
+    // Carrega vozes do navegador
+    function loadVoices() {
+      voices = speechSynthesis.getVoices();
+      voiceSelect.innerHTML = '';
+      voices.forEach((v, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `${v.name} (${v.lang})`;
+        voiceSelect.appendChild(opt);
+      });
+    }
+
+    speechSynthesis.onvoiceschanged = loadVoices;
+
+    // Carrega vídeo enviado (se houver)
+    const params = new URLSearchParams(window.location.search);
+    const file = params.get("file");
+    if (file) {
+      video.src = "uploads/" + file;
+    }
+
+    // Reproduzir com voz e gravar a tela
+    async function falarComGravacao() {
+      const text = translatedText.value;
+      if (!text.trim()) {
+        alert("Insira o texto traduzido.");
+        return;
+      }
+
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.voice = voices[voiceSelect.value];
+
+      // Espera pelo áudio do navegador
+      const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+
+      // Junta vídeo + voz
+      const combined = new MediaStream([...screenStream.getTracks(), ...audioStream.getTracks()]);
+
+      const recorder = new MediaRecorder(combined);
+      const chunks = [];
+
+      recorder.ondataavailable = e => chunks.push(e.data);
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        downloadBtn.href = url;
+        downloadBtn.download = 'video_dublado.webm';
+        downloadBtn.style.display = 'inline';
+      };
+
+      // Começa a gravar e a falar
+      recorder.start();
+      video.play();
+      speechSynthesis.speak(utter);
+
+      utter.onend = () => {
+        recorder.stop();
+        screenStream.getTracks().forEach(t => t.stop());
+        audioStream.getTracks().forEach(t => t.stop());
+      };
+    }
+  </script>
+
+</body>
+</html>
