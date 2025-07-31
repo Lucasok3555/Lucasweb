@@ -1,190 +1,456 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Chatbot - Lucas IA</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-
-    .chat-container {
-      width: 400px;
-      height: 600px;
-      background: #fff;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    .chat-header {
-      background: #007bff;
-      color: white;
-      padding: 15px;
-      text-align: center;
-      font-weight: bold;
-    }
-
-    .chat-messages {
-      flex: 1;
-      padding: 15px;
-      overflow-y: auto;
-      background: #f9f9f9;
-    }
-
-    .message {
-      margin-bottom: 10px;
-      max-width: 80%;
-      padding: 10px;
-      border-radius: 5px;
-      word-wrap: break-word;
-    }
-
-    .user {
-      align-self: flex-end;
-      background: #dc3545;
-      color: white;
-    }
-
-    .bot {
-      align-self: flex-start;
-      background: #e9e9e9;
-      color: black;
-    }
-
-    .chat-input {
-      display: flex;
-      border-top: 1px solid #ccc;
-    }
-
-    .chat-input input {
-      flex: 1;
-      padding: 10px;
-      border: none;
-      outline: none;
-      font-size: 16px;
-    }
-
-    .chat-input button {
-      background: #28a745;
-      color: white;
-      border: none;
-      padding: 10px 15px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-
-    .chat-input button:hover {
-      background: #218838;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatBot com Rede Neural</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        #chat-container {
+            height: 400px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+        .message {
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            border-radius: 15px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        .user-message {
+            background-color: #007bff;
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        .bot-message {
+            background-color: #e9e9eb;
+            color: #333;
+            margin-right: auto;
+        }
+        #input-container {
+            display: flex;
+            gap: 10px;
+        }
+        #user-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        #download-btn {
+            background-color: #17a2b8;
+        }
+        #download-btn:hover {
+            background-color: #138496;
+        }
+        #load-btn {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        #load-btn:hover {
+            background-color: #e0a800;
+        }
+        .button-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        #status {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h1>ChatBot com Rede Neural</h1>
+        <div id="chat-container"></div>
+        <div id="input-container">
+            <input type="text" id="user-input" placeholder="Digite sua mensagem...">
+            <button id="send-btn">Enviar</button>
+        </div>
+        <div class="button-container">
+            <button id="download-btn">Download Modelo</button>
+            <button id="load-btn">Carregar Modelo</button>
+            <input type="file" id="model-file" style="display: none;">
+        </div>
+        <div id="status">Treinando modelo... Aguarde.</div>
+    </div>
 
-<div class="chat-container">
-  <div class="chat-header">Lucas IA</div>
-  <div class="chat-messages" id="chatMessages"></div>
-  <div class="chat-input">
-    <input type="text" id="userInput" placeholder="Digite sua mensagem..." />
-    <button onclick="sendMessage()">Enviar</button>
-  </div>
-</div>
+    <script>
+        // Estrutura do chat
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-btn');
+        const downloadButton = document.getElementById('download-btn');
+        const loadButton = document.getElementById('load-btn');
+        const modelFileInput = document.getElementById('model-file');
+        const statusDisplay = document.getElementById('status');
 
-<script>
-  const messagesDiv = document.getElementById('chatMessages');
-  const input = document.getElementById('userInput');
+        // Histórico de chat
+        let chatHistory = [];
 
-  // Banco de respostas
-  const respostas = {
-    "oi": "Olá! Como posso ajudar?",
-    "áio": "Olá! Como posso ajudar?",
-    "nome": "Meu nome é Lucas IA!",
-    "io": "Olá! Como posso ajudar?",
-    "olá": "Olá! Como posso ajudar?",
-    "bom dia": "Bom dia como você está",
-    "boa noite": "Boa noite, um bom sono para você",
-    "quem é você": "O meu nome é Lucas IA eu sou assistente do Lucas",
-    "como você está": "Eu estou tudo bem, como você está também?",
-    "boa tarde": "Boa tarde para você também",
-    "criar uma imagem": "Eu não posso criar uma imagem no momento",
-    "a história do brasil": "A história do Brasil é marcada por uma rica diversidade cultural e eventos significativos.",
-    "tudo bem": "Eu estou tudo bem 😁",
-    "vai morar comigo": "Não",
-    "t": "2",
-    "eu estou carente": "A ele kkk",
-    "você quer ser minha namorada digital": "Não eu não quero ser sua mulher digital não",
-    "um beijo": "Caramba não precisava kkkk",
-    "qual dia é hoje": "Não sei, eu não estou em tempo real",
-    "qual é a previsão do tempo": "Eu não sou atualizando o tempo da sua cidade local, faz uma pesquisa na internet para viabilizar o tempo na sua cidade",
-    "quais são as notícias de hoje": "Eu não sei qual é o dia de hoje, cara. Pesquisa na internet para ver as notícias de hoje",
-    "que dia lindo hoje": "Engraçado kkkk O dia hoje está lindo né",
-    "somos os br": "Brasileiro é foda né caramba puta que pariu os caras ficam falando que somos BR assim mesmo cara",
-    "eu preciso de ajuda": "É uma polícia kkk",
-    "faz uma piada para mim": "Tio pato falou para a porta: 'Eu tô cansado' kkk",
-    "que horas que é agora": "Eu não sei, meu filho virgem, olha no seu celular aí ou no seu PC né kkk 🙄",
-    "e hoje eu posso p": "Não sei cara",
-    "aonde que eu posso viajar para o Brasil": "Ah você pode ir para a cidade de Mimoso do Sul, lá vai ter bastante coisa porque em junho vai ter festa",
-    "como conseguir namorada": "Eu não sei meu irmão, como que eu vou resolver isso? Cara tenta na praça da sua cidade, uma moeda cara... Eu não tenho cara de Tinder não meu filho",
-    "eu queria tanto um feriado": "Eu também kkkk",
-    "cara como você me acha eu sou bonito ou feio": "Eu não sei cara",
-    "aqui na minha cidade está chovendo": "Carai, puxa, aqui tá um calor do caraio",
-    "eu estou assistindo freio cansaço": "Usa uma blusa de frio para se proteger no frio",
-    "o bagulho mais grande do universo": "Quem é que tá falando cara?"
-  };
+        // Adicionar mensagens ao chat
+        function addMessage(text, isUser) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.classList.add(isUser ? 'user-message' : 'bot-message');
+            messageDiv.textContent = text;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            chatHistory.push({ text, isUser });
+        }
 
-  function sendMessage() {
-    const text = input.value.trim();
-    if (text === '') return;
+        // Simular resposta do bot
+        function getBotResponse(userInput) {
+            // Esta função usará a rede neural treinada
+            // Para este exemplo, vamos usar uma lógica simples baseada em palavras-chave
+            const input = userInput.toLowerCase();
+            
+            if (input.includes('olá') || input.includes('oi') || input.includes('ola')) {
+                return "Olá! Como posso ajudar você hoje?";
+            } else if (input.includes('tudo bem') || input.includes('como vai')) {
+                return "Estou bem, obrigado por perguntar! E você?";
+            } else if (input.includes('nome') || input.includes('chama')) {
+                return "Sou um chatbot com rede neural treinada para conversar com você!";
+            } else if (input.includes('ajuda') || input.includes('ajudar')) {
+                return "Posso ajudar você com informações básicas. Pergunte-me qualquer coisa!";
+            } else if (input.includes('obrigado') || input.includes('obrigada') || input.includes('valeu')) {
+                return "De nada! Estou aqui para ajudar!";
+            } else if (input.includes('tchau') || input.includes('bye')) {
+                return "Até logo! Tenha um ótimo dia!";
+            } else {
+                // Se nenhuma palavra-chave for encontrada, use a rede neural
+                return predictWithNeuralNetwork(input);
+            }
+        }
 
-    appendMessage('user', text);
-    input.value = '';
+        // Modelo de rede neural
+        let model;
+        let vocab = {};
+        let vocabSize = 0;
+        let maxSequenceLength = 20;
 
-    setTimeout(() => {
-      const response = getBotResponse(text.toLowerCase());
-      appendMessage('bot', response);
-    }, 500);
-  }
+        // Dados de treinamento (pares de perguntas e respostas)
+        const trainingData = [
+            { input: "olá", output: "Olá! Como posso ajudar você hoje?" },
+            { input: "oi", output: "Oi! Como posso ajudar você hoje?" },
+            { input: "olá tudo bem", output: "Olá! Estou bem, obrigado! E você?" },
+            { input: "oi tudo bem", output: "Oi! Estou bem, obrigado! E você?" },
+            { input: "como vai", output: "Estou bem, obrigado por perguntar!" },
+            { input: "qual seu nome", output: "Sou um chatbot com rede neural treinada para conversar com você!" },
+            { input: "me ajuda", output: "Claro! Posso ajudar você com informações básicas." },
+            { input: "ajuda", output: "Posso ajudar você com informações básicas. Pergunte-me qualquer coisa!" },
+            { input: "obrigado", output: "De nada! Estou aqui para ajudar!" },
+            { input: "obrigada", output: "De nada! Estou aqui para ajudar!" },
+            { input: "valeu", output: "De nada! Estou aqui para ajudar!" },
+            { input: "tchau", output: "Até logo! Tenha um ótimo dia!" },
+            { input: "bye", output: "Até logo! Tenha um ótimo dia!" },
+            { input: "bom dia", output: "Bom dia! Como posso ajudar você hoje?" },
+            { input: "boa tarde", output: "Boa tarde! Como posso ajudar você hoje?" },
+            { input: "boa noite", output: "Boa noite! Como posso ajudar você hoje?" },
+            { input: "quem é você", output: "Sou um chatbot com rede neural treinada para conversar com você!" },
+            { input: "o que você faz", output: "Converso com você e tento responder suas perguntas!" },
+            { input: "ajuda com tarefas", output: "Posso tentar ajudar com informações. O que você precisa?" },
+            { input: "estou bem", output: "Fico feliz em ouvir isso!" },
+            { input: "estou triste", output: "Sinto muito que você esteja triste. Posso tentar ajudar?" },
+            { input: "estou feliz", output: "Que bom que você está feliz!" }
+        ];
 
-  function appendMessage(sender, text) {
-    const msg = document.createElement('div');
-    msg.classList.add('message', sender);
-    msg.textContent = text;
-    messagesDiv.appendChild(msg);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  }
+        // Pré-processamento de texto
+        function preprocessText(text) {
+            return text.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/);
+        }
 
-  function getBotResponse(userText) {
-    // Procura por chave exata
-    if (respostas[userText]) {
-      return respostas[userText];
-    }
+        // Criar vocabulário
+        function createVocabulary() {
+            let wordIndex = 1; // Começa com 1, 0 é reservado para padding
+            const wordCount = {};
+            
+            trainingData.forEach(pair => {
+                const words = preprocessText(pair.input);
+                words.forEach(word => {
+                    wordCount[word] = (wordCount[word] || 0) + 1;
+                });
+            });
 
-    // Busca por palavras-chave
-    for (let key in respostas) {
-      if (userText.includes(key)) {
-        return respostas[key];
-      }
-    }
+            // Ordenar palavras por frequência e criar vocabulário
+            const sortedWords = Object.keys(wordCount).sort((a, b) => wordCount[b] - wordCount[a]);
+            sortedWords.forEach(word => {
+                vocab[word] = wordIndex++;
+            });
+            
+            vocabSize = Object.keys(vocab).length + 1; // +1 para o padding
+        }
 
-    return 'Desculpe, não entendi. Pode reformular?';
-  }
+        // Codificar sequência de texto
+        function encodeText(text) {
+            const words = preprocessText(text);
+            const encoded = words.map(word => vocab[word] || 0); // 0 para palavras desconhecidas
+            
+            // Padding ou truncamento
+            if (encoded.length < maxSequenceLength) {
+                return [...Array(maxSequenceLength - encoded.length).fill(0), ...encoded];
+            } else {
+                return encoded.slice(0, maxSequenceLength);
+            }
+        }
 
-  input.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-      sendMessage();
-    }
-  });
-</script>
+        // Criar e compilar modelo
+        async function createModel() {
+            model = tf.sequential();
+            
+            // Camada de embedding
+            model.add(tf.layers.embedding({
+                inputDim: vocabSize,
+                outputDim: 64,
+                inputLength: maxSequenceLength
+            }));
+            
+            // Camada LSTM
+            model.add(tf.layers.lstm({
+                units: 64,
+                dropout: 0.2,
+                recurrent Dropout: 0.2
+            }));
+            
+            // Camada densa
+            model.add(tf.layers.dense({
+                units: 128,
+                activation: 'relu'
+            }));
+            
+            // Camada de saída
+            model.add(tf.layers.dense({
+                units: trainingData.length,
+                activation: 'softmax'
+            }));
+            
+            // Compilar modelo
+            model.compile({
+                optimizer: tf.train.adam(0.001),
+                loss: 'categoricalCrossentropy',
+                metrics: ['accuracy']
+            });
+            
+            return model;
+        }
 
+        // Preparar dados de treinamento
+        function prepareTrainingData() {
+            const xs = [];
+            const ys = [];
+            
+            trainingData.forEach((pair, index) => {
+                xs.push(encodeText(pair.input));
+                
+                // Criar vetor one-hot para a saída
+                const y = Array(trainingData.length).fill(0);
+                y[index] = 1;
+                ys.push(y);
+            });
+            
+            return {
+                xs: tf.tensor2d(xs),
+                ys: tf.tensor2d(ys)
+            };
+        }
+
+        // Treinar modelo
+        async function trainModel() {
+            createVocabulary();
+            await createModel();
+            const { xs, ys } = prepareTrainingData();
+            
+            statusDisplay.textContent = "Treinando modelo... Isso pode levar alguns segundos.";
+            
+            try {
+                const history = await model.fit(xs, ys, {
+                    epochs: 100,
+                    batchSize: 8,
+                    verbose: 1,
+                    validationSplit: 0.2
+                });
+                
+                statusDisplay.textContent = "Modelo treinado com sucesso!";
+                addMessage("Olá! Sou um chatbot com rede neural. Como posso ajudar você?", false);
+            } catch (error) {
+                console.error("Erro no treinamento:", error);
+                statusDisplay.textContent = "Erro no treinamento do modelo.";
+                addMessage("Olá! Estou com um pequeno problema, mas ainda posso conversar com você.", false);
+            }
+        }
+
+        // Prever resposta com a rede neural
+        function predictWithNeuralNetwork(inputText) {
+            if (!model) {
+                return "Ainda estou aprendendo. Pergunte-me algo simples.";
+            }
+            
+            const encoded = encodeText(inputText);
+            const input = tf.tensor2d([encoded]);
+            const prediction = model.predict(input);
+            const pArray = prediction.dataSync();
+            
+            // Encontrar o índice com maior probabilidade
+            let maxIndex = 0;
+            let maxValue = pArray[0];
+            
+            for (let i = 1; i < pArray.length; i++) {
+                if (pArray[i] > maxValue) {
+                    maxValue = pArray[i];
+                    maxIndex = i;
+                }
+            }
+            
+            // Retornar a resposta correspondente
+            return trainingData[maxIndex].output;
+        }
+
+        // Enviar mensagem
+        function sendMessage() {
+            const text = userInput.value.trim();
+            if (text === '') return;
+            
+            addMessage(text, true);
+            userInput.value = '';
+            
+            // Resposta do bot (com pequeno delay para parecer mais natural)
+            setTimeout(() => {
+                const response = getBotResponse(text);
+                addMessage(response, false);
+            }, 500);
+        }
+
+        // Salvar modelo
+        async function saveModel() {
+            if (!model) {
+                alert("Modelo ainda não está treinado!");
+                return;
+            }
+            
+            try {
+                // Salvar vocabulário e configurações junto com o modelo
+                const modelData = {
+                    vocab,
+                    vocabSize,
+                    maxSequenceLength,
+                    trainingData
+                };
+                
+                // Salvar modelo
+                await model.save('downloads/chatbot-model');
+                
+                // Criar arquivo JSON com os dados adicionais
+                const blob = new Blob([JSON.stringify(modelData)], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'chatbot-data.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                alert("Modelo salvo com sucesso em 'chatbot-model' e 'chatbot-data.json'!");
+            } catch (error) {
+                console.error("Erro ao salvar modelo:", error);
+                alert("Erro ao salvar modelo: " + error.message);
+            }
+        }
+
+        // Carregar modelo
+        async function loadModel() {
+            // Abrir seletor de arquivos
+            modelFileInput.click();
+        }
+
+        // Quando o arquivo for selecionado
+        modelFileInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (file.name.endsWith('.json')) {
+                try {
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            const modelData = JSON.parse(e.target.result);
+                            vocab = modelData.vocab;
+                            vocabSize = modelData.vocabSize;
+                            maxSequenceLength = modelData.maxSequenceLength;
+                            // Não substituímos trainingData para manter as respostas
+                            
+                            // Carregar modelo treinado
+                            model = await tf.loadLayersModel('downloads/chatbot-model/model.json');
+                            
+                            statusDisplay.textContent = "Modelo carregado com sucesso!";
+                            addMessage("Olá! Meu modelo foi carregado com sucesso. Como posso ajudar você?", false);
+                            
+                            // Limpar input file
+                            modelFileInput.value = '';
+                        } catch (error) {
+                            console.error("Erro ao carregar dados:", error);
+                            alert("Erro ao carregar dados do modelo: " + error.message);
+                        }
+                    };
+                    reader.readAsText(file);
+                } catch (error) {
+                    console.error("Erro ao ler arquivo:", error);
+                    alert("Erro ao ler arquivo: " + error.message);
+                }
+            } else {
+                alert("Por favor, selecione um arquivo JSON válido.");
+            }
+        });
+
+        // Event Listeners
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        downloadButton.addEventListener('click', saveModel);
+        loadButton.addEventListener('click', loadModel);
+
+        // Inicializar
+        trainModel();
+    </script>
 </body>
 </html>
