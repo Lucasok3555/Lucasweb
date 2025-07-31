@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Simulador de Chamada WebRTC</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 20px; }
+    audio, video { margin-top: 10px; width: 300px; }
+    button { padding: 10px 20px; margin: 10px; }
+  </style>
+</head>
+<body>
+
+  <h2>📞 Simulador WebRTC com Áudio</h2>
+
+  <input type="file" id="audioInput" accept="audio/*"><br>
+  <button onclick="iniciarChamada()">Iniciar Chamada</button><br>
+
+  <video id="localVideo" autoplay playsinline muted></video>
+  <video id="remoteVideo" autoplay playsinline></video>
+
+  <script>
+    let localStream;
+    let peer1, peer2;
+
+    async function iniciarChamada() {
+      const audioInput = document.getElementById("audioInput").files[0];
+
+      if (audioInput) {
+        // Usa o áudio enviado
+        const audioURL = URL.createObjectURL(audioInput);
+        const audio = new Audio(audioURL);
+        audio.loop = true;
+        audio.play();
+
+        // Criar MediaStream com esse áudio
+        const audioCtx = new AudioContext();
+        const source = audioCtx.createMediaElementSource(audio);
+        const destination = audioCtx.createMediaStreamDestination();
+        source.connect(destination);
+        source.connect(audioCtx.destination);
+        localStream = destination.stream;
+      } else {
+        // Gera tom simulado com Web Audio API
+        const audioCtx = new AudioContext();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
+        gainNode.gain.value = 0.3;
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        const dest = audioCtx.createMediaStreamDestination();
+        gainNode.connect(dest);
+        oscillator.start();
+
+        localStream = dest.stream;
+      }
+
+      // Exibir o stream local (mudo para não duplicar som)
+      const localVideo = document.getElementById("localVideo");
+      localVideo.srcObject = localStream;
+
+      // Configurar WebRTC local simulado
+      peer1 = new RTCPeerConnection();
+      peer2 = new RTCPeerConnection();
+
+      // Enviar áudio do peer1 para peer2
+      localStream.getTracks().forEach(track => peer1.addTrack(track, localStream));
+      peer2.ontrack = event => {
+        const remoteVideo = document.getElementById("remoteVideo");
+        remoteVideo.srcObject = event.streams[0];
+      };
+
+      // Sinalização local (troca de oferta e resposta)
+      const offer = await peer1.createOffer();
+      await peer1.setLocalDescription(offer);
+      await peer2.setRemoteDescription(offer);
+
+      const answer = await peer2.createAnswer();
+      await peer2.setLocalDescription(answer);
+      await peer1.setRemoteDescription(answer);
+    }
+  </script>
+</body>
+</html>
