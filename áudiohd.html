@@ -2,88 +2,122 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Áudio Imersivo HD</title>
+  <title>Conversor de Áudio Imersivo HD</title>
   <style>
     body {
-      background: #111;
-      color: #fff;
-      font-family: Arial, sans-serif;
+      background: #121212;
+      color: white;
+      font-family: sans-serif;
       text-align: center;
-      padding: 50px;
+      padding: 30px;
     }
-    input[type="file"] {
-      margin: 20px;
+    input, button {
+      padding: 10px;
+      margin: 10px;
     }
     audio {
-      width: 90%;
       margin-top: 20px;
-    }
-    button {
-      margin: 10px;
-      padding: 10px 20px;
-      font-size: 16px;
-      background: #333;
-      color: #fff;
-      border: none;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #555;
+      width: 90%;
     }
   </style>
 </head>
 <body>
-  <h1>Player de Áudio Imersivo HD</h1>
-  <input type="file" id="audioFile" accept="audio/*">
-  <br>
-  <audio id="audioPlayer" controls></audio>
-  <br>
-  <button onclick="ativarImersao()">Ativar Imersão</button>
-  <button onclick="desativarImersao()">Desativar Imersão</button>
+  <h2>🎧 Conversor de Áudio Imersivo HD</h2>
+
+  <input type="file" id="inputAudio" accept="audio/*"><br>
+  <button onclick="playWithEffects()">Tocar com efeitos</button>
+  <button onclick="downloadProcessed()">🎵 Baixar Áudio com Efeitos</button>
+
+  <audio id="player" controls></audio>
 
   <script>
-    const input = document.getElementById('audioFile');
-    const audio = document.getElementById('audioPlayer');
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    const ctx = new AudioContext();
-    let source, panner, filter;
+    const inputAudio = document.getElementById("inputAudio");
+    const audioElement = document.getElementById("player");
 
-    input.addEventListener('change', function () {
-      const file = this.files[0];
-      if (file) {
-        const url = URL.createObjectURL(file);
-        audio.src = url;
-        audio.load();
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let sourceNode, panner, filter, reverb, destination, recorder, chunks = [];
+
+    let audioURL;
+
+    // Cria reverb simples
+    function createReverb() {
+      const convolver = audioCtx.createConvolver();
+      const length = audioCtx.sampleRate * 3;
+      const impulse = audioCtx.createBuffer(2, length, audioCtx.sampleRate);
+      for (let c = 0; c < 2; c++) {
+        let channel = impulse.getChannelData(c);
+        for (let i = 0; i < length; i++) {
+          channel[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2); // decaimento
+        }
       }
-    });
-
-    function ativarImersao() {
-      source = ctx.createMediaElementSource(audio);
-      panner = ctx.createStereoPanner();
-      filter = ctx.createBiquadFilter();
-
-      // Configurações de imersão
-      panner.pan.value = 0.3; // Posicionamento estéreo
-      filter.type = "lowshelf";
-      filter.frequency.value = 1000;
-      filter.gain.value = 5;
-
-      source.connect(panner);
-      panner.connect(filter);
-      filter.connect(ctx.destination);
-
-      audio.play();
+      convolver.buffer = impulse;
+      return convolver;
     }
 
-    function desativarImersao() {
-      if (source) {
-        source.disconnect();
-        panner.disconnect();
-        filter.disconnect();
+    inputAudio.addEventListener("change", () => {
+      const file = inputAudio.files[0];
+      if (!file) return;
+      if (audioURL) URL.revokeObjectURL(audioURL);
+      audioURL = URL.createObjectURL(file);
+      audioElement.src = audioURL;
+    });
+
+    async function playWithEffects() {
+      await audioCtx.resume(); // Garante que o contexto esteja ativo
+
+      if (!audioElement.src) return alert("Selecione um áudio primeiro.");
+
+      // Cria nós
+      sourceNode = audioCtx.createMediaElementSource(audioElement);
+      panner = audioCtx.createStereoPanner();
+      panner.pan.value = 0.4; // leve efeito estéreo
+
+      filter = audioCtx.createBiquadFilter();
+      filter.type = "lowshelf";
+      filter.frequency.value = 1000;
+      filter.gain.value = 10; // HD boost
+
+      reverb = createReverb();
+
+      destination = audioCtx.createMediaStreamDestination();
+
+      // Encadeia os nós
+      sourceNode.connect(panner);
+      panner.connect(filter);
+      filter.connect(reverb);
+      reverb.connect(audioCtx.destination);       // para ouvir
+      reverb.connect(destination);                // para gravar
+
+      // Inicia gravação
+      recorder = new MediaRecorder(destination.stream);
+      chunks = [];
+
+      recorder.ondataavailable = e => chunks.push(e.data);
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const downloadLink = document.createElement("a");
+        downloadLink.href = URL.createObjectURL(blob);
+        downloadLink.download = "audio_imersivo_hd.webm";
+        downloadLink.click();
+      };
+
+      recorder.start();
+
+      // Toca o áudio
+      audioElement.currentTime = 0;
+      audioElement.play();
+
+      // Para gravação após a duração do áudio
+      setTimeout(() => recorder.stop(), audioElement.duration * 1000);
+    }
+
+    function downloadProcessed() {
+      if (!recorder || recorder.state === "inactive") {
+        alert("Reproduza o áudio com efeitos primeiro.");
+      } else {
+        // A gravação já será baixada automaticamente após terminar
+        alert("O áudio será baixado automaticamente após a reprodução.");
       }
-      audio.pause();
-      ctx.resume(); // garante que o áudio não quebre
-      audio.currentTime = 0;
     }
   </script>
 </body>
