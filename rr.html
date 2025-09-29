@@ -59,78 +59,6 @@
             width: 20px;
             height: 20px;
         }
-        
-        /* Controles para celular */
-        .mobile-controls {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            display: flex;
-            gap: 10px;
-            pointer-events: auto;
-            z-index: 1000;
-        }
-        
-        .mobile-btn {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.3);
-            border: 2px solid white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 24px;
-            user-select: none;
-        }
-        
-        .mobile-btn:active {
-            background-color: rgba(255, 255, 255, 0.5);
-        }
-        
-        .mobile-btn.break {
-            background-color: rgba(255, 0, 0, 0.3);
-        }
-        
-        .mobile-btn.place {
-            background-color: rgba(0, 255, 0, 0.3);
-        }
-        
-        .mobile-directions {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            gap: 5px;
-        }
-        
-        .mobile-directions .dir-btn {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.3);
-            border: 2px solid white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 24px;
-            user-select: none;
-        }
-        
-        .mobile-directions .dir-btn:active {
-            background-color: rgba(255, 255, 255, 0.5);
-        }
-        
-        .mobile-directions .center {
-            display: none;
-        }
-        
-        @media (min-width: 768px) {
-            .mobile-controls {
-                display: none;
-            }
-        }
     </style>
 </head>
 <body>
@@ -155,20 +83,6 @@
             <div></div>
         </div>
     </div>
-    
-    <!-- Controles para celular -->
-    <div class="mobile-controls">
-        <div class="mobile-directions">
-            <div class="dir-btn" id="btn-up">↑</div>
-            <div class="dir-btn" id="btn-left">←</div>
-            <div class="dir-btn" id="btn-right">→</div>
-            <div class="dir-btn" id="btn-down">↓</div>
-            <div class="center"></div>
-        </div>
-        <div class="mobile-btn break" id="btn-break">⛏️</div>
-        <div class="mobile-btn place" id="btn-place">🪵</div>
-    </div>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         // Configuração do jogo
@@ -183,8 +97,7 @@
                 onGround: false,
                 jumpHeight: 0.5,
                 gravity: 0.01,
-                speed: 0.1,
-                height: 1.8
+                speed: 0.1
             },
             worldSize: 32,
             chunkSize: 16,
@@ -450,21 +363,21 @@
             game.player.velocity.y -= game.player.gravity;
             
             // Movimento horizontal
-            if (keys['w'] || keys['ArrowUp']) {
+            if (keys['w']) {
                 game.player.velocity.z -= game.player.speed;
             }
-            if (keys['s'] || keys['ArrowDown']) {
+            if (keys['s']) {
                 game.player.velocity.z += game.player.speed;
             }
-            if (keys['a'] || keys['ArrowLeft']) {
+            if (keys['a']) {
                 game.player.velocity.x -= game.player.speed;
             }
-            if (keys['d'] || keys['ArrowRight']) {
+            if (keys['d']) {
                 game.player.velocity.x += game.player.speed;
             }
             
             // Pulo
-            if ((keys[' '] || keys['ArrowUp']) && game.player.onGround) {
+            if (keys[' '] && game.player.onGround) {
                 game.player.velocity.y = game.player.jumpHeight;
                 game.player.onGround = false;
             }
@@ -480,7 +393,7 @@
             // Verificar colisões com blocos
             const playerBox = new THREE.Box3().setFromCenterAndSize(
                 new THREE.Vector3(game.player.x, game.player.y, game.player.z),
-                new THREE.Vector3(0.8, game.player.height, 0.8)
+                new THREE.Vector3(0.8, 1.8, 0.8)
             );
             
             const blocks = scene.children.filter(obj => obj.userData && obj.userData.type);
@@ -529,14 +442,30 @@
                 }
             }
             
-            // Garantir que o jogador não caia abaixo do nível do solo
-            if (game.player.y < 0) {
-                game.player.y = 0;
-                game.player.velocity.y = 0;
-                game.player.onGround = true;
-            }
-            
             // Atualizar posição da câmera
             camera.position.set(
                 game.player.x,
-      
+                game.player.y + 1.5,
+                game.player.z + 5
+            );
+            camera.lookAt(game.player.x, game.player.y, game.player.z);
+        }
+        
+        // Loop de animação
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            updatePlayer();
+            updateChunks();
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Iniciar jogo
+        animate();
+        
+        // Gerar mundo inicial
+        generateChunk(0, 0);
+    </script>
+</body>
+</html>
