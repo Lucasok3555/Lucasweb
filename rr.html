@@ -64,13 +64,11 @@
         .mobile-controls {
             position: absolute;
             bottom: 10px;
-            left: 0;
-            right: 0;
+            left: 10px;
             display: flex;
-            justify-content: space-between;
-            padding: 10px;
+            gap: 10px;
             pointer-events: auto;
-            display: none;
+            z-index: 1000;
         }
         
         .mobile-btn {
@@ -91,30 +89,60 @@
             background-color: rgba(255, 255, 255, 0.5);
         }
         
+        .mobile-btn.break {
+            background-color: rgba(255, 0, 0, 0.3);
+        }
+        
+        .mobile-btn.place {
+            background-color: rgba(0, 255, 0, 0.3);
+        }
+        
         .mobile-directions {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 5px;
         }
         
-        .mobile-direction-row {
+        .mobile-directions .dir-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.3);
+            border: 2px solid white;
             display: flex;
-            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 24px;
+            user-select: none;
         }
         
-        .mobile-actions {
-            display: flex;
-            gap: 10px;
+        .mobile-directions .dir-btn:active {
+            background-color: rgba(255, 255, 255, 0.5);
         }
         
-        @media (max-width: 768px) {
+        .mobile-directions .center {
+            display: none;
+        }
+        
+        @media (min-width: 768px) {
             .mobile-controls {
-                display: flex;
-            }
-            
-            .controls {
                 display: none;
             }
+        }
+        
+        /* Mensagem de carregamento */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 24px;
+            text-align: center;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -144,21 +172,18 @@
     <!-- Controles para celular -->
     <div class="mobile-controls">
         <div class="mobile-directions">
-            <div class="mobile-direction-row">
-                <div class="mobile-btn" id="btn-up">↑</div>
-            </div>
-            <div class="mobile-direction-row">
-                <div class="mobile-btn" id="btn-left">←</div>
-                <div class="mobile-btn" id="btn-down">↓</div>
-                <div class="mobile-btn" id="btn-right">→</div>
-            </div>
+            <div class="dir-btn" id="btn-up">↑</div>
+            <div class="dir-btn" id="btn-left">←</div>
+            <div class="dir-btn" id="btn-right">→</div>
+            <div class="dir-btn" id="btn-down">↓</div>
+            <div class="center"></div>
         </div>
-        <div class="mobile-actions">
-            <div class="mobile-btn" id="btn-break">💥</div>
-            <div class="mobile-btn" id="btn-place">➕</div>
-            <div class="mobile-btn" id="btn-jump">⬆️</div>
-        </div>
+        <div class="mobile-btn break" id="btn-break">⛏️</div>
+        <div class="mobile-btn place" id="btn-place">🪵</div>
     </div>
+    
+    <!-- Mensagem de carregamento -->
+    <div class="loading" id="loading-message">Carregando jogo...</div>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
@@ -183,23 +208,42 @@
         };
 
         // Inicialização do Three.js
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x87CEEB);
+        let scene, camera, renderer;
         
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 5, 10);
-        
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-        
-        // Luzes
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
-        
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(10, 20, 10);
-        scene.add(directionalLight);
+        function initGame() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 5, 10);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+            
+            // Luzes
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 20, 10);
+            scene.add(directionalLight);
+            
+            // Criar bloco inicial no chão
+            createBlock('grass', 0, 0, 0);
+            
+            // Gerar mundo inicial
+            generateChunk(0, 0);
+            
+            // Posicionar jogador no chão
+            game.player.y = 1;
+            
+            // Remover mensagem de carregamento
+            document.getElementById('loading-message').style.display = 'none';
+            
+            // Iniciar animação
+            animate();
+        }
         
         // Criar blocos
         function createBlock(type, x, y, z) {
@@ -430,9 +474,11 @@
         
         // Redimensionar janela
         window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
         });
         
         // Atualizar física do jogador
@@ -440,22 +486,22 @@
             // Aplicar gravidade
             game.player.velocity.y -= game.player.gravity;
             
-            // Movimento horizontal (teclado)
-            if (keys['w']) {
+            // Movimento horizontal
+            if (keys['w'] || keys['ArrowUp']) {
                 game.player.velocity.z -= game.player.speed;
             }
-            if (keys['s']) {
+            if (keys['s'] || keys['ArrowDown']) {
                 game.player.velocity.z += game.player.speed;
             }
-            if (keys['a']) {
+            if (keys['a'] || keys['ArrowLeft']) {
                 game.player.velocity.x -= game.player.speed;
             }
-            if (keys['d']) {
+            if (keys['d'] || keys['ArrowRight']) {
                 game.player.velocity.x += game.player.speed;
             }
             
-            // Pulo (teclado)
-            if (keys[' '] && game.player.onGround) {
+            // Pulo
+            if ((keys[' '] || keys['ArrowUp']) && game.player.onGround) {
                 game.player.velocity.y = game.player.jumpHeight;
                 game.player.onGround = false;
             }
@@ -502,46 +548,4 @@
                         // Colisão horizontal
                         if (Math.abs(playerPos.x - blockPos.x) < 1.0 && Math.abs(playerPos.z - blockPos.z) < 1.0) {
                             // Ajustar movimento horizontal
-                            if (Math.abs(playerPos.x - blockPos.x) > Math.abs(playerPos.z - blockPos.z)) {
-                                if (playerPos.x > blockPos.x) {
-                                    game.player.x = blockPos.x + 1.0;
-                                } else {
-                                    game.player.x = blockPos.x - 1.0;
-                                }
-                            } else {
-                                if (playerPos.z > blockPos.z) {
-                                    game.player.z = blockPos.z + 1.0;
-                                } else {
-                                    game.player.z = blockPos.z - 1.0;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // Garantir que o jogador não caia abaixo do nível do solo
-            if (game.player.y < 0) {
-                game.player.y = 0;
-                game.player.velocity.y = 0;
-                game.player.onGround = true;
-            }
-            
-            // Atualizar posição da câmera
-            camera.position.set(
-                game.player.x,
-                game.player.y + 1.5,
-                game.player.z + 5
-            );
-            camera.lookAt(game.player.x, game.player.y, game.player.z);
-        }
-        
-        // Controles para celular
-        const mobileControls = {
-            up: false,
-            down: false,
-            left: false,
-            right: false,
-            jump: false,
-            break: false,
-      
+                            if (Math.abs(pla
