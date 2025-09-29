@@ -59,6 +59,78 @@
             width: 20px;
             height: 20px;
         }
+        
+        /* Controles para celular */
+        .mobile-controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+            z-index: 1000;
+        }
+        
+        .mobile-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.3);
+            border: 2px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 24px;
+            user-select: none;
+        }
+        
+        .mobile-btn:active {
+            background-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .mobile-btn.break {
+            background-color: rgba(255, 0, 0, 0.3);
+        }
+        
+        .mobile-btn.place {
+            background-color: rgba(0, 255, 0, 0.3);
+        }
+        
+        .mobile-directions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 5px;
+        }
+        
+        .mobile-directions .dir-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.3);
+            border: 2px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 24px;
+            user-select: none;
+        }
+        
+        .mobile-directions .dir-btn:active {
+            background-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .mobile-directions .center {
+            display: none;
+        }
+        
+        @media (min-width: 768px) {
+            .mobile-controls {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -83,6 +155,20 @@
             <div></div>
         </div>
     </div>
+    
+    <!-- Controles para celular -->
+    <div class="mobile-controls">
+        <div class="mobile-directions">
+            <div class="dir-btn" id="btn-up">↑</div>
+            <div class="dir-btn" id="btn-left">←</div>
+            <div class="dir-btn" id="btn-right">→</div>
+            <div class="dir-btn" id="btn-down">↓</div>
+            <div class="center"></div>
+        </div>
+        <div class="mobile-btn break" id="btn-break">⛏️</div>
+        <div class="mobile-btn place" id="btn-place">🪵</div>
+    </div>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         // Configuração do jogo
@@ -364,21 +450,21 @@
             game.player.velocity.y -= game.player.gravity;
             
             // Movimento horizontal
-            if (keys['w']) {
+            if (keys['w'] || keys['ArrowUp']) {
                 game.player.velocity.z -= game.player.speed;
             }
-            if (keys['s']) {
+            if (keys['s'] || keys['ArrowDown']) {
                 game.player.velocity.z += game.player.speed;
             }
-            if (keys['a']) {
+            if (keys['a'] || keys['ArrowLeft']) {
                 game.player.velocity.x -= game.player.speed;
             }
-            if (keys['d']) {
+            if (keys['d'] || keys['ArrowRight']) {
                 game.player.velocity.x += game.player.speed;
             }
             
             // Pulo
-            if (keys[' '] && game.player.onGround) {
+            if ((keys[' '] || keys['ArrowUp']) && game.player.onGround) {
                 game.player.velocity.y = game.player.jumpHeight;
                 game.player.onGround = false;
             }
@@ -453,30 +539,4 @@
             // Atualizar posição da câmera
             camera.position.set(
                 game.player.x,
-                game.player.y + 1.5,
-                game.player.z + 5
-            );
-            camera.lookAt(game.player.x, game.player.y, game.player.z);
-        }
-        
-        // Loop de animação
-        function animate() {
-            requestAnimationFrame(animate);
-            
-            updatePlayer();
-            updateChunks();
-            
-            renderer.render(scene, camera);
-        }
-        
-        // Iniciar jogo
-        animate();
-        
-        // Gerar mundo inicial
-        generateChunk(0, 0);
-        
-        // Posicionar jogador no chão
-        game.player.y = 1;
-    </script>
-</body>
-</html>
+      
