@@ -97,7 +97,8 @@
                 onGround: false,
                 jumpHeight: 0.5,
                 gravity: 0.01,
-                speed: 0.1
+                speed: 0.1,
+                height: 1.8
             },
             worldSize: 32,
             chunkSize: 16,
@@ -393,7 +394,7 @@
             // Verificar colisões com blocos
             const playerBox = new THREE.Box3().setFromCenterAndSize(
                 new THREE.Vector3(game.player.x, game.player.y, game.player.z),
-                new THREE.Vector3(0.8, 1.8, 0.8)
+                new THREE.Vector3(0.8, game.player.height, 0.8)
             );
             
             const blocks = scene.children.filter(obj => obj.userData && obj.userData.type);
@@ -442,6 +443,13 @@
                 }
             }
             
+            // Garantir que o jogador não caia abaixo do nível do solo
+            if (game.player.y < 0) {
+                game.player.y = 0;
+                game.player.velocity.y = 0;
+                game.player.onGround = true;
+            }
+            
             // Atualizar posição da câmera
             camera.position.set(
                 game.player.x,
@@ -466,6 +474,9 @@
         
         // Gerar mundo inicial
         generateChunk(0, 0);
+        
+        // Posicionar jogador no chão
+        game.player.y = 1;
     </script>
 </body>
 </html>
