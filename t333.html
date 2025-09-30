@@ -1,20 +1,43 @@
-<span class="brilho-mudando">Brilhante!</span>
-.brilho-mudando {
-  font-size: 3rem;
-  font-weight: bold;
-  color: white;
-  text-shadow: 
-    0 0 10px currentColor,
-    0 0 20px currentColor,
-    0 0 30px currentColor,
-    0 0 40px currentColor;
-  animation: mudarCor 4s infinite alternate;
-}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tela Inicial com GIF Responsivo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
 
-@keyframes mudarCor {
-  0%   { color: #ff00ff; }   /* Magenta */
-  25%  { color: #00ffff; }   /* Ciano */
-  50%  { color: #ffff00; }   /* Amarelo */
-  75%  { color: #00ff00; }   /* Verde */
-  100% { color: #ff00aa; }   /* Rosa brilhante */
-}
+        .gif-container {
+            text-align: center;
+        }
+
+        .gif-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        @media (max-width: 768px) {
+            .gif-container img {
+                width: 90vw;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="gif-container">
+        <img src="https://media.giphy.com/media/l0HlN5Y28D9MzzcRy/giphy.gif" alt="GIF Responsivo">
+    </div>
+</body>
+</html>
+gjojh
