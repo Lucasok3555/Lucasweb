@@ -1,1 +1,20 @@
 <span class="brilho-mudando">Brilhante!</span>
+.brilho-mudando {
+  font-size: 3rem;
+  font-weight: bold;
+  color: white;
+  text-shadow: 
+    0 0 10px currentColor,
+    0 0 20px currentColor,
+    0 0 30px currentColor,
+    0 0 40px currentColor;
+  animation: mudarCor 4s infinite alternate;
+}
+
+@keyframes mudarCor {
+  0%   { color: #ff00ff; }   /* Magenta */
+  25%  { color: #00ffff; }   /* Ciano */
+  50%  { color: #ffff00; }   /* Amarelo */
+  75%  { color: #00ff00; }   /* Verde */
+  100% { color: #ff00aa; }   /* Rosa brilhante */
+}
