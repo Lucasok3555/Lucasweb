@@ -1,54 +1,101 @@
 <style>
-/* Estilização da barra de busca do Google CSE */
-.gsc-search-box {
-  border: none !important;
-  box-shadow: none !important;
+/* Container responsivo */
+.search-container {
+  position: relative;
+  max-width: 600px;
+  margin: 20px auto;
+  width: 90%;
 }
 
+/* Estilização do campo de busca */
 .gsc-input {
-  padding: 8px 12px !important;
-  font-size: 16px !important;
-  border: 2px solid #e0e0e0 !important;
-  border-radius: 24px !important;
+  padding: 12px 16px !important;
+  font-size: 16px !important; /* Evita zoom no iOS */
+  border: 2px solid #ddd !important;
+  border-radius: 30px !important;
   background-color: #fff !important;
   color: #333 !important;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
   transition: border-color 0.3s, box-shadow 0.3s;
 }
 
 .gsc-input:focus {
-  border-color: #4CAF50 !important;
-  box-shadow: 0 2px 10px rgba(76, 175, 80, 0.3) !important;
+  border-color: #1976d2 !important;
+  box-shadow: 0 2px 12px rgba(25, 118, 210, 0.3) !important;
   outline: none !important;
 }
 
+/* Botão de busca */
 .gsc-search-button {
-  background-color: #4CAF50 !important;
+  background-color: #1976d2 !important;
   border: none !important;
-  border-radius: 24px !important;
-  padding: 8px 16px !important;
+  border-radius: 30px !important;
+  padding: 10px 20px !important;
   color: white !important;
   font-weight: bold !important;
-  cursor: pointer !important;
-  transition: background-color 0.3s;
+  margin-left: 10px !important;
+  height: auto !important;
 }
 
 .gsc-search-button:hover {
-  background-color: #45a049 !important;
+  background-color: #1565c0 !important;
 }
 
-/* Opcional: ajustar largura */
-.gsc-control-cse {
-  padding: 0 !important;
-  border: none !important;
-  background-color: transparent !important;
+/* Botão de voz */
+.voice-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #1976d2;
+  z-index: 10;
+  padding: 4px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
 }
 
-.gsc-control-wrapper-cse {
-  width: 100% !important;
-  max-width: 600px; /* ajuste conforme necessário */
-  margin: 0 auto;
+.voice-btn:hover {
+  background-color: #f0f0f0;
+}
+
+.voice-btn:active {
+  color: #d32f2f;
+}
+
+/* Ajustes para mobile */
+@media (max-width: 600px) {
+  .gsc-input {
+    font-size: 18px !important; /* Melhor experiência em mobile */
+    padding: 14px 50px 14px 16px !important; /* Espaço para o microfone */
+  }
+
+  .gsc-search-button {
+    display: none !important; /* Esconde o botão em mobile (busca ao pressionar Enter) */
+  }
+
+  .voice-btn {
+    right: 16px;
+  }
+}
+
+/* Esconde o botão de voz se o navegador não suportar SpeechRecognition */
+.no-voice-support .voice-btn {
+  display: none;
 }
 </style>
+<!-- Script do Google CSE -->
 <script async src="https://cse.google.com/cse.js?cx=3439bfa86d61244ab"></script>
-<div class="gcse-search"></div>
+
+<!-- Container da busca -->
+<div class="search-container">
+  <div class="gcse-search"></div>
+  <button id="voice-search-btn" class="voice-btn" title="Pesquisar por voz" aria-label="Pesquisar por voz">
+    🎤
+  </button>
+</div>
