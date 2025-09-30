@@ -1,218 +1,544 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Sandbox Blocos - Debug</title>
-<style>
-  html,body { height:100%; margin:0; font-family:Arial,Helvetica,sans-serif; background:#87CEEB; }
-  #canvasContainer { width:100%; height:100%; position:relative; overflow:hidden; }
-  #overlay {
-    position:absolute; left:12px; top:12px; z-index:50;
-    background:rgba(0,0,0,0.45); color:#fff; padding:8px 10px; border-radius:8px; font-size:13px;
-  }
-  #controlsMobile { position:absolute; right:12px; bottom:12px; z-index:50; display:none; gap:8px; }
-  .btn { background: rgba(255,255,255,0.12); color:#fff; padding:10px 12px; border-radius:8px; font-size:14px; user-select:none; }
-  #log {
-    position:absolute; left:12px; bottom:12px; z-index:60; max-width:45%; max-height:35%; overflow:auto;
-    background:rgba(0,0,0,0.55); color:#fff; padding:8px; border-radius:8px; font-size:12px;
-  }
-  #errorBanner {
-    position:absolute; left:50%; transform:translateX(-50%); top:50%; z-index:100; background:#b33; color:#fff;
-    padding:16px 20px; border-radius:8px; display:none; font-weight:bold;
-  }
-  #hint { font-size:12px; color:#eee; margin-top:6px; opacity:0.9; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mundo Infinito 3D</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+        }
+        canvas {
+            display: block;
+        }
+        .controls {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .hotbar {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 5px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px;
+            border-radius: 10px;
+        }
+        .hotbar-item {
+            width: 50px;
+            height: 50px;
+            border: 2px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        .hotbar-item.selected {
+            border-color: white;
+        }
+        .hotbar-item img {
+            width: 30px;
+            height: 30px;
+        }
+        .mobile-controls {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+        }
+        .mobile-left {
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .mobile-right {
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .mobile-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            user-select: none;
+        }
+        #instructions {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            pointer-events: none;
+            display: none;
+        }
+        @media (max-width: 768px) {
+            .desktop-only {
+                display: none;
+            }
+            #instructions {
+                display: block;
+            }
+        }
+    </style>
 </head>
 <body>
-<div id="canvasContainer"></div>
-<div id="overlay">
-  <div>Clique/Tap = colocar bloco • Shift+Clique = quebrar</div>
-  <div id="hint">Abra no Chrome se possível. Se aparecer erro, veja o painel abaixo.</div>
-</div>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div class="controls desktop-only">
+        <div class="control-btn" id="placeBtn">+</div>
+        <div class="control-btn" id="breakBtn">-</div>
+    </div>
+    
+    <div class="hotbar">
+        <div class="hotbar-item selected" data-type="grass">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cmVjdCB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIGZpbGw9IiM3QkNEOTkiLz48cGF0aCBkPSJNMjAgMTZIMmMwLTItMi00LTQtNFYxMGMwIDItMiA0LTQgNFYyMEgxOGMwLTItMi00LTQtNFYxMGMwIDItMiA0LTQgNFYyMFoiIGZpbGw9IiM2QUM1ODAiLz48L3N2Zz4=" alt="Grama">
+        </div>
+        <div class="hotbar-item" data-type="stone">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cmVjdCB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIGZpbGw9IiM4Qjk0OTgiLz48cGF0aCBkPSJNMjAgMTZIMmMwLTItMi00LTQtNFYxMGMwIDItMiA0LTQgNFYyMEgxOGMwLTItMi00LTQtNFYxMGMwIDItMiA0LTQgNFYyMFoiIGZpbGw9IiM3NDgwODYiLz48L3N2Zz4=" alt="Pedra">
+        </div>
+        <div class="hotbar-item" data-type="water">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cmVjdCB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIGZpbGw9IiM0Qzk5RjAiLz48cGF0aCBkPSJNMjAgMTZIMmMwLTItMi00LTQtNFYxMGMwIDItMiA0LTQgNFYyMEgxOGMwLTItMi00LTQtNFYxMGMwIDItMiA0LTQgNFYyMFoiIGZpbGw9IiMzQjlCRjAiLz48L3N2Zz4=" alt="Água">
+        </div>
+        <div class="hotbar-item" data-type="wood">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cmVjdCB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIGZpbGw9IiM5M0E1NTUiLz48cGF0aCBkPSJNMjAgMTZIMmMwLTItMi00LTQtNFYxMGMwIDItMiA0LTQgNFYyMEgxOGMwLTItMi00LTQtNFYxMGMwIDItMiA0LTQgNFYyMFoiIGZpbGw9IiM4M0EwNDYiLz48L3N2Zz4=" alt="Madeira">
+        </div>
+        <div class="hotbar-item" data-type="hand">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0Ij48cmVjdCB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIGZpbGw9IiMxQTFFMkIiLz48cGF0aCBkPSJNMjAgMTZIMmMwLTItMi00LTQtNFYxMGMwIDItMiA0LTQgNFYyMEgxOGMwLTItMi00LTQtNFYxMGMwIDItMiA0LTQgNFYyMFoiIGZpbGw9IiMxMDEyMTkiLz48L3N2Zz4=" alt="Mão">
+        </div>
+    </div>
+    
+    <div class="mobile-controls">
+        <div class="mobile-left">
+            <div class="mobile-btn" id="mobilePlaceBtn">+</div>
+            <div class="mobile-btn" id="mobileBreakBtn">-</div>
+        </div>
+        <div class="mobile-right">
+            <div class="mobile-btn" id="mobileJumpBtn">↑</div>
+            <div class="mobile-btn" id="mobileMoveLeftBtn">←</div>
+            <div class="mobile-btn" id="mobileMoveRightBtn">→</div>
+        </div>
+    </div>
+    
+    <div id="instructions">
+        PC: Clique direito para quebrar, esquerdo para colocar<br>
+        Celular: Botões na tela para interagir
+    </div>
 
-<div id="controlsMobile" style="display:none;">
-  <div id="btnPlace" class="btn">Colocar</div>
-  <div id="btnBreak" class="btn">Quebrar</div>
-</div>
-
-<pre id="log"></pre>
-<div id="errorBanner"></div>
-
-<!-- Three.js UMD build + OrbitControls (compatível com a maioria dos browsers) -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/controls/OrbitControls.js"></script>
-
-<script>
-(function(){
-  const logEl = document.getElementById('log');
-  function log(...args){ console.log(...args); logEl.textContent += args.map(a=> (typeof a === 'object'? JSON.stringify(a): String(a)) ).join(' ') + '\\n'; logEl.scrollTop = logEl.scrollHeight; }
-  function showError(msg){ const b = document.getElementById('errorBanner'); b.textContent = msg; b.style.display = 'block'; log('ERRO: ' + msg); }
-
-  // Captura erros JS e mostra na tela
-  window.addEventListener('error', function(e){ showError('Erro JS: ' + e.message + ' (veja console)'); console.error(e); });
-  window.addEventListener('unhandledrejection', function(e){ showError('Promise rejeitada: ' + e.reason); console.error(e); });
-
-  // Container
-  const container = document.getElementById('canvasContainer');
-
-  // Tentativa de criar renderer (captura falha WebGL)
-  let renderer;
-  try {
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-  } catch(e){ showError('WebGL não disponível no navegador'); log(e); return; }
-
-  renderer.setPixelRatio(window.devicePixelRatio || 1);
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.domElement.style.display = 'block';
-  container.appendChild(renderer.domElement);
-
-  // Cena e câmera
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x87CEEB);
-  const camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.1, 1000);
-  camera.position.set(10, 12, 16);
-
-  // Luzes
-  const amb = new THREE.AmbientLight(0xffffff, 0.6); scene.add(amb);
-  const dir = new THREE.DirectionalLight(0xffffff, 0.8); dir.position.set(10,20,10); scene.add(dir);
-
-  // Helpers (grid)
-  const grid = new THREE.GridHelper(40, 40, 0x444444, 0x888888);
-  grid.position.y = -0.5;
-  scene.add(grid);
-
-  // Controls (Orbit para testar)
-  const controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-
-  // Raycaster / mouse
-  const ray = new THREE.Raycaster();
-  const mouse = new THREE.Vector2();
-
-  // Array de blocos (meshes)
-  const blocks = [];
-  const BLOCK_SIZE = 1;
-  const cubeGeo = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
-
-  // Cores simples para tipos
-  const materials = {
-    default: new THREE.MeshLambertMaterial({ color: 0x8B5A2B }),
-    grass: new THREE.MeshLambertMaterial({ color: 0x2E8B57 }),
-    stone: new THREE.MeshLambertMaterial({ color: 0x888888 })
-  };
-
-  // Cria chão pequeno (20x20)
-  const half = 10;
-  for(let x=-half; x<half; x++){
-    for(let z=-half; z<half; z++){
-      const m = new THREE.Mesh(cubeGeo, (Math.random()>0.9?materials.stone:materials.default).clone());
-      m.position.set(x + 0.5, 0, z + 0.5);
-      m.userData.isBlock = true;
-      scene.add(m);
-      blocks.push(m);
-    }
-  }
-
-  // Função para adicionar bloco na posição (inteiro)
-  function addBlock(ix, iy, iz, mat=materials.default){
-    const m = new THREE.Mesh(cubeGeo, mat.clone());
-    m.position.set(ix + 0.5, iy + 0.5, iz + 0.5);
-    m.userData.isBlock = true;
-    scene.add(m);
-    blocks.push(m);
-    log('Adicionado bloco em', ix,iy,iz);
-    return m;
-  }
-
-  // Remove bloco mesh
-  function removeBlock(mesh){
-    scene.remove(mesh);
-    const i = blocks.indexOf(mesh);
-    if(i>=0) blocks.splice(i,1);
-    if(mesh.geometry) mesh.geometry.dispose && mesh.geometry.dispose();
-    if(mesh.material) mesh.material.dispose && mesh.material.dispose();
-    log('Removido bloco');
-  }
-
-  // Converte ponto para coords inteiros do bloco (floor)
-  function worldToBlockCoords(v){
-    return { x: Math.floor(v.x), y: Math.floor(v.y), z: Math.floor(v.z) };
-  }
-
-  // Interação clique / toque:
-  // - clique normal: coloca bloco acima do bloco clicado
-  // - shift+clique: remove bloco clicado
-  renderer.domElement.addEventListener('pointerdown', function(ev){
-    ev.preventDefault();
-    mouse.x = (ev.clientX / renderer.domElement.clientWidth) * 2 - 1;
-    mouse.y = - (ev.clientY / renderer.domElement.clientHeight) * 2 + 1;
-    ray.setFromCamera(mouse, camera);
-    const hits = ray.intersectObjects(blocks, false);
-    if(hits.length === 0){
-      log('Nenhum bloco atingido');
-      return;
-    }
-    const hit = hits[0];
-    const mesh = hit.object;
-    if(ev.shiftKey || ev.pointerType === 'touch' && ev.altKey){ // altKey fallback
-      removeBlock(mesh);
-    } else {
-      // lugar para novo bloco: posição do face + normal
-      const normal = hit.face.normal.clone();
-      const pos = hit.point.clone().add(normal.multiplyScalar(0.5));
-      const coords = worldToBlockCoords(pos);
-      addBlock(coords.x, coords.y, coords.z, materials.grass);
-    }
-  });
-
-  // Mobile UI: mostrar botões se for mobile
-  function isMobile(){ return /Mobi|Android/i.test(navigator.userAgent); }
-  if(isMobile()){
-    document.getElementById('controlsMobile').style.display = 'flex';
-    // botão place => faz um clique virtual
-    document.getElementById('btnPlace').addEventListener('touchstart', function(e){
-      e.preventDefault();
-      // coloca bloco à frente da câmera (3 unidades) se não atingir
-      const dir = new THREE.Vector3();
-      camera.getWorldDirection(dir);
-      const target = camera.position.clone().add(dir.multiplyScalar(4));
-      const coords = worldToBlockCoords(target);
-      addBlock(coords.x, coords.y, coords.z, materials.grass);
-    }, {passive:false});
-    document.getElementById('btnBreak').addEventListener('touchstart', function(e){
-      e.preventDefault();
-      // quebra o bloco mais próximo da câmera na direção
-      const dir = new THREE.Vector3();
-      camera.getWorldDirection(dir);
-      ray.set(camera.position, dir);
-      const hits = ray.intersectObjects(blocks, true);
-      if(hits.length) removeBlock(hits[0].object);
-    }, {passive:false});
-  }
-
-  // Resize
-  window.addEventListener('resize', function(){
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
-
-  // Render loop
-  const clock = new THREE.Clock();
-  function animate(){
-    requestAnimationFrame(animate);
-    controls.update();
-    renderer.render(scene, camera);
-  }
-  animate();
-
-  log('Cena iniciada. Se a tela continuar branca:');
-  log('- abra o console remoto (chrome://inspect) no PC para ver erros do device;');
-  log('- tente abrir no Google Chrome (Android) se estiver usando outro navegador;');
-  log('- verifique se há overlays (apps tipo "Root missing" podem estar bloqueando a página);');
-
-})();
-</script>
-</body>
-</html>
+    <script>
+        // Configuração do jogo
+        const blockSize = 111;
+        const worldSize = 100; // Tamanho inicial do mundo
+        let currentBlockType = 'grass';
+        let isPlacing = true;
+        let playerPosition = { x: 0, y: 0, z: 0 };
+        let cameraRotation = { x: 0, y: 0 };
+        let velocity = { x: 0, y: 0, z: 0 };
+        let gravity = 0.5;
+        let onGround = false;
+        let world = {};
+        let selectedBlockIndex = 0;
+        
+        // Inicialização do WebGL
+        const canvas = document.getElementById('gameCanvas');
+        const gl = canvas.getContext('webgl');
+        
+        if (!gl) {
+            alert('WebGL não suportado!');
+            throw new Error('WebGL não suportado');
+        }
+        
+        // Redimensionar canvas
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        
+        // Shaders
+        const vertexShaderSource = `
+            attribute vec3 position;
+            attribute vec3 color;
+            uniform mat4 modelViewMatrix;
+            uniform mat4 projectionMatrix;
+            varying vec3 vColor;
+            
+            void main() {
+                vColor = color;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        `;
+        
+        const fragmentShaderSource = `
+            precision mediump float;
+            varying vec3 vColor;
+            
+            void main() {
+                gl_FragColor = vec4(vColor, 1.0);
+            }
+        `;
+        
+        // Criar shader
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error('Erro de compilação do shader:', gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            
+            return shader;
+        }
+        
+        // Criar programa
+        const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+        const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+        
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            console.error('Erro ao linkar o programa:', gl.getProgramInfoLog(program));
+            return;
+        }
+        
+        // Obter atributos e uniforms
+        const positionLocation = gl.getAttribLocation(program, 'position');
+        const colorLocation = gl.getAttribLocation(program, 'color');
+        const modelViewMatrixLocation = gl.getUniformLocation(program, 'modelViewMatrix');
+        const projectionMatrixLocation = gl.getUniformLocation(program, 'projectionMatrix');
+        
+        // Gerar cubo
+        function createCube() {
+            const positions = [
+                // Front face
+                -0.5, -0.5,  0.5,
+                 0.5, -0.5,  0.5,
+                 0.5,  0.5,  0.5,
+                -0.5,  0.5,  0.5,
+                
+                // Back face
+                -0.5, -0.5, -0.5,
+                -0.5,  0.5, -0.5,
+                 0.5,  0.5, -0.5,
+                 0.5, -0.5, -0.5,
+                
+                // Top face
+                -0.5,  0.5, -0.5,
+                -0.5,  0.5,  0.5,
+                 0.5,  0.5,  0.5,
+                 0.5,  0.5, -0.5,
+                
+                // Bottom face
+                -0.5, -0.5, -0.5,
+                 0.5, -0.5, -0.5,
+                 0.5, -0.5,  0.5,
+                -0.5, -0.5,  0.5,
+                
+                // Right face
+                 0.5, -0.5, -0.5,
+                 0.5,  0.5, -0.5,
+                 0.5,  0.5,  0.5,
+                 0.5, -0.5,  0.5,
+                
+                // Left face
+                -0.5, -0.5, -0.5,
+                -0.5, -0.5,  0.5,
+                -0.5,  0.5,  0.5,
+                -0.5,  0.5, -0.5,
+            ];
+            
+            const indices = [
+                0, 1, 2, 0, 2, 3,  // front
+                4, 5, 6, 4, 6, 7,  // back
+                8, 9, 10, 8, 10, 11,  // top
+                12, 13, 14, 12, 14, 15,  // bottom
+                16, 17, 18, 16, 18, 19,  // right
+                20, 21, 22, 20, 22, 23,  // left
+            ];
+            
+            const colors = [];
+            for (let i = 0; i < 6; i++) {
+                const r = Math.random();
+                const g = Math.random();
+                const b = Math.random();
+                for (let j = 0; j < 6; j++) {
+                    colors.push(r, g, b);
+                }
+            }
+            
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+            
+            const colorBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+            
+            const indexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+            
+            return {
+                positionBuffer,
+                colorBuffer,
+                indexBuffer,
+                numIndices: indices.length
+            };
+        }
+        
+        const cube = createCube();
+        
+        // Funções de matriz
+        function createIdentityMatrix() {
+            return new Float32Array([
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1
+            ]);
+        }
+        
+        function createPerspectiveMatrix(fov, aspect, near, far) {
+            const f = 1.0 / Math.tan(fov / 2);
+            const rangeInv = 1 / (near - far);
+            
+            return new Float32Array([
+                f / aspect, 0, 0, 0,
+                0, f, 0, 0,
+                0, 0, (near + far) * rangeInv, -1,
+                0, 0, near * far * rangeInv * 2, 0
+            ]);
+        }
+        
+        function createTranslationMatrix(x, y, z) {
+            return new Float32Array([
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                x, y, z, 1
+            ]);
+        }
+        
+        function createRotationXMatrix(angle) {
+            const c = Math.cos(angle);
+            const s = Math.sin(angle);
+            
+            return new Float32Array([
+                1, 0, 0, 0,
+                0, c, s, 0,
+                0, -s, c, 0,
+                0, 0, 0, 1
+            ]);
+        }
+        
+        function createRotationYMatrix(angle) {
+            const c = Math.cos(angle);
+            const s = Math.sin(angle);
+            
+            return new Float32Array([
+                c, 0, -s, 0,
+                0, 1, 0, 0,
+                s, 0, c, 0,
+                0, 0, 0, 1
+            ]);
+        }
+        
+        function multiplyMatrices(a, b) {
+            const result = new Float32Array(16);
+            
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    let sum = 0;
+                    for (let k = 0; k < 4; k++) {
+                        sum += a[i * 4 + k] * b[k * 4 + j];
+                    }
+                    result[i * 4 + j] = sum;
+                }
+            }
+            
+            return result;
+        }
+        
+        // Gerar mundo
+        function generateWorld() {
+            // Gerar blocos em linha reta
+            for (let x = -worldSize; x < worldSize; x++) {
+                for (let z = -worldSize; z < worldSize; z++) {
+                    // Gerar pedra no fundo
+                    for (let y = -5; y < 0; y++) {
+                        setBlock(x, y, z, 'stone');
+                    }
+                    
+                    // Gerar grama no topo
+                    setBlock(x, 0, z, 'grass');
+                    
+                    // Gerar cavernas aleatoriamente
+                    if (Math.random() < 0.1 && x > -worldSize + 5 && x < worldSize - 5 && z > -worldSize + 5 && z < worldSize - 5) {
+                        for (let y = -3; y < 0; y++) {
+                            if (Math.random() < 0.3) {
+                                setBlock(x, y, z, 'air');
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Gerar alguns blocos de água
+            for (let i = 0; i < 20; i++) {
+                const x = Math.floor(Math.random() * (worldSize - 10)) - worldSize/2;
+                const z = Math.floor(Math.random() * (worldSize - 10)) - worldSize/2;
+                for (let y = -2; y < 0; y++) {
+                    setBlock(x, y, z, 'water');
+                }
+            }
+            
+            // Gerar alguns blocos de madeira
+            for (let i = 0; i < 15; i++) {
+                const x = Math.floor(Math.random() * (worldSize - 10)) - worldSize/2;
+                const z = Math.floor(Math.random() * (worldSize - 10)) - worldSize/2;
+                for (let y = 0; y < 3; y++) {
+                    if (y === 0) {
+                        setBlock(x, y, z, 'grass');
+                    } else {
+                        setBlock(x, y, z, 'wood');
+                    }
+                }
+            }
+        }
+        
+        // Obter bloco
+        function getBlock(x, y, z) {
+            const key = `${Math.floor(x)},${Math.floor(y)},${Math.floor(z)}`;
+            return world[key] || 'air';
+        }
+        
+        // Definir bloco
+        function setBlock(x, y, z, type) {
+            const key = `${Math.floor(x)},${Math.floor(y)},${Math.floor(z)}`;
+            world[key] = type;
+        }
+        
+        // Remover bloco
+        function removeBlock(x, y, z) {
+            const key = `${Math.floor(x)},${Math.floor(y)},${Math.floor(z)}`;
+            delete world[key];
+        }
+        
+        // Verificar colisão
+        function checkCollision(playerPos, blockPos) {
+            const blockX = Math.floor(blockPos.x);
+            const blockY = Math.floor(blockPos.y);
+            const blockZ = Math.floor(blockPos.z);
+            
+            const blockType = getBlock(blockX, blockY, blockZ);
+            return blockType !== 'air';
+        }
+        
+        // Renderizar mundo
+        function render() {
+            gl.clearColor(0.5, 0.7, 1.0, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            
+            gl.enable(gl.DEPTH_TEST);
+            gl.useProgram(program);
+            
+            // Matriz de projeção
+            const projectionMatrix = createPerspectiveMatrix(
+                Math.PI / 4, 
+                canvas.width / canvas.height, 
+                0.1, 
+                1000
+            );
+            
+            // Matriz de câmera
+            const cameraMatrix = createIdentityMatrix();
+            const rotationXMatrix = createRotationXMatrix(cameraRotation.x);
+            const rotationYMatrix = createRotationYMatrix(cameraRotation.y);
+            const translationMatrix = createTranslationMatrix(
+                -playerPosition.x, 
+                -playerPosition.y, 
+                -playerPosition.z
+            );
+            
+            const viewMatrix = multiplyMatrices(
+                multiplyMatrices(rotationXMatrix, rotationYMatrix),
+                translationMatrix
+            );
+            
+            gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
+            
+            // Desenhar blocos
+            gl.bindBuffer(gl.ARRAY_BUFFER, cube.positionBuffer);
+            gl.enableVertexAttribArray(positionLocation);
+            gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, cube.colorBuffer);
+            gl.enableVertexAttribArray(colorLocation);
+            gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, 0, 0);
+            
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cube.indexBuffer);
+            
+            // Limites de renderização
+            const renderDistance = 20;
+            const startX = Math.floor(playerPosition.x - renderDistance);
+            const endX = Math.floor(playerPosition.x + renderDistance);
+            const startY = Math.floor(playerPosition.y - renderDistance);
+            const endY = Math.floor(playerPosition.y + renderDistance);
+            const startZ = Math.floor(playerPosition.z - renderDistance);
+            const endZ = Math.floor(playerPosition.z + renderDistance);
+            
+            for (let x = startX; x <= endX; x++) {
+                for (let y = startY; y <= endY; y++) {
+                    for (let z = startZ; z <= endZ; z++) {
+                        const blockType = getBlock(x, y, z);
+                        if (blockType === 'air') continue;
+                        
+                        // Criar matriz de modelo
+                        const modelMatrix = createTranslationMatrix(x, y, z);
+                        
+                        // Matriz mode
