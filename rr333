@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mundo Infinito 3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: none;
+        }
+        
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none;
+        }
+        
+        #gameContainer { 
+            position: relative; 
+            width: 100vw; 
+            height: 100vh; 
+            touch-action: none;
+        }
+        
+        #infoPanel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0,0,0,0.7);
+            padding: 12px;
+            border-radius: 10px;
+            max-width: 280px;
+            z-index: 10;
+            font-size: 14px;
+        }
+        
+        #infoPanel h2 {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+        
+        #eventLog {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            color: white;
+            background: rgba(0,0,0,0.7);
+            padding: 12px;
+            border-radius: 10px;
+            max-height: 120px;
+            overflow-y: auto;
+            z-index: 10;
+            font-size: 12px;
+        }
+        
+        #eventLog h3 {
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            background: rgba(0,0,0,0.7);
+            padding: 12px;
+            border-radius: 10px;
+            z-index: 10;
+            font-size: 12px;
+            display: none;
+        }
+        
+        /* Controles mobile */
+        #mobileControls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: none;
+            z-index: 20;
+            pointer-events: none;
+        }
+        
+        .mobile-btn {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.2);
+            border: 2px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            pointer-events: auto;
+            user-select: none;
+        }
+        
+        #btnUp { top: 10px; left: 50%; transform: translateX(-50%); }
+        #btnDown { bottom: 10px; left: 50%; transform: translateX(-50%); }
+        #btnLeft { top: 50%; left: 10px; transform: translateY(-50%); }
+        #btnRight { top: 50%; right: 10px; transform: translateY(-50%); }
+        #btnJump { bottom: 20px; right: 20px; }
+        
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        #startScreen h1 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #4A90E2;
+        }
+        
+        #startScreen p {
+            font-size: 16px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+        
+        #startBtn {
+            background: #4A90E2;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        #startBtn:hover {
+            background: #357ABD;
+        }
+        
+        @media (max-width: 768px) {
+            #controls {
+                display: none !important;
+            }
+            
+            #mobileControls {
+                display: block;
+            }
+            
+            #infoPanel {
+                max-width: 220px;
+                font-size: 12px;
+            }
+            
+            #infoPanel h2 {
+                font-size: 16px;
+            }
+        }
+        
+        @media (min-width: 769px) {
+            #mobileControls {
+                display: none !important;
+            }
+            
+            #controls {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="startScreen">
+            <h1>MUNDO INFINITO 3D</h1>
+            <p>Explore um mundo procedural infinito com eventos dinâmicos que acontecem ao seu redor!</p>
+            <button id="startBtn">INICIAR JOGO</button>
+        </div>
+        
+        <div id="infoPanel">
+            <h2>Mundo Infinito 3D</h2>
+            <p>Eventos gerados dinamicamente em um mundo procedural infinito.</p>
+            <p>Coordenadas: <span id="coords">0, 0</span></p>
+            <p>Eventos ativos: <span id="eventCount">0</span></p>
+        </div>
+        
+        <div id="eventLog">
+            <h3>Eventos Recentes:</h3>
+            <ul id="logList"></ul>
+        </div>
+        
+        <div id="controls">
+            <h3>Controles PC:</h3>
+            <p>WASD: Mover</p>
+            <p>Mouse: Olhar ao redor</p>
+            <p>Espaço: Pular</p>
+        </div>
+        
+        <div id="mobileControls">
+            <div class="mobile-btn" id="btnUp">↑</div>
+            <div class="mobile-btn" id="btnDown">↓</div>
+            <div class="mobile-btn" id="btnLeft">←</div>
+            <div class="mobile-btn" id="btnRight">→</div>
+            <div class="mobile-btn" id="btnJump">JUMP</div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Detectar dispositivo
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        // Variáveis globais
+        let scene, camera, renderer, clock;
+        let loadedChunks = new Map();
+        let activeEvents = [];
+        let isGameStarted = false;
+        
+        // Elementos DOM
+        const startScreen = document.getElementById('startScreen');
+        const startBtn = document.getElementById('startBtn');
+        const coordsElement = document.getElementById('coords');
+        const eventCountElement = document.getElementById('eventCount');
+        const logList = document.getElementById('logList');
+        
+        // Configuração inicial
+        function init() {
+            // Cena
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            scene.fog = new THREE.Fog(0x87CEEB, 20, 100);
+            
+            // Câmera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.y = 1.6;
+            
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.getElementById('gameContainer').appendChild(renderer.domElement);
+            
+            // Iluminação
+            const ambientLight = new THREE.AmbientLight(0x606060, 1.2);
+            scene.add(ambientLight);
+            
+            const sunLight = new THREE.DirectionalLight(0xffffff, 1);
+            sunLight.position.set(100, 100, 50);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 1024;
+            sunLight.shadow.mapSize.height = 1024;
+            scene.add(sunLight);
+            
+            // Grupo para chunks
+            const chunkGroup = new THREE.Group();
+            scene.add(chunkGroup);
+            
+            // Eventos
+            setupEventSystem();
+            
+            // Controles
+            setupControls();
+            
+            // Objetos decorativos
+            addDecorativeObjects();
+            
+            // Clock
+            clock = new THREE.Clock();
+            
+            // Iniciar loop
+            animate();
+        }
+        
+        // Sistema de eventos
+        const eventTypes = [
+            { name: "Tempestade", color: 0x4A90E2, duration: 10000 },
+            { name: "Terremoto", color: 0xD0021B, duration: 8000 },
+            { name: "Aurora Boreal", color: 0x7ED321, duration: 15000 },
+            { name: "Invasão de Meteoros", color: 0xF5A623, duration: 12000 },
+            { name: "Neblina Mística", color: 0x9013FE, duration: 20000 },
+            { name: "Chuva de Flores", color: 0xBD10E0, duration: 18000 }
+        ];
+        
+        function setupEventSystem() {
+            let lastEventTime = 0;
+            
+            function triggerRandomEvent() {
+                if (activeEvents.length > 3) return;
+                
+                const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+                const eventId = Date.now();
+                const event = {
+                    id: eventId,
+                    ...eventType,
+                    startTime: Date.now(),
+                    position: {
+                        x: camera.position.x + (Math.random() - 0.5) * 50,
+                        z: camera.position.z + (Math.random() - 0.5) * 50
+                    }
+                };
+                
+                activeEvents.push(event);
+                updateEventDisplay();
+                
+                // Efeito visual
+                const effectGeometry = new THREE.SphereGeometry(5, 16, 16);
+                const effectMaterial = new THREE.MeshBasicMaterial({ 
+                    color: event.color,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                const effect = new THREE.Mesh(effectGeometry, effectMaterial);
+                effect.position.set(event.position.x, 5, event.position.z);
+                scene.add(effect);
+                
+                setTimeout(() => {
+                    scene.remove(effect);
+                    activeEvents = activeEvents.filter(e => e.id !== eventId);
+                    updateEventDisplay();
+                }, event.duration);
+                
+                // Log
+                const logItem = document.createElement('li');
+                logItem.textContent = `Evento "${event.name}" iniciado em (${event.position.x.toFixed(0)}, ${event.position.z.toFixed(0)})`;
+                logList.prepend(logItem);
+                if (logList.children.length > 8) logList.removeChild(logList.lastChild);
+            }
+            
+            // Função para atualizar exibição de eventos
+            window.updateEventDisplay = function() {
+                eventCountElement.textContent = activeEvents.length;
+            };
+            
+            // Loop de eventos
+            function eventLoop() {
+                if (!isGameStarted) return;
+                
+                const elapsedTime = clock.getElapsedTime() * 1000;
+                if (elapsedTime - lastEventTime > (5 + Math.random() * 10) * 1000) {
+                    triggerRandomEvent();
+                    lastEventTime = elapsedTime;
+                }
+                
+                requestAnimationFrame(eventLoop);
+            }
+            
+            eventLoop();
+        }
+        
+        // Sistema de chunks
+        const CHUNK_SIZE = 50;
+        
+        function getChunkKey(x, z) {
+            return `${Math.floor(x / CHUNK_SIZE)},${Math.floor(z / CHUNK_SIZE)}`;
+        }
+        
+        function createChunk(x, z) {
+            const geometry = new THREE.PlaneGeometry(CHUNK_SIZE, CHUNK_SIZE, 10, 10);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0x2E8B57,
+                roughness: 0.9,
+                metalness: 0.1
+            });
+            
+            const colorOffset = (x * 0.01 + z * 0.01) % 1;
+            material.color.offsetHSL(colorOffset * 0.1, 0, 0);
+            
+            const chunk = new THREE.Mesh(geometry, material);
+            chunk.rotation.x = -Math.PI / 2;
+            chunk.position.set(x, 0, z);
+            chunk.receiveShadow = true;
+            return chunk;
+        }
+        
+        function updateChunks(playerX, playerZ) {
+            const playerChunkX = Math.floor(playerX / CHUNK_SIZE) * CHUNK_SIZE;
+            const playerChunkZ = Math.floor(playerZ / CHUNK_SIZE) * CHUNK_SIZE;
+            
+            // Carregar chunks próximos
+            for (let x = -2; x <= 2; x++) {
+                for (let z = -2; z <= 2; z++) {
+                    const chunkX = playerChunkX + x * CHUNK_SIZE;
+                    const chunkZ = playerChunkZ + z * CHUNK_SIZE;
+                    const key = getChunkKey(chunkX, chunkZ);
+                    
+                    if (!loadedChunks.has(key)) {
+                        const chunk = createChunk(chunkX, chunkZ);
+                        scene.add(chunk);
+                        loadedChunks.set(key, chunk);
+                    }
+                }
+            }
+            
+            // Remover chunks distantes
+            for (const [key, chunk] of loadedChunks) {
+                const [x, z] = key.split(',').map(Number);
+                const distance = Math.sqrt(
+                    Math.pow(x * CHUNK_SIZE - playerX, 2) + 
+                    Math.pow(z * CHUNK_SIZE - playerZ, 2)
+                );
+                
+                if (distance > CHUNK_SIZE * 3) {
+                    scene.remove(chunk);
+                    loadedChunks.delete(key);
+                }
+            }
+        }
+        
+        // Controles
+        let keys = {};
+        let velocity = new THREE.Vector3();
+        let direction = new THREE.Vector3();
+        let isJumping = false;
+        let jumpVelocity = 0;
+        const gravity = 0.01;
+        const jumpStrength = 0.2;
+        const moveSpeed = isMobile ? 0.15 : 0.2;
+        
+        function setupControls() {
+            // Controles PC
+            if (!isMobile) {
+                document.addEventListener('keydown', (e) => {
+                    if (!isGameStarted) return;
+                    keys[e.key.toLowerCase()] = true;
+                    if (e.key === ' ') {
+                        if (!isJumping) {
+                            isJumping = true;
+                            jumpVelocity = jumpStrength;
+                        }
+                    }
+                });
+                
+                document.addEventListener('keyup', (e) => {
+                    keys[e.key.toLowerCase()] = false;
+                });
+                
+                // Mouse look
+                let yaw = 0;
+                let pitch = 0;
+                let isPointerLocked = false;
+                
+                renderer.domElement.requestPointerLock = renderer.domElement.requestPointerLock ||
+                                                    renderer.domElement.mozRequestPointerLock;
+                
+                document.addEventListener('click', () => {
+                    if (!isGameStarted) return;
+                    if (!isPointerLocked) {
+                        renderer.domElement.requestPointerLock();
+                    }
+                });
+                
+                document.addEventListener('pointerlockchange', () => {
+                    isPointerLocked = document.pointerLockElement === renderer.domElement;
+                });
+                
+                document.addEventListener('mousemove', (e) => {
+                    if (isPointerLocked && isGameStarted) {
+                        yaw -= e.movementX * 0.002;
+                        pitch -= e.movementY * 0.002;
+                        pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
+                    }
+                });
+                
+                // Atualizar câmera no loop
+                window.updateCameraRotation = function() {
+                    camera.rotation.order = 'YXZ';
+                    camera.rotation.y = yaw;
+                    camera.rotation.x = pitch;
+                };
+            } 
+            // Controles Mobile
+            else {
+                const btnUp = document.getElementById('btnUp');
+                const btnDown = document.getElementById('btnDown');
+                const btnLeft = document.getElementById('btnLeft');
+                const btnRight = document.getElementById('btnRight');
+                const btnJump = document.getElementById('btnJump');
+                
+                // Setup touch events
+                function createTouchHandler(key) {
+                    return {
+                        start: () => { keys[key] = true; },
+                        end: () => { keys[key] = false; }
+                    };
+                }
+                
+                const handlers = {
+                    'w': createTouchHandler('w'),
+                    's': createTouchHandler('s'),
+                    'a': createTouchHandler('a'),
+                    'd': createTouchHandler('d'),
+                    ' ': createTouchHandler(' ')
+                };
+                
+                btnUp.addEventListener('touchstart', handlers['w'].start);
+                btnUp.addEventListener('touchend', handlers['w'].end);
+                btnDown.addEventListener('touchstart', handlers['s'].start);
+                btnDown.addEventListener('touchend', handlers['s'].end);
+                btnLeft.addEventListener('touchstart', handlers['a'].start);
+                btnLeft.addEventListener('touchend', handlers['a'].end);
+                btnRight.addEventListener('touchstart', handlers['d'].start);
+                btnRight.addEventListener('touchend', handlers['d'].end);
+                btnJump.addEventListener('touchstart', () => {
+                    if (!isJumping) {
+                        isJumping = true;
+                        jumpVelocity = jumpStrength;
+                        keys[' '] = true;
+                    }
+                });
+                btnJump.addEventListener('touchend', () => {
+                    keys[' '] = false;
+                });
+                
+                // Também suportar mouse para testes em desktop
+                btnUp.addEventListener('mousedown', handlers['w'].start);
+                btnUp.addEventListener('mouseup', handlers['w'].end);
+                btnDown.addEventListener('mousedown', handlers['s'].start);
+                btnDown.addEventListener('mouseup', handlers['s'].end);
+                btnLeft.addEventListener('mousedown', handlers['a'].start);
+                btnLeft.addEventListener('mouseup', handlers['a'].end);
+                btnRight.addEventListener('mousedown', handlers['d'].start);
+                btnRight.addEventListener('mouseup', handlers['d'].end);
+                btnJump.addEventListener('mousedown', () => {
+                    if (!isJumping) {
+                        isJumping = true;
+                        jumpVelocity = jumpStrength;
+                        keys[' '] = true;
+                    }
+                });
+                btnJump.addEventListener('mouseup', () => {
+                    keys[' '] = false;
+                });
+                
+                window.updateCameraRotation = function() {
+                    // Em mobile, a câmera não gira com mouse, então mantemos fixa
+                    // ou poderíamos adicionar controles de toque para rotação
+                };
+            }
+        }
+  
