@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mundo de Blocos 3D</title>
+    <!-- Carrega Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Carrega Tailwind CSS para a UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilo base para garantir que o jogo ocupe toda a tela */
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            -webkit-user-select: none; /* Desabilita seleção em mobile */
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            touch-action: manipulation; /* Otimização de toque */
+        }
+        canvas {
+            display: block;
+        }
+
+        /* Estilo para o Crosshair (Símbolo de Mais) no centro da tela */
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            pointer-events: none; /* Crucial: permite que o clique passe por ele */
+            color: white;
+            text-shadow: 0 0 5px black;
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 100;
+        }
+
+        /* Estilos do Joystick Virtual */
+        #joystick-container {
+            position: absolute;
+            bottom: 5vh;
+            left: 5vw;
+            width: 150px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0.9;
+            z-index: 100;
+        }
+        #joystick-handle {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            touch-action: none; /* Não permitir o scroll do navegador */
+        }
+
+        /* Estilos da Hotbar */
+        .hotbar-item {
+            cursor: pointer;
+            width: 60px;
+            height: 60px;
+            transition: all 0.1s;
+        }
+        .hotbar-item.selected {
+            border: 4px solid #FCD34D; /* Destaque amarelo */
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(252, 211, 77, 0.8);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Símbolo de mais no meio da tela -->
+    <div id="crosshair" class="text-white text-3xl">+</div>
+
+    <!-- Botões de Ação (Destruir e Colocar) -->
+    <div class="absolute bottom-5 right-5 flex flex-col space-y-3 z-100">
+        <button id="place-button" class="p-4 bg-lime-600 hover:bg-lime-700 text-white font-bold rounded-full shadow-lg transition duration-150 transform active:scale-95 text-lg w-20 h-20 flex items-center justify-center">
+            <span class="text-4xl">P</span>
+        </button>
+        <button id="destroy-button" class="p-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full shadow-lg transition duration-150 transform active:scale-95 text-lg w-20 h-20 flex items-center justify-center">
+            <span class="text-4xl">D</span>
+        </button>
+    </div>
+
+    <!-- Joystick Virtual (Controle Analógico Celular) -->
+    <div id="joystick-container">
+        <div id="joystick-handle"></div>
+    </div>
+
+    <!-- Hotbar de Blocos -->
+    <div id="hotbar" class="absolute bottom-5 left-1/2 transform -translate-x-1/2 flex space-x-2 bg-gray-900/70 p-2 rounded-xl shadow-2xl z-100">
+        <!-- Item 1: Grama -->
+        <div data-block-type="grass" id="hotbar-grass" class="hotbar-item bg-lime-500 rounded-lg flex items-center justify-center border-gray-600 border-2">
+            <span class="text-white font-extrabold text-xl">1</span>
+        </div>
+        <!-- Item 2: Pedra -->
+        <div data-block-type="stone" id="hotbar-stone" class="hotbar-item bg-gray-500 rounded-lg flex items-center justify-center border-gray-600 border-2">
+            <span class="text-white font-extrabold text-xl">2</span>
+        </div>
+        <!-- Adicionar mais blocos aqui -->
+    </div>
+
+    <script type="module">
+        // Variáveis globais do Three.js
+        let scene, camera, renderer, raycaster;
+        let blocks = new Map(); // Armazena blocos: "x,y,z" -> Mesh
+        const BLOCK_SIZE = 1;
+        const MOVEMENT_SPEED = 0.08;
+        const CHUNK_SIZE = 16;
+
+        // Materiais dos Blocos
+        const blockMaterials = {
+            'grass': {
+                name: 'Grama',
+                // Mapeamento de cor para as 6 faces (topo, fundo, laterais)
+                material: [
+                    new THREE.MeshLambertMaterial({ color: 0x6B4226 }), // Lado Direito (marrom lateral)
+                    new THREE.MeshLambertMaterial({ color: 0x6B4226 }), // Lado Esquerdo (marrom lateral)
+                    new THREE.MeshLambertMaterial({ color: 0x7CFC00 }), // Topo (verde)
+                    new THREE.MeshLambertMaterial({ color: 0x6B4226 }), // Base (marrom)
+                    new THREE.MeshLambertMaterial({ color: 0x6B4226 }), // Frente (marrom lateral)
+                    new THREE.MeshLambertMaterial({ color: 0x6B4226 })  // Trás (marrom lateral)
+                ],
+                color: 0x7CFC00 // Cor principal para a pré-visualização
+            },
+            'stone': {
+                name: 'Pedra',
+                material: new THREE.MeshLambertMaterial({ color: 0x808080 }),
+                color: 0x808080
+            }
+        };
+
+        let selectedBlockType = 'grass'; // Bloco que o jogador está colocando
+        let intersectedBlock = null; // Bloco atualmente sob o crosshair
+
+        // Variáveis de Controle
+        let controls = { w: false, s: false, a: false, d: false, space: false, shift: false };
+        let velocity = new THREE.Vector3();
+        let isLocked = false; // Estado do Pointer Lock (PC)
+
+        // Variáveis de Joystick (Mobile)
+        let joystick = {
+            active: false,
+            startPos: { x: 0, y: 0 },
+            currentPos: { x: 0, y: 0 },
+            container: document.getElementById('joystick-container'),
+            handle: document.getElementById('joystick-handle'),
+            vector: new THREE.Vector2(0, 0)
+        };
+        
+        // Variáveis de Touch Look (Mobile)
+        let lastTouchX = null;
+        let lastTouchY = null;
+        let touchLookActive = false;
+        
+        // Função para atualizar o destaque da Hotbar
+        function updateHotbarSelection(type) {
+            const items = document.querySelectorAll('.hotbar-item');
+            items.forEach(item => {
+                if (item.getAttribute('data-block-type') === type) {
+                    item.classList.add('selected');
+                } else {
+                    item.classList.remove('selected');
+                }
+            });
+        }
+        
+        // Inicializa o bloco selecionado
+        updateHotbarSelection(selectedBlockType);
+
+
+        // Função para obter o material correto de um bloco pelo tipo
+        function getBlockMaterial(type) {
+            const blockDef = blockMaterials[type];
+            const geometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+            if (Array.isArray(blockDef.material)) {
+                // Se for um material com faces diferentes (ex: Grama)
+                return new THREE.Mesh(geometry, blockDef.material);
+            } else {
+                // Se for um material uniforme (ex: Pedra)
+                return new THREE.Mesh(geometry, blockDef.material);
+            }
+        }
+
+        // === LÓGICA DE GERAÇÃO E GERENCIAMENTO DE MUNDO ===
+
+        function generateBlock(x, y, z, type) {
+            const key = `${x},${y},${z}`;
+            if (blocks.has(key)) return; // Evita duplicatas
+
+            const blockMesh = getBlockMaterial(type);
+            // Posição: (x, y, z) são coordenadas de grid. O centro do bloco é offset + metade do tamanho.
+            blockMesh.position.set(x * BLOCK_SIZE + BLOCK_SIZE / 2, y * BLOCK_SIZE + BLOCK_SIZE / 2, z * BLOCK_SIZE + BLOCK_SIZE / 2);
+
+            blockMesh.userData = { isBlock: true, type: type, key: key }; // Dados de identificação
+
+            scene.add(blockMesh);
+            blocks.set(key, blockMesh);
+        }
+
+        function generateInitialWorld() {
+            // Cria um mundo inicial plano
+            const WORLD_RADIUS = 10;
+            for (let x = -WORLD_RADIUS; x < WORLD_RADIUS; x++) {
+                for (let z = -WORLD_RADIUS; z < WORLD_RADIUS; z++) {
+                    // Chão de Grama
+                    generateBlock(x, 0, z, 'grass');
+                    // Uma camada de Pedra abaixo da grama
+                    generateBlock(x, -1, z, 'stone');
+                }
+            }
+        }
+
+        function removeBlock(blockMesh) {
+            const key = blockMesh.userData.key;
+            if (blocks.has(key)) {
+                scene.remove(blockMesh);
+                blocks.delete(key);
+                blockMesh.geometry.dispose();
+                // O material é reutilizável, não precisa ser removido
+            }
+        }
+
+        function placeBlock(x, y, z, type) {
+            generateBlock(x, y, z, type);
+        }
+
+        // === SETUP DA CENA 3D ===
+
+        function init() {
+            // 1. Cena
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB); // Céu Azul Claro
+
+            // 2. Câmera (Perspectiva para 3D)
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 5, 0); // Posição inicial acima do chão
+
+            // 3. Renderizador
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // 4. Iluminação
+            const ambientLight = new THREE.AmbientLight(0x404040, 3); // Luz Ambiente Suave
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 2); // Luz Direcional (Sol)
+            directionalLight.position.set(5, 10, 5);
+            scene.add(directionalLight);
+
+            // 5. Raycaster para interações (blocos sob o crosshair)
+            raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, 0, -1), 0, 5); // Verifica até 5 unidades de distância
+
+            // 6. Geração do Mundo
+            generateInitialWorld();
+
+            // 7. Configurar Controles
+            setupPCControls();
+            setupMobileControls();
+            setupHotbarListeners();
+
+            window.addEventListener('resize', onWindowResize, false);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // === LÓGICA DE INTERAÇÃO (RAYCASTING) ===
+
+        function highlightBlock(intersection) {
+            if (intersectedBlock) {
+                // Remove o destaque do bloco anterior
+                intersectedBlock.mesh.material.emissive.setHex(0x000000);
+            }
+
+            if (intersection) {
+                // Aplica destaque ao novo bloco
+                intersection.object.material.emissive.setHex(0x333333);
+                intersectedBlock = {
+                    mesh: intersection.object,
+                    point: intersection.point,
+                    face: intersection.face,
+                    normal: intersection.face.normal.clone() // Clone para evitar alterações
+                };
+            } else {
+                intersectedBlock = null;
+            }
+        }
+
+        function updateRaycast() {
+            // O raycaster sempre aponta do centro da tela
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+
+            // Filtra apenas os objetos que são blocos
+            const blockMeshes = Array.from(blocks.values());
+            const intersects = raycaster.intersectObjects(blockMeshes);
+
+            if (intersects.length > 0) {
+                // Interseção mais próxima
+                highlightBlock(intersects[0]);
+            } else {
+                highlightBlock(null);
+            }
+        }
+
+        // === LISTENERS DE AÇÃO (Destruir/Colocar) ===
+
+        document.getElementById('destroy-button').addEventListener('click', () => {
+            if (intersectedBlock) {
+                removeBlock(intersectedBlock.mesh);
+                highlightBlock(null); // Remove o destaque após a remoção
+            }
+        });
+
+        document.getElementById('place-button').addEventListener('click', () => {
+            if (intersectedBlock) {
+                // Posição do bloco a ser removido (centro)
+                const blockPos = intersectedBlock.mesh.position;
+                // Normal da face (direção para colocar o novo bloco)
+                const normal = intersectedBlock.normal;
+
+                // Calcula a posição do novo bloco (no centro do próximo "slot")
+                // Arredonda para o grid (coordenadas inteiras)
+                const newX = Math.round(blockPos.x - BLOCK_SIZE / 2 + normal.x * BLOCK_SIZE);
+                const newY = Math.round(blockPos.y - BLOCK_SIZE / 2 + normal.y * BLOCK_SIZE);
+                const newZ = Math.round(blockPos.z - BLOCK_SIZE / 2 + normal.z * BLOCK_SIZE);
+
+                // Evita colocar o bloco dentro da área ocupada pela câmera
+                const cameraGridX = Math.floor(camera.position.x);
+                const cameraGridY = Math.floor(camera.position.y);
+                const cameraGridZ = Math.floor(camera.position.z);
+
+                if (newX !== cameraGridX || newY !== cameraGridY || newZ !== cameraGridZ) {
+                     placeBlock(newX, newY, newZ, selectedBlockType);
+                } else {
+                    console.warn("Tentativa de colocar bloco na posição da câmera.");
+                }
+
+                highlightBlock(null); // Atualiza o raycast na próxima frame
+            }
+        });
+        
+        // === LISTENERS DA HOTBAR ===
+
+        function setupHotbarListeners() {
+            document.querySelectorAll('.hotbar-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    selectedBlockType = item.getAttribute('data-block-type');
+                    updateHotbarSelection(selectedBlockType);
+                });
+            });
+        }
+
+        // === CONTROLES PC (TECLADO E MOUSE LOOK) ===
+
+        function setupPCControls() {
+            // Lógica de Mouse Look e Pointer Lock
+            document.addEventListener('click', () => {
+                // Só tenta Pointer Lock se não for um dispositivo touch
+                if (!('ontouchstart' in window) && !isLocked) {
+                    renderer.domElement.requestPointerLock();
+                }
+            });
+
+            document.addEventListener('pointerlockchange', () => {
+                isLocked = (document.pointerLockElement === renderer.domElement);
+            }, false);
+
+            // Rotação da Câmera (Mouse Move)
+            document.addEventListener('mousemove', (event) => {
+                if (isLocked) {
+                    const movementX = event.movementX || 0;
+                    const movementY = event.movementY || 0;
+                    const sensitivity = 0.002;
+
+                    // Gira a câmera horizontalmente (Y-axis)
+                    camera.rotation.y -= movementX * sensitivity;
+
+                    // Gira a câmera verticalmente (X-axis, limitado)
+                    let rotationX = camera.rotation.x - movementY * sensitivity;
+                    rotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, rotationX)); // Limita o olhar para cima/baixo
+                    camera.rotation.x = rotationX;
+                }
+            }, false);
+
+            // Movimento (WASD)
+            document.addEventListener('keydown', (event) => {
+                switch (event.code) {
+                    case 'KeyW': controls.w = true; break;
+                    case 'KeyS': controls.s = true; break;
+                    case 'KeyA': controls.a = true; break;
+                    case 'KeyD': controls.d = true; break;
+                    case 'Space': controls.space = true; break;
+                    case 'ShiftLeft': controls.shift = true; break;
+                    // Troca de bloco para colocação (Teclado)
+                    case 'Digit1': selectedBlockType = 'grass'; updateHotbarSelection('grass'); break;
+                    case 'Digit2': selectedBlockType = 'stone'; updateHotbarSelection('stone'); break;
+                }
+            });
+
+            document.addEventListener('keyup', (event) => {
+                switch (event.code) {
+                    case 'KeyW': controls.w = false; break;
+                    case 'KeyS': controls.s = false; break;
+                    case 'KeyA': controls.a = false; break;
+                    case 'KeyD': controls.d = false; break;
+                    case 'Space': controls.space = false; break;
+                    case 'ShiftLeft': controls.shift = false; break;
+                }
+            });
+        }
+
+        // === CONTROLES MOBILE (JOYSTICK E TOUCH LOOK) ===
+
+        function setupMobileControls() {
+            const container = joystick.container;
+            const handle = joystick.handle;
+            
+            // --- Joystick Setup (Movimento) ---
+
+            const handleTouchStart = (e) => {
+                // Verifica se o toque começou no joystick
+                const relevantTouch = Array.from(e.touches).find(t => t.target === handle || t.target === container);
+                if (!relevantTouch) return;
+                
+                e.preventDefault();
+                e.stopPropagation();
+
+                joystick.active = true;
+                
+                // Calcula a posição de início dentro do container
+                const rect = container.getBoundingClientRect();
+                joystick.startPos.x = rect.left + rect.width / 2;
+                joystick.startPos.y = rect.top + rect.height / 2;
+                
+                // O toque que iniciou o joystick
+                joystick.touchId = relevantTouch.identifier; 
+            };
+            
+            // Início do Toque (Joystick)
+            container.addEventListener('touchstart', handleTouchStart, { passive: false });
+            handle.addEventListener('touchstart', handleTouchStart, { passive: false });
+            
+
+            // --- Touch Look & Move (Geral) ---
+            
+            document.addEventListener('touchmove', (e) => {
+                e.preventDefault(); // Evita scroll
+
+                const touch = e.touches[0];
+                if (!touch) return;
+                
+                let isJoystickTouch = false;
+                
+                // 1. Lógica do Joystick
+                if (joystick.active) {
+                    const activeTouch = Array.from(e.touches).find(t => t.identifier === joystick.touchId);
+                    if (activeTouch) {
+                        isJoystickTouch = true;
+                        joystick.currentPos.x = activeTouch.clientX;
+                        joystick.currentPos.y = activeTouch.clientY;
+
+                        // Calcula o vetor de movimento
+                        let dx = joystick.currentPos.x - joystick.startPos.x;
+                        let dy = joystick.currentPos.y - joystick.startPos.y;
+
+                        const maxDistance = container.offsetWidth / 2;
+                        const distance = Math.min(maxDistance, Math.sqrt(dx * dx + dy * dy));
+                        const angle = Math.atan2(dy, dx);
+
+                        // Limita o handle dentro do containe
