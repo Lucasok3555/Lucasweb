@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BNB Token Sender</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #F0B90B;
+      --gold-dim: #c99a08;
+      --bg: #0a0c10;
+      --surface: #111318;
+      --surface2: #181c24;
+      --border: #252a35;
+      --text: #e8eaf0;
+      --muted: #6b7280;
+      --green: #22c55e;
+      --red: #ef4444;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Background grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(240,185,11,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(240,185,11,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Glow blob */
+    body::after {
+      content: '';
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(240,185,11,0.08) 0%, transparent 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 0;
+      animation: pulse 4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+      50% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.6; }
+    }
+
+    .card {
+      position: relative;
+      z-index: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      width: 420px;
+      padding: 40px 36px;
+      box-shadow: 0 0 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(240,185,11,0.06);
+      animation: fadeIn 0.6s ease both;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+
+    .bnb-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--gold);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 0 20px rgba(240,185,11,0.4);
+    }
+
+    .bnb-icon svg { width: 26px; height: 26px; }
+
+    .header-text h1 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .header-text p {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      margin-top: 2px;
+    }
+
+    /* Network badge */
+    .network-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(240,185,11,0.1);
+      border: 1px solid rgba(240,185,11,0.25);
+      border-radius: 100px;
+      padding: 5px 12px;
+      font-size: 0.7rem;
+      font-family: 'Space Mono', monospace;
+      color: var(--gold);
+      margin-bottom: 24px;
+      letter-spacing: 0.04em;
+    }
+
+    .network-badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--gold);
+      animation: blink 1.4s ease infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
+    }
+
+    /* Wallet status */
+    .wallet-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .wallet-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+
+    .wallet-addr {
+      font-size: 0.82rem;
+      font-family: 'Space Mono', monospace;
+      color: var(--text);
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+
+    .status-dot.connected { background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+    /* Fields */
+    .field { margin-bottom: 20px; }
+
+    label {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 13px 16px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.88rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(240,185,11,0.1);
+    }
+
+    input::placeholder { color: var(--muted); }
+
+    /* Amount row */
+    .amount-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .preset-btn {
+      flex: 1;
+      min-width: 60px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 4px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+    }
+
+    .preset-btn:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    .preset-btn.active {
+      border-color: var(--gold);
+      background: rgba(240,185,11,0.1);
+      color: var(--gold);
+    }
+
+    /* Send button */
+    .send-btn {
+      width: 100%;
+      margin-top: 8px;
+      padding: 16px;
+      background: var(--gold);
+      border: none;
+      border-radius: 12px;
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 800;
+      color: #0a0c10;
+      cursor: pointer;
+      letter-spacing: 0.01em;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .send-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0);
+      transition: background 0.2s;
+    }
+
+    .send-btn:hover { background: #ffd44d; box-shadow: 0 0 30px rgba(240,185,11,0.5); transform: translateY(-1px); }
+    .send-btn:active { transform: translateY(0); }
+    .send-btn:disabled { background: var(--muted); cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .connect-btn {
+      width: 100%;
+      margin-top: 8px;
+      padding: 16px;
+      background: transparent;
+      border: 1px solid var(--gold);
+      border-radius: 12px;
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--gold);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .connect-btn:hover { background: rgba(240,185,11,0.1); box-shadow: 0 0 20px rgba(240,185,11,0.2); }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 22px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+      opacity: 0;
+      z-index: 100;
+      max-width: 360px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      white-space: nowrap;
+    }
+
+    #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    #toast.success { border-color: var(--green); color: var(--green); }
+    #toast.error { border-color: var(--red); color: var(--red); }
+
+    /* Tx hash link */
+    .tx-link {
+      display: none;
+      margin-top: 16px;
+      background: rgba(34,197,94,0.07);
+      border: 1px solid rgba(34,197,94,0.2);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--green);
+      word-break: break-all;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .tx-link a { color: inherit; text-decoration: underline; }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 24px 0;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      margin-bottom: 8px;
+    }
+
+    .info-row span:last-child { color: var(--text); }
+
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(10,12,16,0.3);
+      border-top-color: #0a0c10;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <div class="bnb-icon">
+      <!-- BNB diamond logo -->
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50 10L61 39H90L67 57L76 86L50 69L24 86L33 57L10 39H39L50 10Z" fill="#0a0c10"/>
+        <path d="M50 22L58 44H81L62 57L69 79L50 67L31 79L38 57L19 44H42L50 22Z" fill="#0a0c10" opacity="0.4"/>
+        <rect x="44" y="35" width="12" height="12" rx="2" fill="#0a0c10" transform="rotate(45 50 41)"/>
+        <rect x="44" y="53" width="12" height="12" rx="2" fill="#0a0c10" transform="rotate(45 50 59)"/>
+        <rect x="34" y="44" width="12" height="12" rx="2" fill="#0a0c10" transform="rotate(45 40 50)"/>
+        <rect x="54" y="44" width="12" height="12" rx="2" fill="#0a0c10" transform="rotate(45 60 50)"/>
+      </svg>
+    </div>
+    <div class="header-text">
+      <h1>BNB Token Sender</h1>
+      <p>Envio sem valor · Testnet/Mainnet</p>
+    </div>
+  </div>
+
+  <div class="network-badge">
+    <span class="dot"></span>
+    BNB Smart Chain
+  </div>
+
+  <div class="wallet-box">
+    <div>
+      <div class="wallet-label">Carteira Conectada</div>
+      <div class="wallet-addr" id="walletAddr">Não conectada</div>
+    </div>
+    <div class="status-dot" id="statusDot"></div>
+  </div>
+
+  <!-- Connect -->
+  <button class="connect-btn" id="connectBtn" onclick="connectWallet()">
+    🦊 Conectar MetaMask
+  </button>
+
+  <div id="sendSection" style="display:none">
+    <div class="divider"></div>
+
+    <div class="field">
+      <label>Endereço de Destino</label>
+      <input type="text" id="toAddress" placeholder="0x..." />
+    </div>
+
+    <div class="field">
+      <label>Quantia de BNB</label>
+      <input type="number" id="amount" placeholder="0.0001" min="0" step="any"/>
+      <div class="amount-row">
+        <button class="preset-btn" onclick="setAmount(0)">0 BNB</button>
+        <button class="preset-btn" onclick="setAmount(0.0001)">0.0001</button>
+        <button class="preset-btn" onclick="setAmount(0.001)">0.001</button>
+        <button class="preset-btn" onclick="setAmount(0.01)">0.01</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="info-row">
+      <span>Rede</span>
+      <span id="netName">—</span>
+    </div>
+    <div class="info-row">
+      <span>Gas estimado</span>
+      <span>~21,000 units</span>
+    </div>
+    <div class="info-row">
+      <span>Valor</span>
+      <span id="amtDisplay">0 BNB</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <button class="send-btn" id="sendBtn" onclick="sendBNB()">
+      Enviar BNB →
+    </button>
+
+    <div class="tx-link" id="txBox"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const BSC_MAINNET = '0x38';    // 56
+  const BSC_TESTNET = '0x61';   // 97
+
+  let walletAddress = null;
+
+  // Live amount display
+  document.getElementById('amount')?.addEventListener('input', e => {
+    const v = parseFloat(e.target.value);
+    document.getElementById('amtDisplay').textContent = isNaN(v) ? '0 BNB' : `${v} BNB`;
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  });
+
+  function setAmount(val) {
+    document.getElementById('amount').value = val;
+    document.getElementById('amtDisplay').textContent = val + ' BNB';
+    document.querySelectorAll('.preset-btn').forEach(b => {
+      b.classList.toggle('active', parseFloat(b.textContent) === val);
+    });
+  }
+
+  function toast(msg, type = 'info') {
+    const t = document.getElementById('toast');
+    t.className = `show ${type}`;
+    t.innerHTML = type === 'success' ? `✓ ${msg}` : type === 'error' ? `✗ ${msg}` : `ℹ ${msg}`;
+    clearTimeout(t._timeout);
+    t._timeout = setTimeout(() => t.className = '', 4000);
+  }
+
+  async function connectWallet() {
+    if (!window.ethereum) {
+      toast('MetaMask não encontrada! Instale a extensão.', 'error');
+      return;
+    }
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      walletAddress = accounts[0];
+      updateUI();
+      await switchToBSC();
+    } catch (e) {
+      toast('Conexão recusada.', 'error');
+    }
+  }
+
+  async function switchToBSC() {
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: BSC_MAINNET }]
+      });
+    } catch (err) {
+      if (err.code === 4902) {
+        await addBSCNetwork();
+      }
+    }
+    updateNetName();
+  }
+
+  async function addBSCNetwork() {
+    await window.ethereum.request({
+      method: 'wallet_addEthereumChain',
+      params: [{
+        chainId: BSC_MAINNET,
+        chainName: 'BNB Smart Chain',
+        nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+        rpcUrls: ['https://bsc-dataseed.binance.org/'],
+        blockExplorerUrls: ['https://bscscan.com/']
+      }]
+    });
+  }
+
+  async function updateNetName() {
+    try {
+      const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+      const names = {
+        '0x38': 'BSC Mainnet',
+        '0x61': 'BSC Testnet',
+        '0x1': 'Ethereum',
+      };
+      document.getElementById('netName').textContent = names[chainId] || `Chain ${parseInt(chainId)}`;
+    } catch {}
+  }
+
+  function updateUI() {
+    const short = walletAddress
+      ? walletAddress.slice(0, 6) + '...' + walletAddress.slice(-4)
+      : 'Não conectada';
+    document.getElementById('walletAddr').textContent = short;
+    document.getElementById('statusDot').className = 'status-dot' + (walletAddress ? ' connected' : '');
+    document.getElementById('connectBtn').style.display = walletAddress ? 'none' : 'block';
+    document.getElementById('sendSection').style.display = walletAddress ? 'block' : 'none';
+    if (walletAddress) toast('Carteira conectada!', 'success');
+  }
+
+  async function sendBNB() {
+    const to = document.getElementById('toAddress').value.trim();
+    const amtStr = document.getElementById('amount').value.trim();
+    const amt = parseFloat(amtStr);
+
+    if (!to || !/^0x[0-9a-fA-F]{40}$/.test(to)) {
+      toast('Endereço inválido.', 'error'); return;
+    }
+    if (isNaN(amt) || amt < 0) {
+      toast('Quantia inválida.', 'error'); return;
+    }
+
+    const btn = document.getElementById('sendBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Aguardando MetaMask...';
+
+    try {
+      // Convert BNB to wei (hex)
+      const weiValue = BigInt(Math.round(amt * 1e18));
+      const hexValue = '0x' + weiValue.toString(16);
+
+      const txHash = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: walletAddress,
+          to: to,
+          value: hexValue,
+          gas: '0x5208', // 21000
+        }]
+      });
+
+      toast('Transação enviada!', 'success');
+      const txBox = document.getElementById('txBox');
+      txBox.style.display = 'block';
+      txBox.innerHTML = `✓ TX Hash:<br><a href="https://bscscan.com/tx/${txHash}" target="_blank">${txHash}</a>`;
+    } catch (e) {
+      if (e.code === 4001) toast('Transação rejeitada pelo usuário.', 'error');
+      else toast('Erro: ' + (e.message || 'desconhecido'), 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Enviar BNB →';
+    }
+  }
+
+  // Listen for account changes
+  if (window.ethereum) {
+    window.ethereum.on('accountsChanged', accs => {
+      walletAddress = accs[0] || null;
+      updateUI();
+    });
+    window.ethereum.on('chainChanged', updateNetName);
+  }
+</script>
+</body>
+</html>
