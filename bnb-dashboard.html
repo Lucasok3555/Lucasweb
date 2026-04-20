@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BNB Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #F0B90B;
+    --gold-dim: #c99a00;
+    --gold-glow: rgba(240,185,11,0.35);
+    --bg: #06070d;
+    --panel: #0c0e1a;
+    --panel2: #111427;
+    --border: rgba(240,185,11,0.18);
+    --text: #e8eaf0;
+    --muted: #5a6080;
+    --green: #0fffb0;
+    --red: #ff4466;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 0%, rgba(240,185,11,0.07) 0%, transparent 70%),
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(240,185,11,0.03) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(240,185,11,0.03) 40px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px;
+  }
+  .logo {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 22px;
+    color: var(--gold);
+    letter-spacing: 4px;
+    text-shadow: 0 0 20px var(--gold-glow);
+  }
+  .net-badge {
+    background: rgba(15,255,176,0.08);
+    border: 1px solid rgba(15,255,176,0.3);
+    color: var(--green);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 2px;
+    animation: pulse-green 2.5s ease-in-out infinite;
+  }
+  @keyframes pulse-green {
+    0%,100%{ box-shadow: 0 0 0 rgba(15,255,176,0); }
+    50%{ box-shadow: 0 0 10px rgba(15,255,176,0.2); }
+  }
+
+  /* BALANCE CARD */
+  .balance-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 28px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .balance-card::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 160px; height: 160px;
+    background: radial-gradient(circle, rgba(240,185,11,0.12), transparent 70%);
+    border-radius: 50%;
+  }
+  .balance-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .balance-amount {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 42px;
+    font-weight: 900;
+    color: var(--gold);
+    text-shadow: 0 0 30px var(--gold-glow);
+    line-height: 1;
+    margin-bottom: 6px;
+    transition: all 0.4s ease;
+  }
+  .balance-symbol {
+    font-size: 18px;
+    color: var(--gold-dim);
+    margin-left: 6px;
+  }
+  .balance-usd {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+  .balance-usd span { color: var(--text); }
+  .change-badge {
+    display: inline-block;
+    background: rgba(15,255,176,0.1);
+    color: var(--green);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-left: 8px;
+  }
+
+  /* DATE SALDO */
+  .date-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .date-label { font-size: 11px; color: var(--muted); letter-spacing: 2px; }
+  .date-val { font-size: 13px; color: var(--gold); }
+
+  /* WALLETS PANEL */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 22px;
+  }
+  .panel-title {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .wallet-list { display: flex; flex-direction: column; gap: 10px; }
+  .wallet-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--panel2);
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+  }
+  .wallet-item:hover {
+    border-color: var(--gold-dim);
+    box-shadow: 0 0 12px rgba(240,185,11,0.1);
+  }
+  .wallet-item.selected {
+    border-color: var(--gold);
+    box-shadow: 0 0 20px rgba(240,185,11,0.2);
+    background: rgba(240,185,11,0.05);
+  }
+  .wallet-item.selected::before {
+    content: '✦';
+    position: absolute;
+    left: -2px; top: -2px;
+    font-size: 9px;
+    color: var(--gold);
+    text-shadow: 0 0 6px var(--gold);
+  }
+  .wallet-left { display: flex; align-items: center; gap: 12px; }
+  .wallet-icon {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, rgba(240,185,11,0.15), rgba(240,185,11,0.05));
+    border: 1px solid rgba(240,185,11,0.25);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .wallet-name { font-size: 13px; color: var(--text); }
+  .wallet-addr { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .wallet-bal { font-family: 'Orbitron', sans-serif; font-size: 13px; color: var(--gold); }
+
+  /* BUTTONS */
+  .btn-row { display: flex; gap: 12px; }
+
+  .btn-magic {
+    flex: 1;
+    background: linear-gradient(135deg, #1a1400, #2a1f00);
+    border: 1.5px solid var(--gold);
+    color: var(--gold);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 16px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+    text-transform: uppercase;
+  }
+  .btn-magic::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: conic-gradient(from 0deg, var(--gold), transparent, var(--gold), transparent, var(--gold));
+    border-radius: 13px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: -1;
+    animation: spin-border 2s linear infinite;
+  }
+  .btn-magic:hover::before { opacity: 1; }
+  .btn-magic:hover {
+    background: linear-gradient(135deg, #2a1f00, #3a2b00);
+    box-shadow: 0 0 30px var(--gold-glow), inset 0 0 20px rgba(240,185,11,0.08);
+    transform: translateY(-2px);
+  }
+  .btn-magic:active { transform: translateY(0); }
+  .btn-magic .magic-icon { font-size: 20px; display: block; margin-bottom: 6px; }
+  @keyframes spin-border {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .btn-send {
+    flex: 1;
+    background: linear-gradient(135deg, #000d1a, #001a2e);
+    border: 1.5px solid #1a6fff;
+    color: #5badff;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 16px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    overflow: hidden;
+    position: relative;
+  }
+  .btn-send:hover {
+    box-shadow: 0 0 25px rgba(26,111,255,0.3), inset 0 0 15px rgba(26,111,255,0.08);
+    color: #90d0ff;
+    transform: translateY(-2px);
+    border-color: #5badff;
+  }
+  .btn-send:active { transform: translateY(0); }
+  .btn-send .send-icon { font-size: 20px; display: block; margin-bottom: 6px; }
+
+  /* TOAST / NOTIFICATION */
+  .toast {
+    position: fixed;
+    bottom: 30px; left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--panel);
+    border: 1px solid var(--gold);
+    border-radius: 12px;
+    padding: 14px 22px;
+    font-size: 13px;
+    color: var(--gold);
+    box-shadow: 0 0 30px rgba(240,185,11,0.25);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 999;
+    max-width: 340px;
+    text-align: center;
+    white-space: pre-line;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.blue {
+    border-color: #5badff;
+    color: #5badff;
+    box-shadow: 0 0 30px rgba(26,111,255,0.2);
+  }
+  .toast.green {
+    border-color: var(--green);
+    color: var(--green);
+    box-shadow: 0 0 30px rgba(15,255,176,0.15);
+  }
+
+  /* TX HASH AREA */
+  .tx-panel {
+    background: var(--panel2);
+    border: 1px dashed rgba(240,185,11,0.2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 11px;
+    color: var(--muted);
+    display: none;
+    word-break: break-all;
+    line-height: 1.8;
+  }
+  .tx-panel.visible { display: block; }
+  .tx-panel .tx-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .tx-panel .tx-key { color: var(--gold-dim); }
+  .tx-panel .tx-val { color: var(--text); font-size: 10px; }
+  .tx-panel .tx-hash { color: #5badff; font-size: 10px; margin-top: 8px; }
+
+  /* SPINNER */
+  .spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(240,185,11,0.2);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--panel);
+    border: 1px solid #1a6fff;
+    border-radius: 20px;
+    padding: 28px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 0 50px rgba(26,111,255,0.2);
+    animation: modal-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes modal-in {
+    from { transform: scale(0.85) translateY(20px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+  }
+  .modal-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    color: #5badff;
+    margin-bottom: 20px;
+    text-align: center;
+    letter-spacing: 3px;
+  }
+  .modal label { font-size: 11px; color: var(--muted); letter-spacing: 2px; display: block; margin-bottom: 6px; }
+  .modal input {
+    width: 100%;
+    background: var(--panel2);
+    border: 1px solid rgba(26,111,255,0.3);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    outline: none;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+  .modal input:focus { border-color: #5badff; }
+  .modal-btns { display: flex; gap: 10px; margin-top: 4px; }
+  .modal-cancel {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--muted);
+    color: var(--muted);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  .modal-cancel:hover { border-color: var(--text); color: var(--text); }
+  .modal-confirm {
+    flex: 2;
+    background: linear-gradient(135deg, #0a1a3a, #0d2050);
+    border: 1px solid #5badff;
+    color: #5badff;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+  .modal-confirm:hover {
+    box-shadow: 0 0 20px rgba(91,173,255,0.3);
+    background: linear-gradient(135deg, #0d2050, #1a3070);
+  }
+
+  .meta-logo {
+    text-align: center;
+    font-size: 36px;
+    margin-bottom: 12px;
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%,100%{ transform: translateY(0); }
+    50%{ transform: translateY(-6px); }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">◆ BNB</div>
+    <div class="net-badge">BSC MAINNET</div>
+  </div>
+
+  <!-- BALANCE CARD -->
+  <div class="balance-card">
+    <div class="balance-label">⬡ SALDO DO DIA</div>
+    <div class="balance-amount" id="balAmount">2.4871 <span class="balance-symbol">BNB</span></div>
+    <div class="balance-usd">
+      ≈ <span id="usdVal">R$ 5.482,36</span>
+      <span class="change-badge">+3.2%</span>
+    </div>
+    <div class="date-row">
+      <span class="date-label">📅 DATA</span>
+      <span class="date-val" id="dateDisplay">—</span>
+    </div>
+  </div>
+
+  <!-- CARTEIRAS -->
+  <div class="panel">
+    <div class="panel-title">⬡ Selecionar Carteira</div>
+    <div class="wallet-list" id="walletList">
+      <div class="wallet-item" data-id="0" onclick="selectWallet(0)">
+        <div class="wallet-left">
+          <div class="wallet-icon">🦊</div>
+          <div>
+            <div class="wallet-name">Carteira Alpha</div>
+            <div class="wallet-addr">0x3F9a...B72c</div>
+          </div>
+        </div>
+        <div class="wallet-bal">1.2340</div>
+      </div>
+      <div class="wallet-item" data-id="1" onclick="selectWallet(1)">
+        <div class="wallet-left">
+          <div class="wallet-icon">💎</div>
+          <div>
+            <div class="wallet-name">Carteira Beta</div>
+            <div class="wallet-addr">0x8D2b...A11f</div>
+          </div>
+        </div>
+        <div class="wallet-bal">0.9870</div>
+      </div>
+      <div class="wallet-item" data-id="2" onclick="selectWallet(2)">
+        <div class="wallet-left">
+          <div class="wallet-icon">🔥</div>
+          <div>
+            <div class="wallet-name">Carteira Gamma</div>
+            <div class="wallet-addr">0x1C7e...D93a</div>
+          </div>
+        </div>
+        <div class="wallet-bal">0.2661</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTÕES -->
+  <div class="btn-row">
+    <button class="btn-magic" onclick="magicTouch()">
+      <span class="magic-icon">✨</span>
+      TOQUE MÁGICO
+    </button>
+    <button class="btn-send" onclick="openSendModal()">
+      <span class="send-icon">🦊</span>
+      META MASTER
+    </button>
+  </div>
+
+  <!-- TX INFO -->
+  <div class="tx-panel" id="txPanel">
+    <div class="tx-row"><span class="tx-key">FROM</span><span class="tx-val" id="txFrom">—</span></div>
+    <div class="tx-row"><span class="tx-key">TO</span><span class="tx-val" id="txTo">—</span></div>
+    <div class="tx-row"><span class="tx-key">VALOR</span><span class="tx-val">0.000000000 BNB</span></div>
+    <div class="tx-row"><span class="tx-key">GAS</span><span class="tx-val">21000 GWEI</span></div>
+    <div class="tx-row"><span class="tx-key">STATUS</span><span class="tx-val" id="txStatus">—</span></div>
+    <div class="tx-hash" id="txHash">—</div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- MODAL ENVIAR -->
+<div class="modal-overlay" id="sendModal">
+  <div class="modal">
+    <div class="meta-logo">🦊</div>
+    <div class="modal-title">ENVIAR PARA<br>META MASTER</div>
+    <label>ENDEREÇO DESTINO (MetaMask)</label>
+    <input type="text" id="destAddr" placeholder="0x..." value="0xMetaMaster...F4a7"/>
+    <label>VALOR BNB</label>
+    <input type="number" id="sendAmt" placeholder="0.0000" step="0.0001" min="0"/>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeSendModal()">CANCELAR</button>
+      <button class="modal-confirm" onclick="confirmSend()">ENVIAR ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ─── DATA ───
+  const wallets = [
+    { name: 'Carteira Alpha', addr: '0x3F9a7c21B4dE832c7b8F42dA01B72c', bal: '1.2340' },
+    { name: 'Carteira Beta',  addr: '0x8D2bF31c9E7A44d5C2b1098DA11f', bal: '0.9870' },
+    { name: 'Carteira Gamma', addr: '0x1C7eAB83F52D10c9E4B7F5A3D93a', bal: '0.2661' },
+  ];
+
+  let selectedWallet = null;
+
+  // ─── DATE ───
+  function setDate() {
+    const d = new Date();
+    const opts = { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' };
+    document.getElementById('dateDisplay').textContent =
+      d.toLocaleDateString('pt-BR', opts);
+  }
+  setDate();
+
+  // animate balance on load
+  setTimeout(() => {
+    const el = document.getElementById('balAmount');
+    el.style.textShadow = '0 0 50px rgba(240,185,11,0.7)';
+    setTimeout(() => { el.style.textShadow = ''; }, 800);
+  }, 300);
+
+  // ─── SELECT WALLET ───
+  function selectWallet(id) {
+    document.querySelectorAll('.wallet-item').forEach(el => el.classList.remove('selected'));
+    document.querySelector(`[data-id="${id}"]`).classList.add('selected');
+    selectedWallet = id;
+    showToast(`✦ ${wallets[id].name} selecionada`, 'gold');
+  }
+
+  // ─── MAGIC TOUCH ───
+  function magicTouch() {
+    if (selectedWallet === null) {
+      showToast('⚠ Selecione uma carteira primeiro!', 'red'); return;
+    }
+    const w = wallets[selectedWallet];
+    const toAddr = '0xMAGIC' + Math.random().toString(16).slice(2,8).toUpperCase() + '...null';
+
+    showToast('✨ Gerando toque mágico...\n<span class="spinner"></span>', 'gold');
+
+    setTimeout(() => {
+      const hash = '0x' + Array.from({length:64}, () =>
+        Math.floor(Math.random()*16).toString(16)).join('');
+
+      document.getElementById('txFrom').textContent = w.addr.slice(0,18) + '...';
+      document.getElementById('txTo').textContent   = toAddr;
+      document.getElementById('txStatus').textContent = '✔ CONFIRMADO';
+      document.getElementById('txHash').textContent = '🔗 TX: ' + hash;
+
+      const panel = document.getElementById('txPanel');
+      panel.classList.add('visible');
+
+      showToast('✨ Toque gerado!\nValor: 0.000000000 BNB\n✔ Zero — limpo!', 'green');
+    }, 1800);
+  }
+
+  // ─── MODAL ───
+  function openSendModal() {
+    if (selectedWallet !== null) {
+      document.getElementById('sendAmt').value = wallets[selectedWallet].bal;
+    }
+    document.getElementById('sendModal').classList.add('open');
+  }
+  function closeSendModal() {
+    document.getElementById('sendModal').classList.remove('open');
+  }
+  document.getElementById('sendModal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeSendModal();
+  });
+
+  function confirmSend() {
+    const dest = document.getElementById('destAddr').value.trim();
+    const amt  = document.getElementById('sendAmt').value;
+    if (!dest || !amt) { showToast('⚠ Preencha todos os campos', 'red'); return; }
+
+    closeSendModal();
+    showToast('🦊 Enviando para MetaMaster...\n<span class="spinner"></span>', 'blue');
+
+    setTimeout(() => {
+      const hash = '0x' + Array.from({length:64}, () =>
+        Math.floor(Math.random()*16).toString(16)).join('');
+
+      document.getElementById('txFrom').textContent = selectedWallet !== null
+        ? wallets[selectedWallet].addr.slice(0,18) + '...'
+        : '0xSEU_ENDEREÇO...';
+      document.getElementById('txTo').textContent   = dest.slice(0,20) + '...';
+      document.getElementById('txStatus').textContent = '✔ ENVIADO → MetaMaster';
+      document.getElementById('txHash').textContent = '🔗 TX: ' + hash;
+
+      document.getElementById('txPanel').classList.add('visible');
+      showToast(`🦊 ${amt} BNB enviado!\nMeta Master ✔`, 'blue');
+    }, 2000);
+  }
+
+  // ─── TOAST ───
+  let toastTimer;
+  function showToast(msg, type='gold') {
+    const t = document.getElementById('toast');
+    t.innerHTML = msg;
+    t.className = 'toast' + (type==='blue'?' blue':type==='green'?' green':'');
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+  }
+
+  // ─── LIVE PRICE TICK ───
+  setInterval(() => {
+    const base = 2.4871;
+    const jitter = (Math.random() - 0.5) * 0.002;
+    const val = (base + jitter).toFixed(4);
+    const usd = (parseFloat(val) * 2203.7).toFixed(2).replace('.', ',');
+    document.getElementById('balAmount').innerHTML =
+      val + ' <span class="balance-symbol">BNB</span>';
+    document.getElementById('usdVal').textContent = 'R$ ' + usd;
+  }, 4000);
+</script>
+</body>
+</html>
